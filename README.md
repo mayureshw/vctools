@@ -77,41 +77,46 @@ Cross check. This command should show the source code of the component:
 
     ls $VCTOOLSDIR
 
-### Other components
+### petrisimu : Petri net simulator
 
-Please clone and follow the set up instructions in respective package. Mostly
-they all require setting one environment variable each.
+Check out:
 
-    1. Petri net simulator
+    git clone --depth 1 https://github.com/mayureshw/petrisimu
 
-        git clone --depth 1 https://github.com/mayureshw/petrisimu
+See the package's README.md for instructions.
 
-    Cross check. This command should show the source code of the component:
+Cross check. This command should show the source code of the component:
 
-        ls $PETRISIMUDIR
+    ls $PETRISIMUDIR
 
-    If you want to use the CEP (Complex Event Processing) tool for verification
-    checks on event sequences you need to install the following additional
-    components.
+### Optional components
 
-    2. XSB Prolog
+If you want to use the CEP (Complex Event Processing) tool for verification
+checks on event sequences you need to install the following additional
+components.
+
+    1. XSB Prolog
 
     See http://xsb.sourceforge.net for installation instructions.
 
     To cross check type "xsb" and see if it launches Prolog interpreter.  Use
     Ctrl-D to exit.
 
-    3. XSB C++ interface
+    2. XSB C++ interface
 
         git clone --depth 1 https://github.com/mayureshw/xsbcppif
+
+    See the package's README.md for instructions.
 
     Cross check. This command should show the source code of the component:
 
         ls $XSBCPPIFDIR
 
-    4. CEP tool
+    3. CEP tool
 
         git clone --depth 1 https://github.com/mayureshw/ceptool/
+
+    See the package's README.md for instructions.
 
     Cross check. This command should show the source code of the component:
 
