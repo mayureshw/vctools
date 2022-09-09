@@ -99,7 +99,11 @@ they all require setting one environment variable each.
 
 ## Setting up vctools
 
-Run make. Preferably use -j = number cores you have:
+In above step you should have set the VCTOOLSDIR environment variable. Now cd
+to it.
+
+Before running make you may want to check and alter some configurable options
+in vcsimconf.h. They are documented in the same file.
 
     cd $VCTOOLSDIR
     make -j4
@@ -115,3 +119,5 @@ Following items are a work in progress:
     2. The simulator supports integer arithmetic and logic operations for
        arbitrary widths limited up to 64 bits. AHIR does not have such limit.
 
+    3. A compatiblity bridge between Aa simulator test drivers and vC simulator
+       is to be developed.
