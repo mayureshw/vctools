@@ -3,6 +3,19 @@ Virtual Circuit simulator and some other tools for the AHIR framework
 
 ## Installing the required components
 
+### C++ compiler that supports 2014 standard
+
+(Most recent systems should have a suitable c++ compiler by default.)
+
+gcc 12 was used for development of this component, though it should work with a
+C++ compiler that supports 2014 standard.
+
+If your stock compiler (typically /usr/bin/c++) does not support this and you
+install a newer version at some other location, do set the following
+envrionment variable.
+
+    CXX:    Path to your c++ compiler that supports 2014 standard
+
 ### Java
 
 Java (JRE) is required for antlr parser generator to run. These instructions
@@ -81,21 +94,28 @@ they all require setting one environment variable each.
     checks on event sequences you need to install the following additional
     components.
 
-    3. CEP tool
+    2. XSB Prolog
 
-        git clone --depth 1 https://github.com/mayureshw/ceptool/
+    See http://xsb.sourceforge.net for installation instructions.
 
-    Cross check. This command should show the source code of the component:
+    To cross check type "xsb" and see if it launches Prolog interpreter.  Use
+    Ctrl-D to exit.
 
-        ls $CEPTOOLDIR
-
-    4. XSB C++ interface
+    3. XSB C++ interface
 
         git clone --depth 1 https://github.com/mayureshw/xsbcppif
 
     Cross check. This command should show the source code of the component:
 
         ls $XSBCPPIFDIR
+
+    4. CEP tool
+
+        git clone --depth 1 https://github.com/mayureshw/ceptool/
+
+    Cross check. This command should show the source code of the component:
+
+        ls $CEPTOOLDIR
 
 ## Setting up vctools
 
