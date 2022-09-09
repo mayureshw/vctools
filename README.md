@@ -127,11 +127,36 @@ components.
 In above step you should have set the VCTOOLSDIR environment variable. Now cd
 to it.
 
+    cd $VCTOOLSDIR
+
 Before running make you may want to check and alter some configurable options
 in vcsimconf.h. They are documented in the same file.
 
-    cd $VCTOOLSDIR
+If you do not wish to use the CEP capabilities mentioned above, please make the
+following changes:
+
+    1. Please comment out the following option in vcsimconf.h as:
+
+        //#define PN_USE_EVENT_LISTENER
+
+    2. Please comment out the following line in the Makefile by placing '#' at
+       the start of the line.
+
+        #include $(CEPTOOLDIR)/Makefile.ceptool
+
+Once configured, run make. Use -j = number of CPU cores you have to speed up
+compilation.
+
     make -j4
+
+## Simulator performance tuning
+
+To get better performance
+
+    1. Check vcsimconf.h and minimize the amount of logging.
+
+    2. See README.md of the petrisimu component for further fine tuning of
+       multi-threaded runs.
 
 ## WIP
 
