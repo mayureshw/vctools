@@ -24,10 +24,14 @@ VCTOOLOBJS	=	$(VCTOOLSRCS:.cpp=.o)
 DFILES		=	$(notdir $(AHIRSRCS:.cpp=.d)) $(PARSERSRCS:.cpp=.d) $(VCTOOLSRCS:.cpp=.d)
 
 CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
-CXXFLAGS	+=	-fPIC -g -O3
+CXXFLAGS	+=	-fPIC -g
 VPATH		+=	$(AHIRSRCDIR)
 
-BINS	=	libahirvc.a $(VCTOOLSDIR)/libvcsim.so cprcheck.out vc2p.out
+BINS		=	libahirvc.a $(VCTOOLSDIR)/libvcsim.so cprcheck.out vc2p.out
+EXCLUDEOPT	=	libahirvc.a
+OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
+
+$(OPTBINS):CXXFLAGS	+=	-O3
 
 # Need to touch the file as antlr doesn't change the timestamp if the file wasn't changed
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
