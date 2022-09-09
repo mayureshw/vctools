@@ -101,6 +101,7 @@ they all require setting one environment variable each.
 
 Run make. Preferably use -j = number cores you have:
 
+    cd $VCTOOLSDIR
     make -j4
 
 ## WIP
