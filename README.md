@@ -57,7 +57,12 @@ some Get methods in vC IR classes.
 
 Define the following environment variables, preferably in your shell's rc file:
 
-    AHIRDIR: Directory where you checked out the above AHIR fork
+    export AHIRDIR=<Directory where you checked out the above AHIR fork>
+
+AHIR supplies pre-compiled binaries for Ubuntu. Append the path of these
+executables to your PATH environment variable:
+
+    export PATH=$AHIRDIR/prebuilt_ubuntu_16.04_release/bin:$PATH
 
 Cross check. This command should show the source code of the component:
 
@@ -71,7 +76,7 @@ Check out:
 
 Define the following environment variables, preferably in your shell's rc file.
 
-    VCTOOLSDIR: Directory where you checked out this component
+    export VCTOOLSDIR=<Directory where you checked out this component>
 
 Cross check. This command should show the source code of the component:
 
@@ -98,6 +103,14 @@ components.
     1. XSB Prolog
 
     See http://xsb.sourceforge.net for installation instructions.
+
+    Define the following environment variables, preferably in your shell's rc file:
+
+        export XSBDIR=<Directory where you have installed XSB Prolog>
+
+    Append the xsb executable's directory to your PATH environment variable:
+
+        export PATH=$XSBDIR/bin:$PATH
 
     To cross check type "xsb" and see if it launches Prolog interpreter.  Use
     Ctrl-D to exit.
@@ -151,7 +164,7 @@ compilation.
 
 ## Simulator performance tuning
 
-To get better performance
+To get better simulator performance:
 
     1. Check vcsimconf.h and minimize the amount of logging.
 
