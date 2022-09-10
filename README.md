@@ -170,9 +170,9 @@ path.
 
 ## Various tools and their usage
 
-1. vC Simulator
+### vC Simulator
 
-### How to use the simulator
+#### How to use the simulator
 
     The simulator is available in the form of a shared object library that can
     be linked with a test driver. Please browse the following resources to
@@ -183,7 +183,7 @@ path.
     2. The examples directory contains examples of test drivers and a Makefile
        that shows how to compile them.
 
-### Simulator performance tuning
+#### Simulator performance tuning
 
 To get better simulator performance:
 
@@ -192,20 +192,7 @@ To get better simulator performance:
     2. See README.md of the petrisimu component for further fine tuning of
        multi-threaded runs.
 
-2. cprcheck : A dependency verification tool for Control Path Reduction tool in AHIR
-
-AHIR applies a control path reduction transformation to optimize the control
-path. This tool compares the pre and post transformation dependencies between
-events and reports the differences.
-
-Assuming you have added $VCTOOLSDIR to PATH, just type command "cprcheck" and
-it will show its usage message.
-
-3. Complex Event Processing (CEP) tool to validate event sequences
-
-WIP
-
-## WIP
+#### WIP
 
 Following items are a work in progress:
 
@@ -218,3 +205,16 @@ Following items are a work in progress:
 
     3. A compatiblity bridge between Aa simulator test drivers and vC simulator
        is to be developed.
+
+### cprcheck : A dependency verification tool for Control Path Reduction tool in AHIR
+
+AHIR applies a control path reduction transformation to optimize the control
+path. This tool compares the pre and post transformation dependencies between
+events and reports the differences.
+
+Assuming you have added $VCTOOLSDIR to PATH, just type command "cprcheck" and
+it will show its usage message.
+
+### Complex Event Processing (CEP) tool to validate event sequences
+
+WIP
