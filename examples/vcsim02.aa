@@ -1,0 +1,17 @@
+$pipe p1 : $uint<8> $depth 1
+$pipe p2 : $uint<8> $depth 1
+$module [syspipe]
+$in ()
+$out () $is 
+{
+    $branchblock [bb]
+    {
+        $merge $entry loopback
+            $phi b := $zero<8> $on $entry (b + 1) $on loopback
+        $endmerge
+            p2 := p1
+        $if ( b < 2 ) $then
+            $place [loopback]
+        $endif
+    }
+}
