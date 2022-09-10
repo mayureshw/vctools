@@ -1,0 +1,10 @@
+export XSBCPPIFDIR=$GITHUBHOME/xsbcppif
+export CEPTOOLDIR=$GITHUBHOME/ceptool
+export PETRISIMUDIR=$GITHUBHOME/petrisimu
+export AHIRDIR=$GITHUBHOME/ahir
+
+export XSBLIBPATH=$CEPTOOLDIR
+export PATH=$PATH:$AHIRDIR/prebuilt_ubuntu_16.04_release/bin
+export PATH=$PATH:$XSBDIR/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XSBDIR/config/`$XSBDIR/build/config.guess`/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VCTOOLSDIR

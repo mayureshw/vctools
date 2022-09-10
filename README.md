@@ -47,45 +47,53 @@ AHIR compilation requires the boost library. The package on Ubuntu is
 libboost-dev. To cross check the installation: /usr/include/boost directory
 should exist.
 
+### vctools (this component)
+
+Designate some directory to check out github components (e.g. $HOME/programs).
+Create this directory and cd to it.
+
+    git clone --depth 1 https://github.com/mayureshw/vctools
+
+### Environment settings
+
+Paste these lines in your shell's rc file, such as ~/.bashrc or ~/.profile.
+
+    # Choose and create a directory to checkout all github components and set
+    # the following variable. (Replace $HOME/programs with whatever directory
+    # you have chosen and created.)
+    export GITHUBHOME=$HOME/programs
+
+    # See instructions under `Optional components'. If you install XSB Prolog
+    # as per those instructions set this variable.
+    export XSBDIR=/usr/local/xsb
+
+    # Set the path of vctools component and source vctoolsrc from it, which
+    # will set the required variables for all the dependencies
+    export VCTOOLSDIR=$GITHUBHOME/vctools
+    . $VCTOOLSDIR/vctoolsrc
+
+
+Make sure that these settings reflect in your environment (Typically open a new
+terminal or just source the rc file)
+
 ### AHIR (fork)
 
 Check out the following fork of AHIR in the installation area:
 
+    cd $GITHUBHOME
     git clone --depth 1 https://github.com/mayureshw/ahir
 
 This fork has some minor changes, with respect to AHIR, such as addition of
 some Get methods in vC IR classes.
 
-Define the following environment variables, preferably in your shell's rc file:
-
-    export AHIRDIR=<Directory where you checked out the above AHIR fork>
-
-Cross check. This command should show the source code of the component:
+Cross check 1: This command should show the source code of the component:
 
     ls $AHIRDIR
 
-AHIR supplies pre-compiled binaries for Ubuntu. Append the path of these
-executables to your PATH environment variable:
-
-    export PATH=$AHIRDIR/prebuilt_ubuntu_16.04_release/bin:$PATH
-
-Cross check. Type Aa2VC command - it should show a usage message:
+Cross check 2: AHIR supplies pre-compiled binaries for Ubuntu. If you are using
+a compatible distribution, the following command should show a usage message.
 
     Aa2VC
-
-### vctools (this component)
-
-Check out:
-
-    git clone --depth 1 https://github.com/mayureshw/vctools
-
-Define the following environment variables, preferably in your shell's rc file.
-
-    export VCTOOLSDIR=<Directory where you checked out this component>
-
-Cross check. This command should show the source code of the component:
-
-    ls $VCTOOLSDIR
 
 ### petrisimu : Petri net simulator
 
@@ -93,9 +101,7 @@ Check out:
 
     git clone --depth 1 https://github.com/mayureshw/petrisimu
 
-See the package's README.md for instructions.
-
-Cross check. This command should show the source code of the component:
+Cross check: This command should show the source code of the component:
 
     ls $PETRISIMUDIR
 
@@ -109,56 +115,56 @@ components.
 
     See http://xsb.sourceforge.net for installation instructions.
 
-    Define the following environment variables, preferably in your shell's rc file:
+    In the environment settings mentioned above set the XSB installation
+    directory.
 
         export XSBDIR=<Directory where you have installed XSB Prolog>
 
-    Append the xsb executable's directory to your PATH environment variable:
+    Ensure that you have sourced the new settings so that vctoolsrc derives
+    additional variables from XSBDIR.
 
-        export PATH=$XSBDIR/bin:$PATH
-
-    To cross check type "xsb" and see if it launches Prolog interpreter.  Use
-    Ctrl-D to exit.
+    To cross check type "xsb" and see if it launches Prolog interpreter. Use
+    Ctrl-D to exit the interpreter.
 
     2. XSB C++ interface
 
+        cd $GITHUBHOME
         git clone --depth 1 https://github.com/mayureshw/xsbcppif
 
-    See the package's README.md for instructions.
-
-    Cross check. This command should show the source code of the component:
+    Cross check: This command should show the source code of the component:
 
         ls $XSBCPPIFDIR
 
+    Copy $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+
+        cp $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+
     3. CEP tool
 
+        cd $GITHUBHOME
         git clone --depth 1 https://github.com/mayureshw/ceptool/
 
-    See the package's README.md for instructions.
-
-    Cross check. This command should show the source code of the component:
+    Cross check: This command should show the source code of the component:
 
         ls $CEPTOOLDIR
 
 ## Setting up vctools
 
-In above step you should have set the VCTOOLSDIR environment variable. Now cd
-to it.
+Environment settings should have defined variable $VCTOOLSDIR in previous setps
 
     cd $VCTOOLSDIR
 
 Before running make you may want to check and alter some configurable options
 in vcsimconf.h. They are documented in the same file.
 
-If you do not wish to use the CEP capabilities mentioned above, please make the
+If you DO NOT wish to use the CEP capabilities mentioned above, please make the
 following changes:
 
     1. Please comment out the following option in vcsimconf.h as:
 
         //#define PN_USE_EVENT_LISTENER
 
-    2. Please comment out the following line in the Makefile by placing '#' at
-       the start of the line.
+    2. Please comment out the following line in the Makefile.
 
         #include $(CEPTOOLDIR)/Makefile.ceptool
 
@@ -166,12 +172,6 @@ Once configured, run make. Use -j = number of CPU cores you have to speed up
 compilation.
 
     make -j4
-
-You may want to add VCTOOLSDIR to your PATH variable so that some of the
-executables / script in vctools can be used without explicitly qualifying their
-path.
-
-    export PATH=$PATH:$VCTOOLSDIR
 
 ## Various tools and their usage
 
