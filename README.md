@@ -206,15 +206,16 @@ Following items are a work in progress:
     3. A compatiblity bridge between Aa simulator test drivers and vC simulator
        is to be developed.
 
-### cprcheck : A dependency verification tool for Control Path Reduction tool in AHIR
+### cprcheck : A dependency verification tool for Control Path Reduction
+transformation in AHIR
 
-AHIR applies a control path reduction transformation to optimize the control
-path. This tool compares the pre and post transformation dependencies between
-events and reports the differences.
+    AHIR applies a control path reduction transformation to optimize the
+    control path. This tool compares the pre and post transformation
+    dependencies between events and reports the differences.
 
-Assuming you have added $VCTOOLSDIR to PATH, just type command "cprcheck" and
-it will show its usage message.
+    Assuming you have added $VCTOOLSDIR to PATH, just type command "cprcheck"
+    and it will show its usage message.
 
 ### Complex Event Processing (CEP) tool to validate event sequences
 
-WIP
+    WIP
