@@ -17,15 +17,15 @@ void vcsim(
     // The top module to be invoked for simulation
     const string invoke,
 
-    // Input parameter vector for the invoked module.
-    const vector<DatumBase*>& inpv,
-
     // * * Following parameters are optional * *
+
+    // Input parameter vector for the invoked module.
+    const vector<DatumBase*>& inpv = {},
 
     // parameter `feeds' refers to the contents to be fed to the `system pipes'
     // from the test bench. A pair of pipe-name and contents to be fed to it
     // forms one 'feed'. A vector of such (possibly multiple) feeds contitutes
-    // the `feed' parameter
+    // the `feeds' parameter
     const vector<pair<string,vector<DatumBase*>>>& feeds = {},
 
     // `collects' are just the opposite of `feeds' - meant to collect the
