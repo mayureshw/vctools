@@ -150,24 +150,24 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
 
-#   ifdef GEN_CPDOTFILES
+#   ifdef GEN_CPDOT
     vcs.Print_Reduced_Control_Paths_As_Dot_Files();
 #   endif
 
     System sys(&vcs, daemons);
-#   ifdef GEN_DPDOTFILES
+#   ifdef GEN_DPDOT
     sys.printDPDotFiles();
 #   endif
 
-#   ifdef GEN_PETRIDOTFILE
+#   ifdef GEN_PETRIDOT
     sys.printPNDotFile();
 #   endif
 
-#   ifdef GEN_PETRIJSONFILE
+#   ifdef GEN_PETRIJSON
     sys.printPNJsonFile();
 #   endif
 
-#   ifdef GEN_PETRIPNMLFILE
+#   ifdef GEN_PETRIPNML
     sys.printPNPNMLFile();
 #   endif
 
