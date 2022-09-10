@@ -152,9 +152,21 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
     vcs.Print_Reduced_Control_Paths_As_Dot_Files();
 
     System sys(&vcs, daemons);
+#   ifdef GEN_DPDOTFILE
     sys.printDPDotFiles();
+#   endif
+
+#   ifdef GEN_PETRIDOTFILE
     sys.printPNDotFile();
+#   endif
+
+#   ifdef GEN_PETRIJSONFILE
     sys.printPNJsonFile();
+#   endif
+
+#   ifdef GEN_PETRIPNMLFILE
     sys.printPNPNMLFile();
+#   endif
+
     sys.invoke(invoke, inpv, feeds, collects, collectopmap);
 }

@@ -35,6 +35,17 @@
 // README.md of the ceptool for more details.
 #define PN_USE_EVENT_LISTENER
 
+// Generate data path dot file for each module, with name <modulename>.dot
+// #define GEN_DPDOTFILE
+
+// Generate Petri net dot file as petri.dot
+// #define GEN_PETRIDOTFILE
+
+// Generate json file representation of Petri net in petri.json
+// #define GEN_PETRIJSONFILE
+
+// Generate pnml representation of the Petri net in petri.pnml
+// #define GEN_PETRIPNMLFILE
 
 // ********** Usually you won't need to change beyond this **********
 
