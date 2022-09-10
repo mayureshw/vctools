@@ -1,0 +1,32 @@
+$pipe p1 : $uint<8> $depth 1
+$pipe p2 : $uint<8> $depth 1
+
+// Top module, invoked from simulator, appears in the 'invoked' argument of
+// simulator interface
+$module [ top ]
+$in ( )
+$out ( x : $uint<8> ) $is 
+{
+    $call called ( 2 ) ( x1 )
+    p1 := x1
+    x := p2
+}
+
+// This module is called internally, not exposed to simulator
+$module [ called ]
+$in ( x : $uint<8> )
+$out ( y : $uint<8> ) $is 
+{
+    y := ( x + x )
+}
+
+
+// This is a daemon module that starts on its own and keeps running. Its name
+// needs to appear in the daemons argument of the simulator interface
+$module [ daemon ]
+$in ( )
+$out ( ) $is
+{
+    d := p1
+    p2 := ( d + d )
+}
