@@ -162,7 +162,28 @@ compilation.
 
     make -j4
 
-## Simulator performance tuning
+You may want to add VCTOOLSDIR to your PATH variable so that some of the
+executables / script in vctools can be used without explicitly qualifying their
+path.
+
+    export PATH=$PATH:$VCTOOLSDIR
+
+## Various tools and their usage
+
+1. vC Simulator
+
+### How to use the simulator
+
+    The simulator is available in the form of a shared object library that can
+    be linked with a test driver. Please browse the following resources to
+    understand the usage:
+
+    1. vcsim.h : Details the test bench interface of the vC simulator
+
+    2. The examples directory contains examples of test drivers and a Makefile
+       that shows how to compile them.
+
+### Simulator performance tuning
 
 To get better simulator performance:
 
@@ -170,6 +191,19 @@ To get better simulator performance:
 
     2. See README.md of the petrisimu component for further fine tuning of
        multi-threaded runs.
+
+2. cprcheck : A dependency verification tool for Control Path Reduction tool in AHIR
+
+AHIR applies a control path reduction transformation to optimize the control
+path. This tool compares the pre and post transformation dependencies between
+events and reports the differences.
+
+Assuming you have added $VCTOOLSDIR to PATH, just type command "cprcheck" and
+it will show its usage message.
+
+3. Complex Event Processing (CEP) tool to validate event sequences
+
+WIP
 
 ## WIP
 

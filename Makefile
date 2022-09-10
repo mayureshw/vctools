@@ -1,4 +1,5 @@
-OS=$(shell uname -s)
+OS	=	$(shell uname -s)
+
 ifeq ($(OS),NetBSD)
 	LDFLAGS	+=	-L/usr/pkg/lib -lantlr
 	CXXFLAGS+=	-I/usr/pkg/include

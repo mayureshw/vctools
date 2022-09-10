@@ -1,7 +1,8 @@
 #ifndef _VCSIMCONF_H
 #define _VCSIMCONF_H
 
-// By default following logs are always kept enabled:
+// By default following logs are always kept enabled and they appear on stdout:
+//
 //   - Module entry and exit with input and output parameters respectively
 //   - Writes to the system pipes
 //
