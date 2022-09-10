@@ -149,10 +149,13 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
     // doesn't affect much to the simulator.
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
+
+#   ifdef GEN_CPDOTFILES
     vcs.Print_Reduced_Control_Paths_As_Dot_Files();
+#   endif
 
     System sys(&vcs, daemons);
-#   ifdef GEN_DPDOTFILE
+#   ifdef GEN_DPDOTFILES
     sys.printDPDotFiles();
 #   endif
 
