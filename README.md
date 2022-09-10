@@ -64,7 +64,8 @@ Paste these lines in your shell's rc file, such as ~/.bashrc or ~/.profile.
     export GITHUBHOME=$HOME/programs
 
     # See instructions under `Optional components'. If you install XSB Prolog
-    # as per those instructions set this variable.
+    # as per those instructions set this variable. Otherwise comment out this
+    # line.
     export XSBDIR=/usr/local/xsb
 
     # Set the path of vctools component and source vctoolsrc from it, which
