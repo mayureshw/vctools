@@ -1,8 +1,10 @@
 # Instructions:
 #
-# - Use same basename for 3 files - namely the Aa file, vC file and the cpp
-#   test bench file. It helps automate the build. On running make, a .out file
-#   with the same basename will be generated.
+# - Use same basename for Aa file and its test driver. E.g. if your Aa file is
+#   mytest.aa, its test driver should be mytest.cpp. It helps automate the
+#   build. If build is successful, the vC file and an executable will be
+#   generated with the same basename. E.g. mytest.vc and mytest.out
+#   respectively.
 #
 # - On running the .out file, the default logs are produced on stdout, which
 #   you may want to redirect. There are various additional logs produced
