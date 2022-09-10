@@ -1,0 +1,7 @@
+// Add 2 integers and return the result
+$module [addi]
+$in (a b : $uint<8>)
+$out (c : $uint<8>) $is 
+{
+    c := (a + b)
+}
