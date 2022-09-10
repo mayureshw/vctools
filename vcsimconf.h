@@ -56,8 +56,4 @@
 #   define PN_USE_EVENT_LISTENER
 #endif
 
-// In case one wishes to override the stock classes
-#define PNTRANSITION PNTransition
-#define PNPLACE PNPlace
-
 #endif

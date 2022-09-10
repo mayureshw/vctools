@@ -125,7 +125,7 @@ public:
     }
     Pipe(unsigned depth, string label) : _depth(depth), _wpos(ModCntr(depth)), _label(label)
     {
-        _mutexPlace = new PNPLACE("MARKP:"+_label+".Mutex",1);
+        _mutexPlace = new PNPlace("MARKP:"+_label+".Mutex",1);
     }
     ~Pipe()
     {
@@ -164,8 +164,8 @@ protected:
     }
     BlockingPipe(unsigned depth, string label) : Pipe(depth,label)
     {
-        _freePlace = new PNPLACE("MARKP:"+_label+".Depth",depth);
-        _filledPlace = new PNPLACE(_label+".Filled");
+        _freePlace = new PNPlace("MARKP:"+_label+".Depth",depth);
+        _filledPlace = new PNPlace(_label+".Filled");
     }
 };
 
@@ -218,10 +218,10 @@ protected:
 //     }
 //     SignalPipe_Old(unsigned depth, string label) : Pipe(depth,label)
 //     {
-//         _havePushPlace = new PNPLACE(_label+".HavePush");
-//         _awaitingPushPlace = new PNPLACE("MARKP:"+_label+".AwaitingPush");
-//         _donePushPlace = new PNPLACE(_label+".DonePush");
-//         _doFirstPush = new PNTRANSITION(_label+".DoFirstPush");
+//         _havePushPlace = new PNPlace(_label+".HavePush");
+//         _awaitingPushPlace = new PNPlace("MARKP:"+_label+".AwaitingPush");
+//         _donePushPlace = new PNPlace(_label+".DonePush");
+//         _doFirstPush = new PNTransition(_label+".DoFirstPush");
 //     }
 // };
 
@@ -271,10 +271,10 @@ public:
     }
     PipeIf(Pipe *p) : _p(p)
     {
-        _sreq = new PNTRANSITION("PipeIf_sreq");
-        _sack = new PNTRANSITION("PipeIf_sack");
+        _sreq = new PNTransition("PipeIf_sreq");
+        _sack = new PNTransition("PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this));
-        _triggerPlace = new PNPLACE("PipeIf_trigger");
+        _triggerPlace = new PNPlace("PipeIf_trigger");
     }
 };
 
