@@ -1206,12 +1206,16 @@ public:
         vcCPElement* exitElem = _cp->Get_Exit_Element();
         vcCPElementGroup* exitGroup = _cp->Get_CPElement_To_Group_Map()[exitElem];
         CPElement *exitCPE = getCPE(exitGroup);
-        if ( exitCPE->outPNNode()->typ() != PNElement::TRANSITION )
+
+        // Sometimes exit node is a place, sometimes transition, uniformize it
+        PNTransition *exitCPENode;
+        if ( exitCPE->outPNNode()->typ() == PNElement::TRANSITION )
+            exitCPENode = (PNTransition*) exitCPE->outPNNode();
+        else
         {
-            cout << "Unhandled scenario: Exit CPE Node is not transition" << endl;
-            exit(1);
+            exitCPENode = new PNTRANSITION("extraexit");
+            PetriNet::createArc(exitCPE->outPNNode(), exitCPENode, pni.pnes);
         }
-        PNTransition *exitCPENode = (PNTransition*) exitCPE->outPNNode();
 
         vector<DPElement*> ftopdrvs;
         flowthrOpDrivers(ftopdrvs);
