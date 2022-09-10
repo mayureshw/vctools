@@ -1,14 +1,12 @@
-USECEP	=	y
-
 OS	=	$(shell uname -s)
 
 ifeq ($(OS),NetBSD)
-	LDFLAGS	+=	-L/usr/pkg/lib -lantlr
-	CXXFLAGS+=	-I/usr/pkg/include
-	ANTLR	=	antlr
+LDFLAGS	+=	-L/usr/pkg/lib -lantlr
+CXXFLAGS+=	-I/usr/pkg/include
+ANTLR	=	antlr
 else
-	LDFLAGS	+=	-lantlr-pic
-	ANTLR	=	runantlr
+LDFLAGS	+=	-lantlr-pic
+ANTLR	=	runantlr
 endif
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include
@@ -35,8 +33,8 @@ EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
 ifeq ($(USECEP),y)
-	BINS		+=	vc2p.out
-	VCTOOLSRCS	+=	vc2p.cpp
+BINS		+=	vc2p.out
+VCTOOLSRCS	+=	vc2p.cpp
 endif
 
 $(OPTBINS):CXXFLAGS	+=	-O3
@@ -71,6 +69,10 @@ vc2p.out:	vc2p.o $(VCTOOLSDIR)/libvcsim.so libahirvc.a
 
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
+
+include Makefile.conf
+CONFOPTS	=	USECEP PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML
+CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
 
 ifeq ($(USECEP),y)
 include $(CEPTOOLDIR)/Makefile.ceptool

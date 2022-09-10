@@ -1,10 +1,12 @@
 #ifndef _PNINFO_H
 #define _PNINFO_H
-#include "petrinet.h"
 
 #ifdef USECEP
 #   include "cpp2xsb.h"
+#   define DPN_USE_EVENT_LISTENER
 #endif
+
+#include "petrinet.h"
 
 // Structure to accumulate information as various classes build the Petri net
 

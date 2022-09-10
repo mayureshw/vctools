@@ -6,7 +6,6 @@
 #include <queue>
 #include "datum.h"
 #include "pninfo.h"
-#include "vcsimconf.h"
 
 #ifdef PIPEDBG
     static ofstream plog("pipes.log");

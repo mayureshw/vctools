@@ -5,7 +5,6 @@
 #include <functional>
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
-#include "vcsimconf.h"
 #include "misc.h"
 #include "dot.h"
 #include "pninfo.h"
@@ -13,7 +12,7 @@
 #include "pipes.h"
 
 #ifdef USECEP
-#include "intervals.h"
+#   include "intervals.h"
 #endif
 
 using namespace std::placeholders;
