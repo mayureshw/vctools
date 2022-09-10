@@ -206,8 +206,7 @@ Following items are a work in progress:
     3. A compatiblity bridge between Aa simulator test drivers and vC simulator
        is to be developed.
 
-### cprcheck : A dependency verification tool for Control Path Reduction
-transformation in AHIR
+### cprcheck : A dependency verification tool for Control Path Reduction transformation in AHIR
 
     AHIR applies a control path reduction transformation to optimize the
     control path. This tool compares the pre and post transformation
