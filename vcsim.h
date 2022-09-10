@@ -43,7 +43,9 @@ void vcsim(
 
     // The results gathered as specified by the parameter `collects' are
     // returned as a map of pipename to a vector of gathered-contents from that
-    // pipe is populated in the `collectopmap' parameter.
+    // pipe is populated in the `collectopmap' parameter. The contents of these
+    // pipes are logged. So if you just want to view them, no need to specify
+    // this parameter.
     map<string,vector<DatumBase*>>& collectopmap = emptymap
     );
 
