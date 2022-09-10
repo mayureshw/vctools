@@ -157,18 +157,12 @@ Environment settings should have defined variable $VCTOOLSDIR in previous setps
     cd $VCTOOLSDIR
 
 Before running make you may want to check and alter some configurable options
-in vcsimconf.h. They are documented in the same file.
+in Makefile.conf. They are documented in the same file.
 
-If you DO NOT wish to use the CEP capabilities mentioned above, please make the
-following changes:
+In particular, the CEP event sequence validation capabilities have some
+additional dependencies. If you do not wish to use them set:
 
-    1. Please comment out the following option in vcsimconf.h as:
-
-        //#define PN_USE_EVENT_LISTENER
-
-    2. Please comment out the following line in the Makefile.
-
-        #include $(CEPTOOLDIR)/Makefile.ceptool
+    USECEP  =   n
 
 Once configured, run make. Use -j = number of CPU cores you have to speed up
 compilation.
@@ -199,7 +193,7 @@ compilation.
 
 To get better simulator performance:
 
-    1. Check vcsimconf.h and minimize the amount of logging.
+    1. Check Makefile.conf and minimize the amount of logging.
 
     2. See README.md of the petrisimu component for further fine tuning of
        multi-threaded runs.
