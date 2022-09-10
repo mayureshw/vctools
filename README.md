@@ -12,7 +12,7 @@ C++ compiler that supports 2014 standard.
 
 If your stock compiler (typically /usr/bin/c++) does not support this and you
 install a newer version at some other location, do set the following
-envrionment variable.
+envrionment variable preferably in your shell's rc file.
 
     export CXX=<Path to your c++ compiler that supports 2014 standard>
 
@@ -43,8 +43,9 @@ To cross check:
 
 ### boost
 
-AHIR compilation requires boost. The package on Ubuntu is libboost-dev. To
-cross check the installation: /usr/include/boost directory should exist.
+AHIR compilation requires the boost library. The package on Ubuntu is
+libboost-dev. To cross check the installation: /usr/include/boost directory
+should exist.
 
 ### AHIR (fork)
 
@@ -59,14 +60,18 @@ Define the following environment variables, preferably in your shell's rc file:
 
     export AHIRDIR=<Directory where you checked out the above AHIR fork>
 
+Cross check. This command should show the source code of the component:
+
+    ls $AHIRDIR
+
 AHIR supplies pre-compiled binaries for Ubuntu. Append the path of these
 executables to your PATH environment variable:
 
     export PATH=$AHIRDIR/prebuilt_ubuntu_16.04_release/bin:$PATH
 
-Cross check. This command should show the source code of the component:
+Cross check. Type Aa2VC command - it should show a usage message:
 
-    ls $AHIRDIR
+    Aa2VC
 
 ### vctools (this component)
 
