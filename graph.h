@@ -7,8 +7,6 @@
 #include "matrix.h"
 #include "misc.h"
 
-using namespace std;
-
 template <typename T> class Graph
 {
     SqMatrix<bool> _adjm;

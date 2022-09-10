@@ -1,3 +1,5 @@
+using namespace std;
+
 #include <iostream>
 #include <list>
 #include <map>
@@ -7,8 +9,6 @@
 #include "graph.h"
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
-
-using namespace std;
 
 class ModuleDeps
 {

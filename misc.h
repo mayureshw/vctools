@@ -6,8 +6,9 @@
 #include <functional>
 #include <vector>
 #include <cassert>
-using namespace std;
+
 using namespace std::placeholders;
+
 // Usage: if there is a single constructor for the value, easier to pass it at
 // construction time and then use []. If the construction method varies, do not
 // pass the constructor at construction time and do not use []. Pass it to get.

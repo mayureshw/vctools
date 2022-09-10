@@ -1,9 +1,8 @@
+using namespace std;
+
 #include <iostream>
 #include "vc2pn.h"
 #include "vcsim.h"
-
-
-using namespace std;
 
 PETRINET_STATICS
 

@@ -1,10 +1,10 @@
+using namespace std;
+
 #include <iostream>
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
 #include "cpp2xsb.h"
 #include "vc2pn.h"
-
-using namespace std;
 
 class ModuleIR
 {

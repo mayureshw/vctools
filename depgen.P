@@ -1,0 +1,24 @@
+:-index(dpe/3,[3]).
+:-load_dync('vcirdat').
+:-op(500,xfx,^).
+:-op(700,xfx,->).
+
+phinode(N):-dpe(N,_,'vcPhiPipelined').
+branchnode(N):-dpe(N,_,'vcBranch').
+splitopnode(N):-dpe(N,_,'vcBinarySplitOperator').
+
+dep( Req0 ^ Req1 -> Ack0 ) :- phinode(N),
+    vctid(N,'req0',Req0), vctid(N,'req1',Req1), vctid(N,'ack0',Ack0).
+
+dep( Req0 -> Ack0 ^ Ack1 ) :- branchnode(N),
+    vctid(N,'req0',Req0), vctid(N,'ack0',Ack0), vctid(N,'ack1',Ack1).
+
+dep( Dep ) :- splitopnode(N),
+    vctid(N,'req0',Req0), vctid(N,'req1',Req1), vctid(N,'ack0',Ack0), vctid(N,'ack1',Ack1),
+    ( Dep = ( Req0 -> Ack0 ) ; Dep = ( Req0 -> Ack1 ) ; Dep = ( Req1 -> Ack1 ) ).
+
+dep( Dep ) :- dpdep(U,_,D),
+    vctid(D,'req1',DReq1), vctid(D,'ack1',DAck1), vctid(U,'req0',UReq0), vctid(U,'ack0',UAck0),
+    ( Dep = ( DAck1 -> UReq0 ) ; Dep = ( DReq1 -> UAck0 ) ).
+
+:-dep(D), write_canonical(dep(D)), writeln('.'), fail.

@@ -7,7 +7,6 @@
 #include "datum.h"
 #include "pninfo.h"
 #include "vcsimconf.h"
-using namespace std;
 
 #ifdef PIPEDBG
     static ofstream plog("pipes.log");
