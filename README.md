@@ -189,6 +189,11 @@ compilation.
     2. The examples directory contains examples of test drivers and a Makefile
        that shows how to compile them.
 
+       One important thing to notice from these examples is the mapping between
+       Aa data types and the templatate argument passed to Datum. You should
+       use nearest C type for the given with matching choice of signed /
+       unsigned.
+
 #### Simulator performance tuning
 
 To get better simulator performance:
