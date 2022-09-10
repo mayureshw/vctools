@@ -99,6 +99,7 @@ a compatible distribution, the following command should show a usage message.
 
 Check out:
 
+    cd $GITHUBHOME
     git clone --depth 1 https://github.com/mayureshw/petrisimu
 
 Cross check: This command should show the source code of the component:
