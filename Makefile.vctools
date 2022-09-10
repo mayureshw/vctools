@@ -2,6 +2,6 @@ ifndef _VCTOOLS_
 _VCTOOLS_ = 1
 
 CXXFLAGS	+=	-I$(VCTOOLSDIR)
-LDFLAGS		+=	 $(VCTOOLSDIR)/libvcsim.so
+LDFLAGS		+=	-L$(VCTOOLSDIR) -lvcsim
 
 endif
