@@ -14,7 +14,7 @@ If your stock compiler (typically /usr/bin/c++) does not support this and you
 install a newer version at some other location, do set the following
 envrionment variable.
 
-    CXX:    Path to your c++ compiler that supports 2014 standard
+    export CXX=<Path to your c++ compiler that supports 2014 standard>
 
 ### Java
 
