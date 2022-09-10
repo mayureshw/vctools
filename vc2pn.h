@@ -12,7 +12,7 @@
 #include "operators.h"
 #include "pipes.h"
 
-#ifdef PN_USE_EVENT_LISTENER
+#ifdef USECEP
 #include "intervals.h"
 #endif
 
@@ -1298,7 +1298,7 @@ class System : public SystemBase
     PetriNet *_pn;
     PNPlace *_sysPreExitPlace;
     PNPTArc *_sysExitArc;
-#ifdef PN_USE_EVENT_LISTENER
+#ifdef USECEP
     IntervalManager *_intervalManager;
 #endif
     void markExit()
@@ -1331,7 +1331,7 @@ class System : public SystemBase
         for(auto p:_feedermap) { p.second->buildPN(_pni); }
         for(auto p:_readermap) { p.second->buildPN(_pni); }
         buildSysExitPN(_pni);
-#ifdef PN_USE_EVENT_LISTENER
+#ifdef USECEP
         _intervalManager = new IntervalManager(CEPDAT);
         _pn = new PetriNet( _pni.pnes, [this](unsigned e){ this->_intervalManager->route(e); } );
 #else
@@ -1501,7 +1501,7 @@ public:
         for(auto p:_pipemap) delete p.second;
         for(auto p:_feedermap) delete p.second;
         for(auto p:_readermap) delete p.second;
-#ifdef PN_USE_EVENT_LISTENER
+#ifdef USECEP
         delete _intervalManager;
 #endif
     }
