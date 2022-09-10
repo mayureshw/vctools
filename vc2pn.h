@@ -285,11 +285,15 @@ public:
         {
             auto req = _reqs[i];
             PetriNet::createArc(req, phplace, pni.pnes);
+#           ifdef USECEP
             pni.vctid.add({ rootindex, "req" + to_string(i), req->_nodeid });
+#           endif
             req->setEnabledActions(bind(&Operator::select,_op,i));
         }
         PetriNet::createArc(phplace, _acks[0], pni.pnes);
+#       ifdef USECEP
         pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
+#       endif
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op));
 
     }
@@ -313,9 +317,11 @@ public:
         PetriNet::createArc(brplace, _acks[0], pni.pnes);
         PetriNet::createArc(brplace, _acks[1], pni.pnes );
         auto rootindex = elem()->Get_Root_Index();
+#       ifdef USECEP
         pni.vctid.add({ rootindex, "req0", ftreq->_nodeid });
         pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pni.vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+#       endif
     }
     int uackIndx()
     {
@@ -413,10 +419,12 @@ public:
             );
         uack2sack->setMarking(1);
         auto rootindex = elem()->Get_Root_Index();
+#       ifdef USECEP
         pni.vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
         pni.vctid.add({ rootindex, "req1", _reqs[1]->_nodeid });
         pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pni.vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+#       endif
         if ( isIport or isOport )
         {
             auto sreq = _reqs[0];

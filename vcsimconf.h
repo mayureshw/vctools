@@ -33,7 +33,7 @@
 
 // CEP based verification tools are triggered if this option is set. See
 // README.md of the ceptool for more details.
-#define PN_USE_EVENT_LISTENER
+#define USECEP
 
 // Generate data path dot file for each module, with name <modulename>_CP.dot
 // #define GEN_CPDOTFILES
@@ -51,6 +51,10 @@
 // #define GEN_PETRIPNMLFILE
 
 // ********** Usually you won't need to change beyond this **********
+
+#ifdef USECEP
+#   define PN_USE_EVENT_LISTENER
+#endif
 
 // In case one wishes to override the stock classes
 #define PNTRANSITION PNTransition

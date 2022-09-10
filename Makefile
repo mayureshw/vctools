@@ -1,3 +1,5 @@
+USECEP	=	y
+
 OS	=	$(shell uname -s)
 
 ifeq ($(OS),NetBSD)
@@ -16,7 +18,7 @@ AHIRGRAMDIR	=	$(AHIRDIR)/v2/libAhirV2/grammar
 VCGRAMMAR	=	$(AHIRGRAMDIR)/vc.g
 AHIRSRCS	=	$(wildcard $(AHIRSRCDIR)/*.cpp)
 PARSERSRCS	=	vcParser.cpp vcLexer.cpp
-VCTOOLSRCS	=	vc2pn.cpp cprcheck.cpp vc2p.cpp
+VCTOOLSRCS	=	vc2pn.cpp cprcheck.cpp
 PARSERHDRS	=	$(PARSERSRCS:.cpp=.hpp) vcParserTokenTypes.hpp
 MISCFILES	=	vcParserTokenTypes.txt
 AHIROBJS	=	$(notdir $(AHIRSRCS:.cpp=.o))
@@ -28,9 +30,14 @@ CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-fPIC -g
 VPATH		+=	$(AHIRSRCDIR)
 
-BINS		=	libahirvc.a $(VCTOOLSDIR)/libvcsim.so cprcheck.out vc2p.out
+BINS		=	libahirvc.a $(VCTOOLSDIR)/libvcsim.so cprcheck.out
 EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
+
+ifeq ($(USECEP),y)
+	BINS		+=	vc2p.out
+	VCTOOLSRCS	+=	vc2p.cpp
+endif
 
 $(OPTBINS):CXXFLAGS	+=	-O3
 
@@ -65,6 +72,9 @@ vc2p.out:	vc2p.o $(VCTOOLSDIR)/libvcsim.so libahirvc.a
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
 
+ifeq ($(USECEP),y)
 include $(CEPTOOLDIR)/Makefile.ceptool
+endif
+
 include $(PETRISIMUDIR)/Makefile.petrisimu
 include $(DFILES)
