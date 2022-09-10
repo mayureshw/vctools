@@ -65,8 +65,6 @@ vc2p.out:	vc2p.o $(VCTOOLSDIR)/libvcsim.so libahirvc.a
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
 
-# Comment out this line if you do not want to use the CEP validations
 include $(CEPTOOLDIR)/Makefile.ceptool
-
 include $(PETRISIMUDIR)/Makefile.petrisimu
 include $(DFILES)
