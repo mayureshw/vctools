@@ -110,7 +110,10 @@ public:
             return _store[i];
         }
     }
-    // To be overridden only if there is pipe instance specific network (not involving sreq/sack)
+    // Note that buildPN is for part of pipe's own network and buildPN[IO]port
+    // are for its connections with pipe's users requests and acks
+    // So buildPN is called once per pipe and buildPN[IO]port once per usage
+    // instance of that pipe
     virtual void buildPN(PNInfo& pni) {}
     void buildPNIport(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
     {
@@ -135,8 +138,8 @@ public:
 
 class BlockingPipe : public Pipe
 {
-    PNPlace *_freePlace, *_filledPlace;
 protected:
+    PNPlace *_freePlace, *_filledPlace;
     void pushOnFull()
     {
         cout << "Attempt to push to full blocking pipe (internal error)" << endl;
@@ -168,21 +171,44 @@ protected:
     }
 };
 
-class NonBlockingPipe : public Pipe
+class NonBlockingPipe : public BlockingPipe
+{
+    PNPlace *_popPlace;
+protected:
+    DatumBase* popOnEmpty() { return _zero; }
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
+    {
+        PetriNet::createArc(ureq, _popPlace, pni.pnes);
+    }
+public:
+    void buildPN(PNInfo& pni)
+    {
+        auto popEmpty = new PNTransition(_label+".popEmpty");
+        auto popNonEmpty = new PNTransition(_label+".popNonEmpty");
+        PetriNet::createArc(_popPlace, popEmpty, pni.pnes);
+        PetriNet::createArc(_popPlace, popNonEmpty, pni.pnes);
+        PetriNet::createArc(_filledPlace, popNonEmpty, pni.pnes);
+        PetriNet::createArc(popNonEmpty, _freePlace, pni.pnes);
+
+        auto popEmptyFreeArc = new PNTPArc(popEmpty, _freePlace, _depth);
+        auto freePopEmptyArc = new PNPTArc(_freePlace, popEmpty, _depth);
+        pni.pnes.insert(popEmptyFreeArc);
+        pni.pnes.insert(freePopEmptyArc);
+    }
+    NonBlockingPipe(unsigned depth, string label) : BlockingPipe(depth,label)
+    {
+        _popPlace = new PNPlace(_label+".pop");
+    }
+};
+
+class SignalPipe : public Pipe
 {
 using Pipe::Pipe;
 protected:
     void pushOnFull() {}
-    DatumBase* popOnEmpty() { return _zero; }
+    DatumBase* popOnEmpty() { return _store[lastPopPosOnEmpty()]; }
     void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni) {}
     void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni) {}
-};
-
-class SignalPipe :public NonBlockingPipe
-{
-using NonBlockingPipe::NonBlockingPipe;
-protected:
-    DatumBase* popOnEmpty() { return _store[lastPopPosOnEmpty()]; }
 };
 
 // There was a remark in Aa LRM that signal would block
