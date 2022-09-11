@@ -50,12 +50,12 @@ protected:
     virtual unsigned poppos()=0;
     virtual unsigned lastPopPosOnEmpty()=0;
     PNPlace *_mutexPlace;
-    void buildPNMutexDep(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
+    void buildPNMutexDep(PNTransition *req, PNTransition *ack, PNInfo& pni)
     {
-        // for i or o, sreq should seek token from mutexplace
-        PetriNet::createArc(_mutexPlace, sreq, pni.pnes);
-        // for i or o, sack should release token to mutexplace
-        PetriNet::createArc(sack, _mutexPlace, pni.pnes);
+        // for i or o, req should seek token from mutexplace
+        PetriNet::createArc(_mutexPlace, req, pni.pnes);
+        // for i or o, ack should release token to mutexplace
+        PetriNet::createArc(ack, _mutexPlace, pni.pnes);
     }
     template <typename T> void initStore(unsigned depth, unsigned width)
     {
@@ -74,7 +74,7 @@ protected:
     virtual DatumBase* popOnEmpty()=0;
     // pipe sub-type specific petri net is indicated by suffix 1
     virtual void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni)=0;
-    virtual void buildPNIport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni)=0;
+    virtual void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)=0;
 public:
     string _label;
     bool empty() { return _nElems == 0; }
@@ -112,10 +112,10 @@ public:
     }
     // To be overridden only if there is pipe instance specific network (not involving sreq/sack)
     virtual void buildPN(PNInfo& pni) {}
-    void buildPNIport(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
+    void buildPNIport(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
     {
-        buildPNMutexDep(sreq, sack, pni);
-        buildPNIport1(sreq, sack, pni);
+        buildPNMutexDep(ureq, uack, pni);
+        buildPNIport1(ureq, uack, pni);
     }
     void buildPNOport(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
     {
@@ -154,12 +154,12 @@ protected:
         // out port sack should release a token to filledPlace
         PetriNet::createArc(sreq, _filledPlace, pni.pnes);
     }
-    void buildPNIport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
     {
-        // in port sreq should need a token in filledPlace
-        PetriNet::createArc(_filledPlace, sreq, pni.pnes);
-        // in port should release a token to freePlace on sack
-        PetriNet::createArc(sack, _freePlace, pni.pnes);
+        // in port ureq should need a token in filledPlace
+        PetriNet::createArc(_filledPlace, ureq, pni.pnes);
+        // in port should release a token to freePlace on uack
+        PetriNet::createArc(uack, _freePlace, pni.pnes);
     }
     BlockingPipe(unsigned depth, string label) : Pipe(depth,label)
     {
@@ -175,7 +175,7 @@ protected:
     void pushOnFull() {}
     DatumBase* popOnEmpty() { return _zero; }
     void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni) {}
-    void buildPNIport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni) {}
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni) {}
 };
 
 class SignalPipe :public NonBlockingPipe
@@ -202,7 +202,7 @@ protected:
 //         // out port sack should release a token to _havePushPlace
 //         PetriNet::createArc(sreq, _havePushPlace, pnes);
 //     }
-//     void buildPNIport1(PNTransition *sreq, PNTransition *sack, Elements& pnes)
+//     void buildPNIport1(PNTransition *ureq, PNTransition *uack, Elements& pnes)
 //     {
 //         // in port should require token at _donePushPlace
 //         PetriNet::createArc(_donePushPlace, sreq, pnes);
