@@ -202,14 +202,10 @@ To get better simulator performance:
 
 Following items are a work in progress:
 
-    1. At present the simulator treats non-blocking AHIR pipes as non-blocking
-       for both read and write operations. AHIR non-blocking pipe semantics
-       require the pipe to be blocking for writes and non-blocking for reads.
-
-    2. The simulator supports integer arithmetic and logic operations for
+    1. The simulator supports integer arithmetic and logic operations for
        arbitrary widths limited up to 64 bits. AHIR does not have such limit.
 
-    3. A compatiblity bridge between Aa simulator test drivers and vC simulator
+    2. A compatiblity bridge between Aa simulator test drivers and vC simulator
        is to be developed.
 
 ### 2. cprcheck : A dependency verification tool for Control Path Reduction transformation in AHIR
