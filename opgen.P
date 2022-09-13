@@ -1,0 +1,48 @@
+:-import
+    unparse/1
+    from unparsecpp.
+
+:-import
+    member/2
+    from lists.
+
+% If an operator supports a typ, it is supposed to support all subtyps
+subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
+subtyps( wuint, [ wuint ] ).
+subtyps( float, [ float, double ] ).
+
+% Presently we do not want to support airthmetic, relops for wuint
+arthiops( [ 'Plus', 'Minus', 'Mult' ] ).
+relops( [ 'Lt', 'Gt', 'Ge', 'Ne', 'Eq' ] ).
+
+% Suport all ops. Note: in existing code floats are missing for Inport, Outport, which is a bug
+univops( [ 'Assign', 'Phi', 'Load', 'Store', 'Inport', 'Outport', 'Select' ] ).
+
+% Do not support floats
+logops( [ 'And', 'Or', 'Not' ] ).
+
+% Have single instantiation with fixed template args
+specialops( [ 'Bitsel', 'Concat', 'Slice', 'Branch', 'Call' ] ).
+
+vc2op( vcInterlockBuffer, 'Assign'  ).
+vc2op( vcPhi,             'Phi'     ).
+vc2op( vcPhiPipelined,    'Phi'     ).
+vc2op( vcBranch,          'Branch'  ).
+vc2op( vcEquivalence,     'Assign'  ).
+vc2op( vcLoad,            'Load'    ).
+vc2op( vcStore,           'Store'   ).
+vc2op( vcInport,          'Inport'  ).
+vc2op( vcOutport,         'Outport' ).
+vc2op( vcCall,            'Call'    ).
+vc2op( vcSelect,          'Select'  ).
+vc2op( vcSlice,           'Slice'   ).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:-table subtyp/2.
+subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
+
+
+%%% Test drivers
+:- subtyp(T,ST), writeln((T,ST)), fail.
