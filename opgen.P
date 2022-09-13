@@ -6,43 +6,88 @@
     member/2
     from lists.
 
+% operators identified by vC class
+vcid( 'Assign',  vcInterlockBuffer ).
+vcid( 'Phi',     vcPhi             ).
+vcid( 'Phi',     vcPhiPipelined    ).
+vcid( 'Branch',  vcBranch          ).
+vcid( 'Assign',  vcEquivalence     ).
+vcid( 'Load',    vcLoad            ).
+vcid( 'Store',   vcStore           ).
+vcid( 'Inport',  vcInport          ).
+vcid( 'Outport', vcOutport         ).
+vcid( 'Call',    vcCall            ).
+vcid( 'Select',  vcSelect          ).
+vcid( 'Slice',   vcSlice           ).
+
+% operators identified by vC operator
+vcid( 'Plus',   '+'  ).
+vcid( 'Minus',  '-'  ).
+vcid( 'Mult',   '*'  ).
+vcid( 'Lt',     '<'  ).
+vcid( 'Gt',     '>'  ).
+vcid( 'Ge',     '>=' ).
+vcid( 'Ne',     '!=' ).
+vcid( 'Eq',     '==' ).
+vcid( 'And',    '&'  ).
+vcid( 'Or',     '|'  ).
+vcid( 'Not',    '~'  ).
+vcid( 'Bitsel', '[]' ).
+vcid( 'Concat', '&&' ).
+
+% Presently we do not want to support airthmetic, relops for wuint
+arithops( [ 'Plus', 'Minus', 'Mult' ] ).
+relops( [ 'Lt', 'Gt', 'Ge', 'Ne', 'Eq' ] ).
+
+supmtyp(O, MT) :- ( arithop(O); relop(O) ), ( MT=uint; MT=float ).
+
+% Suport all ops. Note: in existing code floats are missing for Inport, Outport, which is a bug
+univops( [ 'Assign', 'Phi', 'Load', 'Store', 'Inport', 'Outport', 'Select' ] ).
+
+supmtyp(O, MT) :- univop(O), ( MT=uint; MT=wuint; MT=float ).
+
+% Do not support floats
+logops( [ 'And', 'Or', 'Not' ] ).
+
+supmtyp(O, MT) :- logop(O), ( MT=uint; MT=wuint ).
+
+% Have single instantiation with fixed template args
+specialops( [ 'Bitsel', 'Concat', 'Slice', 'Branch', 'Call' ] ).
+
 % If an operator supports a typ, it is supposed to support all subtyps
 subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
 subtyps( wuint, [ wuint ] ).
 subtyps( float, [ float, double ] ).
 
-% Presently we do not want to support airthmetic, relops for wuint
-arthiops( [ 'Plus', 'Minus', 'Mult' ] ).
-relops( [ 'Lt', 'Gt', 'Ge', 'Ne', 'Eq' ] ).
+%%%%%%%%%%
 
-% Suport all ops. Note: in existing code floats are missing for Inport, Outport, which is a bug
-univops( [ 'Assign', 'Phi', 'Load', 'Store', 'Inport', 'Outport', 'Select' ] ).
-
-% Do not support floats
-logops( [ 'And', 'Or', 'Not' ] ).
-
-% Have single instantiation with fixed template args
-specialops( [ 'Bitsel', 'Concat', 'Slice', 'Branch', 'Call' ] ).
-
-vc2op( vcInterlockBuffer, 'Assign'  ).
-vc2op( vcPhi,             'Phi'     ).
-vc2op( vcPhiPipelined,    'Phi'     ).
-vc2op( vcBranch,          'Branch'  ).
-vc2op( vcEquivalence,     'Assign'  ).
-vc2op( vcLoad,            'Load'    ).
-vc2op( vcStore,           'Store'   ).
-vc2op( vcInport,          'Inport'  ).
-vc2op( vcOutport,         'Outport' ).
-vc2op( vcCall,            'Call'    ).
-vc2op( vcSelect,          'Select'  ).
-vc2op( vcSlice,           'Slice'   ).
+suptyp(O, T) :- supmtyp(O, MT), subtyp(MT, T).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+template(O, []) :- operator(O),
+
+% TODO
+newargs.
+
+%%%%%%%%%%
+
+operator(O) :- vcid(O, _).
 
 :-table subtyp/2.
 subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
+:-table arithop/1.
+arithop(O) :- arithops(Os), member(O, Os).
+:-table relop/1.
+relop(O) :- relops(Os), member(O, Os).
+:-table logops/1.
+logop(O) :- logops(Os), member(O, Os).
+:-table specialops/1.
+specialop(O) :- specialops(Os), member(O, Os).
+:-table univop/1.
+univop(O) :- univops(Os), member(O, Os).
+
+operator(O) :- arithop(O); relop(O); logop(O); specialop(O).
 
 
 %%% Test drivers
-:- subtyp(T,ST), writeln((T,ST)), fail.
+:- suptyp(O,T), writeln((O,T)), fail.
