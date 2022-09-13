@@ -1193,10 +1193,12 @@ public:
         {
             auto *owire = oparam.second;
             auto driver = owire->Get_Driver();
-            assert(driver);
-            auto driverDPE = getDPE(driver);
-            if( driverDPE->isDeemedFlowThrough() )
-                ftopdrvs.push_back( driverDPE );
+            if ( driver )
+            {
+                auto driverDPE = getDPE(driver);
+                if( driverDPE->isDeemedFlowThrough() )
+                    ftopdrvs.push_back( driverDPE );
+            }
         }
     }
     void buildPN(PNInfo& pni)
