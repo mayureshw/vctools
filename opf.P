@@ -63,20 +63,20 @@ subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
 subtyps( wuint, [ wuint ] ).
 subtyps( float, [ float, double ] ).
 
+creator('Load',create2):-!.
+creator('Store',create2):-!.
+creator('Inport',create2):-!.
+creator('Outport',create2):-!.
+creator(_,create1):-!.
+
 %%%%%%%%%%
 
 suptyp(O, T) :- supmtyp(O, MT), subtyp(MT, T).
 
 
-
-% TODO
-newargs.
-
-%%%%%%%%%%
-
 :-table subtyp/2.
 subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
-suf_(T, TSuf) :- str_cat(T, '_', TSuf).
+suf_(T, TSuf) :- str_cat(T, '__', TSuf).
 :-table ctyp/1.
 ctyp(ST) :- subtyp(_,ST1), suf_(ST1, ST).
 :-table arithop/1.
@@ -90,26 +90,23 @@ specialop(O) :- specialops(Os), member(O, Os).
 :-table univop/1.
 univop(O) :- univops(Os), member(O, Os).
 
-% targmapv( C, Sig, lambda(Caps, 'LRET', ['LARG'], [Stmt]) ) :-
-%     caps(C, Caps),
-%     template(C, Sig, Targs),
-%     CTyp = typ(C, Targs, ''),
-%     newargs(C, Newargs),
-%     Stmt = stmt(ret(new(CTyp,Newargs))).
+opfmapv( O, ST, lambda([this], 'OPRET', [ 'DPEARG' ], [Stmt]) ) :-
+    CTyp = typ(O, [ST], ''), creator(O, Fcr),
+    Stmt = stmt(ret(call(Fcr,[CTyp],[dpe]))).
 
-lambdaExpr( O, ST, lambda(Caps, 'LRET', ['LARG'], [Stmt]) ) :-
-    Caps = [],
-    Newargs = [],
-    CTyp = typ(O, [ST], ''),
-    Stmt = stmt(ret(new(CTyp,Newargs))).
-%template(O, VCID, [ST, ST, ST]) :-
-opfmapkv( br([str(VCID),br([ST,ST,ST]), Lambda]) ) :-
-    vcid(O,VCID), supmtyp(O, MT), subtyp(MT, ST1), suf_(ST1,ST),
-    lambdaExpr(O,ST1,Lambda).
+opfmapk( VCID, ST, br( [ str(VCID), br([ST,ST,ST]) ] ) ).
+
+opfmapkv( br( [ K, V ] ) ) :-
+    vcid(O,VCID), supmtyp(O, MT), subtyp(MT, ST1), suf_(ST1, ST),
+    opfmapk(VCID, ST, K), opfmapv(O, ST1, V).
 
 opfmap(br(L)) :- findall(V, opfmapkv(V), L).
 
+% TODO: wuint defined temporarily
+cpp(def('wuint','unsigned long')).
 cpp(def('CTYPENUM',br(L))) :- findall(TSuf, ctyp(TSuf), L1), sort(L1, L).
+cpp(def('OPRET',typ('Operator',[],'*'))).
+cpp(def('DPEARG',tv(typ('vcDatapathElement',[],'*'), [dpe]))).
 cpp(def('OPFMAP',Cpp)) :- opfmap(Cpp).
 
 %%% Test drivers
