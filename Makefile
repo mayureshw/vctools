@@ -67,6 +67,11 @@ cprcheck.out:	cprcheck.o libahirvc.a
 vc2p.out:	vc2p.o $(VCTOOLSDIR)/libvcsim.so libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
 
+ifdef XSBDIR
+opf.h:	opf.P
+	echo [opf]. | xsb > $@
+endif
+
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
 
