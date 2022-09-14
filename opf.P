@@ -3,12 +3,17 @@
     from unparsecpp.
 
 :-import
-    member/2
+    member/2,
+    nth/3
     from lists.
 
 :-import
     unparse/1
     from unparsecpp.
+
+:-import
+    map/3
+    from utils.
 
 % operators identified by vC class
 vcid( 'Assign',  vcInterlockBuffer ).
@@ -39,66 +44,68 @@ vcid( 'Not',    '~'  ).
 vcid( 'Bitsel', '[]' ).
 vcid( 'Concat', '&&' ).
 
-% Presently we do not want to support airthmetic, relops for wuint
-arithops( [ 'Plus', 'Minus', 'Mult' ] ).
-relops( [ 'Lt', 'Gt', 'Ge', 'Ne', 'Eq' ] ).
-
-supmtyp(O, MT) :- ( arithop(O); relop(O) ), ( MT=uint; MT=float ).
-
-% Suport all ops. Note: in existing code floats are missing for Inport, Outport, which is a bug
-univops( [ 'Assign', 'Phi', 'Load', 'Store', 'Inport', 'Outport', 'Select' ] ).
-
-supmtyp(O, MT) :- univop(O), ( MT=uint; MT=wuint; MT=float ).
-
-% Do not support floats
-logops( [ 'And', 'Or', 'Not' ] ).
-
-supmtyp(O, MT) :- logop(O), ( MT=uint; MT=wuint ).
-
-% Have single instantiation with fixed template args
-specialops( [ 'Bitsel', 'Concat', 'Slice', 'Branch', 'Call' ] ).
-
-% If an operator supports a typ, it is supposed to support all subtyps
+subtyps( bool,  [ uint8_t ] ).
 subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
 subtyps( wuint, [ wuint ] ).
 subtyps( float, [ float, double ] ).
 
-creator('Load',create2):-!.
-creator('Store',create2):-!.
-creator('Inport',create2):-!.
-creator('Outport',create2):-!.
-creator(_,create1):-!.
+nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, wuint ]).
+
+sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),    !, numeric(Num).
+sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ), !, bool(Bool), numeric(Num).
+sign(O, [Bool,Bool,Bool] ) :- member( O, ['And','Or'] ),               !, bool(Bool).
+sign(O, [Any]            ) :- member( O, ['Inport','Outport'] ),       !, any(Any).
+sign('Not',    [Bool,Bool]        ):-!, bool(Bool).
+sign('Assign', [Any,Any]          ):-!, any(Any).
+sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
+sign('Branch', [Bool]             ):-!, bool(Bool).
+sign('Load',   [Any,UInt]         ):-!, any(Any), uint(UInt).
+sign('Store',  [UInt,Any]         ):-!, uint(UInt), any(Any).
+sign('Select', [Any,Bool,Any,Any] ):-!, any(Any), bool(Bool).
+sign('Bitsel', [Bool,NF,UInt]     ):-!, bool(Bool), nofloat(NF), uint(UInt).
+sign('Concat', [NF1,NF2,NF3]      ):-!, nofloat(NF1), nofloat(NF2), nofloat(NF3), nfge(NF1,NF2), nfge(NF1,NF3).
+sign('Slice',  [NF1,NF2]          ):-!, nofloat(NF1), nofloat(NF2), nfge(NF2,NF1).
+
+numeric(ST) :- ( T = uint; T = float ), subtyp(T, ST).
+nofloat(ST) :- ( T = uint; T = wuint ), subtyp(T, ST).
+uint(ST)    :- subtyp(uint, ST).
+any(ST)     :- subtyp(_, ST).
+bool(ST)    :- subtyp(bool, ST).
+
+template( _, [Optyp|_], [Optyp] ).
+
+creator( 'Load',     create2 ):-!.
+creator( 'Store',    create2 ):-!.
+creator( 'Inport',   create2 ):-!.
+creator( 'Outport',  create2 ):-!.
+creator( _,          create1 ):-!.
 
 %%%%%%%%%%
 
-suptyp(O, T) :- supmtyp(O, MT), subtyp(MT, T).
+suf_(T, TSuf) :- str_cat(T, '__', TSuf).
+suf_L(L, Lsuf) :- map(L, (A,B,suf_(A,B)), Lsuf).
 
+:-table nfge/2.
+nfge( NF1, NF2 ) :- nonFloatOrder(L), nth(N1, L, NF1), nth(N2, L, NF2), N1 >= N2.
+
+:-table operator/1.
+operator(O) :- vcid(O,_).
 
 :-table subtyp/2.
 subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
-suf_(T, TSuf) :- str_cat(T, '__', TSuf).
+
 :-table ctyp/1.
 ctyp(ST) :- subtyp(_,ST1), suf_(ST1, ST).
-:-table arithop/1.
-arithop(O) :- arithops(Os), member(O, Os).
-:-table relop/1.
-relop(O) :- relops(Os), member(O, Os).
-:-table logops/1.
-logop(O) :- logops(Os), member(O, Os).
-:-table specialops/1.
-specialop(O) :- specialops(Os), member(O, Os).
-:-table univop/1.
-univop(O) :- univops(Os), member(O, Os).
 
-opfmapv( O, ST, lambda([this], 'OPRET', [ 'DPEARG' ], [Stmt]) ) :-
-    CTyp = typ(O, [ST], ''), creator(O, Fcr),
+opfmapv( O, Sig, lambda([this], 'OPRET', [ 'DPEARG' ], [Stmt]) ) :-
+    template(O, Sig, Targs),
+    CTyp = typ(O, Targs, ''), creator(O, Fcr),
     Stmt = stmt(ret(call(Fcr,[CTyp],[dpe]))).
 
-opfmapk( VCID, ST, br( [ str(VCID), br([ST,ST,ST]) ] ) ).
+opfmapk( O, Sig, br( [ str(VCID), br(Sig_) ] ) ) :-
+    vcid(O, VCID), sign(O, Sig), suf_L(Sig, Sig_).
 
-opfmapkv( br( [ K, V ] ) ) :-
-    vcid(O,VCID), supmtyp(O, MT), subtyp(MT, ST1), suf_(ST1, ST),
-    opfmapk(VCID, ST, K), opfmapv(O, ST1, V).
+opfmapkv( br( [ K, V ] ) ) :- opfmapk(O, Sig, K), opfmapv(O, Sig, V).
 
 opfmap(br(L)) :- findall(V, opfmapkv(V), L).
 
@@ -110,4 +117,5 @@ cpp(def('DPEARG',tv(typ('vcDatapathElement',[],'*'), [dpe]))).
 cpp(def('OPFMAP',Cpp)) :- opfmap(Cpp).
 
 %%% Test drivers
-:- cpp(CPP), unparse(CPP), fail.
+%:- cpp(CPP), unparse(CPP), fail.
+:- operator(O), sign(O, Sig), writeln((O,Sig)), fail.
