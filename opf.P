@@ -65,6 +65,7 @@ sign('Select', [Any,Bool,Any,Any] ):-!, any(Any), bool(Bool).
 sign('Bitsel', [Bool,NF,UInt]     ):-!, bool(Bool), nofloat(NF), uint(UInt).
 sign('Concat', [NF1,NF2,NF3]      ):-!, nofloat(NF1), nofloat(NF2), nofloat(NF3), nfge(NF1,NF2), nfge(NF1,NF3).
 sign('Slice',  [NF1,NF2]          ):-!, nofloat(NF1), nofloat(NF2), nfge(NF2,NF1).
+sign('Call',   []                 ):-!.
 
 numeric(ST) :- ( T = uint; T = float ), subtyp(T, ST).
 nofloat(ST) :- ( T = uint; T = wuint ), subtyp(T, ST).
@@ -72,13 +73,11 @@ uint(ST)    :- subtyp(uint, ST).
 any(ST)     :- subtyp(_, ST).
 bool(ST)    :- subtyp(bool, ST).
 
-template( _, [Optyp|_], [Optyp] ).
-
-creator( 'Load',     create2 ):-!.
-creator( 'Store',    create2 ):-!.
-creator( 'Inport',   create2 ):-!.
-creator( 'Outport',  create2 ):-!.
-creator( _,          create1 ):-!.
+creator( O,       createLoadStore ):- member( O, [ 'Load', 'Store' ] ), !.
+creator( O,       createIOPort    ):- member( O, [ 'Inport', 'Outport' ] ), !.
+creator( 'Call',  createCall      ):-!.
+creator( 'Slice', createSlice     ):-!.
+creator( _,       createGeneral   ).
 
 %%%%%%%%%%
 
@@ -98,8 +97,7 @@ subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
 ctyp(ST) :- subtyp(_,ST1), suf_(ST1, ST).
 
 opfmapv( O, Sig, lambda([this], 'OPRET', [ 'DPEARG' ], [Stmt]) ) :-
-    template(O, Sig, Targs),
-    CTyp = typ(O, Targs, ''), creator(O, Fcr),
+    CTyp = typ(O, Sig, ''), creator(O, Fcr),
     Stmt = stmt(ret(call(Fcr,[CTyp],[dpe]))).
 
 opfmapk( O, Sig, br( [ str(VCID), br(Sig_) ] ) ) :-
@@ -117,5 +115,5 @@ cpp(def('DPEARG',tv(typ('vcDatapathElement',[],'*'), [dpe]))).
 cpp(def('OPFMAP',Cpp)) :- opfmap(Cpp).
 
 %%% Test drivers
-%:- cpp(CPP), unparse(CPP), fail.
-:- operator(O), sign(O, Sig), writeln((O,Sig)), fail.
+:- cpp(CPP), unparse(CPP), fail.
+%:- operator(O), sign(O, Sig), writeln((O,Sig)), fail.

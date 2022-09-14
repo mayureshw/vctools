@@ -8,7 +8,7 @@
 #include "misc.h"
 #include "dot.h"
 #include "pninfo.h"
-#include "operators.h"
+#include "opfactory.h"
 #include "pipes.h"
 
 #ifdef USECEP
@@ -143,6 +143,7 @@ public:
     virtual vector<DatumBase*>& storageDatums(vcStorageObject*) = 0;
     virtual Pipe* pipeMap(vcPipe*) = 0;
     virtual ModuleBase* getModule(vcModule*) = 0;
+    virtual Operator* createOperator(vcDatapathElement*) = 0;
 };
 
 class ModuleBase
@@ -166,6 +167,7 @@ public:
     virtual vector<DatumBase*> iparamV() = 0;
     virtual vector<DatumBase*> oparamV() = 0;
     virtual DatumBase* opregForWire(vcWire*) = 0;
+    virtual Operator* createOperator(vcDatapathElement*) = 0;
 };
 
 
@@ -194,7 +196,7 @@ class DPElement : public Element
     vector<PNTransition*> _reqs, _acks;
     vector<PNTransition*> _greqs, _gacks;
     Operator *_op;
-    Branch *_guardBranchOp;
+    BRANCH *_guardBranchOp;
     void indexcheck(int indx)
     {
         if ( (indx!=0) && (indx!=1) )
@@ -307,7 +309,7 @@ public:
         }
         auto ftreq = ftdrvs[0]->ftreq(pni);
         auto brplace = new PNPlace("DPE:" + _label + "_brplace");
-        brplace->setArcChooser(bind(&Branch::arcChooser,(Branch*)_op));
+        brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
         // Unlike other users of buildSreqToAckPath, since we want it to end in
         // a place, we take first step ad hoc and ask the first driver to
         // invoke buildSreqToAckPath
@@ -356,7 +358,7 @@ public:
         PNTransition *nogo = new PNTransition(dpelabel + "nogo");
         PNTransition *nogo_ureq = new PNTransition(dpelabel + "nogo_ureq");
         PNPlace *brplace = new PNPlace(dpelabel + "brplace");
-        brplace->setArcChooser(bind(&Branch::arcChooser, _guardBranchOp));
+        brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
         PNPlace *gsackplace = new PNPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = new PNPlace(dpelabel + "guackplace");
         PNPlace *gureqplace = new PNPlace(dpelabel + "gureqplace");
@@ -578,82 +580,83 @@ public:
     }
     void setGuardBranchOp()
     {
-        _guardBranchOp = new Branch(label()+"_guardc");
+        _guardBranchOp = new BRANCH(0, label()+"_guardc");
     }
     void setop()
     {
-        auto ityps = inptyps();
-        auto otyps = optyps();
-        switch(_optyp)
-        {
-            case plus_: OPINST1(Plus,otyps[0])
-            case minus_: OPINST1(Minus,otyps[0])
-            case mult_: OPINST1(Mult,otyps[0])
-            case lt_: OPINST1(Lt,otyps[0])
-            case gt_: OPINST1(Gt,otyps[0])
-            case ge_: OPINST1(Ge,otyps[0])
-            case ne_: OPINST1(Ne,otyps[0])
-            case eq_: OPINST1(Eq,otyps[0])
-            case assign_: OPINST1(Assign,otyps[0])
-            case branch_: _op = new Branch(label());
-                break;
-            case phi_: OPINST1(Phi,otyps[0])
-            case equiv_: OPINST1(Assign,otyps[0])
-            case load_:
-                {
-                auto width = elem()->Get_Output_Width();
-                OPINST2(Load)
-                }
-                break;
-            case store_:
-                {
-                if ( elem()->Get_Input_Wires().size() != 2 )
-                {
-                    cout << "Store operator with input wires count !=2" << endl;
-                    exit(1);
-                }
-                auto width = elem()->Get_Input_Wires()[1]->Get_Size();
-                OPINST2(Store)
-                }
-                break;
-            case inport_: OPINST3(Inport)
-            case outport_: OPINST3(Outport)
-            case bitsel_:
-                {
-                    _op = new Bitsel<unsigned long>(1, label());
-                    break;
-                }
-            case concat_:
-                {
-                    _op = new Concat<unsigned long, unsigned long, unsigned long>(elem()->Get_Output_Width(), label());
-                    break;
-                }
-            case and_: OPINST4(And,otyps[0])
-            case or_: OPINST4(Or,otyps[0])
-            case not_: OPINST4(Not,otyps[0])
-            case select_: OPINST1(Select,otyps[0])
-            case slice_:
-                {
-                    auto vcslice = (vcSlice*) elem();
-                    int width = vcslice->Get_Output_Width();
-                    int h = vcslice->Get_High_Index();
-                    int l = vcslice->Get_Low_Index();
-                    _op = new Slice<unsigned long>(width, label(), h, l);
-                }
-                break;
-            case call_:
-                {
-                    auto calledVcModule = ((vcCall*)_elem)->Get_Called_Module();
-                    auto cm = _module->getModule( calledVcModule );
-                    auto ipv = cm->iparamV();
-                    auto opv = cm->oparamV();
-                    _op = new Call(ipv, opv, label());
-                }
-                break;
-            default:
-                cout << "vc2pn: unhandled operator " << _optyp << endl;
-                exit(1);
-        }
+        _module->createOperator(elem());
+        //auto ityps = inptyps();
+        //auto otyps = optyps();
+        //switch(_optyp)
+        //{
+        //    case plus_: OPINST1(Plus,otyps[0])
+        //    case minus_: OPINST1(Minus,otyps[0])
+        //    case mult_: OPINST1(Mult,otyps[0])
+        //    case lt_: OPINST1(Lt,otyps[0])
+        //    case gt_: OPINST1(Gt,otyps[0])
+        //    case ge_: OPINST1(Ge,otyps[0])
+        //    case ne_: OPINST1(Ne,otyps[0])
+        //    case eq_: OPINST1(Eq,otyps[0])
+        //    case assign_: OPINST1(Assign,otyps[0])
+        //    case branch_: _op = new BRANCH(label());
+        //        break;
+        //    case phi_: OPINST1(Phi,otyps[0])
+        //    case equiv_: OPINST1(Assign,otyps[0])
+        //    case load_:
+        //        {
+        //        auto width = elem()->Get_Output_Width();
+        //        OPINST2(Load)
+        //        }
+        //        break;
+        //    case store_:
+        //        {
+        //        if ( elem()->Get_Input_Wires().size() != 2 )
+        //        {
+        //            cout << "Store operator with input wires count !=2" << endl;
+        //            exit(1);
+        //        }
+        //        auto width = elem()->Get_Input_Wires()[1]->Get_Size();
+        //        OPINST2(Store)
+        //        }
+        //        break;
+        //    case inport_: OPINST3(Inport)
+        //    case outport_: OPINST3(Outport)
+        //    case bitsel_:
+        //        {
+        //            _op = new Bitsel<unsigned long>(1, label());
+        //            break;
+        //        }
+        //    case concat_:
+        //        {
+        //            _op = new Concat<unsigned long, unsigned long, unsigned long>(elem()->Get_Output_Width(), label());
+        //            break;
+        //        }
+        //    case and_: OPINST4(And,otyps[0])
+        //    case or_: OPINST4(Or,otyps[0])
+        //    case not_: OPINST4(Not,otyps[0])
+        //    case select_: OPINST1(Select,otyps[0])
+        //    case slice_:
+        //        {
+        //            auto vcslice = (vcSlice*) elem();
+        //            int width = vcslice->Get_Output_Width();
+        //            int h = vcslice->Get_High_Index();
+        //            int l = vcslice->Get_Low_Index();
+        //            _op = new Slice<unsigned long>(width, label(), h, l);
+        //        }
+        //        break;
+        //    case call_:
+        //        {
+        //            auto calledVcModule = ((vcCall*)_elem)->Get_Called_Module();
+        //            auto cm = _module->getModule( calledVcModule );
+        //            auto ipv = cm->iparamV();
+        //            auto opv = cm->oparamV();
+        //            _op = new Call(ipv, opv, label());
+        //        }
+        //        break;
+        //    default:
+        //        cout << "vc2pn: unhandled operator " << _optyp << endl;
+        //        exit(1);
+        //}
     }
 
     vector<DatumBase*>& opv() { return _op->opv; }
@@ -1062,6 +1065,7 @@ class Module : public ModuleBase
     ElementFactory _ef { ElementFactory(this) };
 public:
     bool _isDaemon;
+    Operator* createOperator(vcDatapathElement* dpe) { return _sys->createOperator(dpe); }
     DPElement* getDPE(vcDatapathElement* vcdpe) { return _ef.getDPElement(vcdpe); }
     CPElement* getCPE(vcCPElement* cpe) { return _ef.getGroupCPElement(_cp->Get_Group(cpe)); }
     GETCPE(vcCPElementGroup,GroupCPElement)
@@ -1299,6 +1303,7 @@ class System : public SystemBase
     PetriNet *_pn;
     PNPlace *_sysPreExitPlace;
     PNPTArc *_sysExitArc;
+    OpFactory _opfactory;
 #ifdef USECEP
     IntervalManager *_intervalManager;
 #endif
@@ -1341,6 +1346,7 @@ class System : public SystemBase
     }
 public:
     PNInfo _pni;
+    Operator* createOperator(vcDatapathElement *dpe) { return _opfactory.dpe2op(dpe); }
     ModuleBase* getModule(vcModule* vcm)
     {
         string modulename = vcm->Get_Id();

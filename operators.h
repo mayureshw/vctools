@@ -18,10 +18,6 @@
 #   define OPLOG(ARGS)
 #endif
 
-// For type compatibility reason, BOOL is defined as unsgined. Use of BOOL will
-// make the intention clearer than directly using unsigned
-#define BOOL unsigned
-
 // It is advisable to use concrete functions as callbacks to save vtbl cost
 // i.e. Plus<T>::sack is better than Operator:sack (but not achived currently)
 // (Unfortunately uack still uses virtual function.)
@@ -74,7 +70,7 @@ public:
     Operator(string label="") : _dplabel(label) {}
 };
 
-template <typename Tin1, typename Tin2, typename Tin3, typename Tout> class TernOperatorBase
+template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class TernOperator
     : public Operator
 {
 protected:
@@ -91,7 +87,7 @@ public:
         unsigned wr = ( this->_ipv[1] )->width();
         z = eval(p,q,r,wp,wq,wr);
     }
-    TernOperatorBase(unsigned width, string label) : z(width), op(width), Operator(label)
+    TernOperator(unsigned width, string label) : z(width), op(width), Operator(label)
     {
         _resv.push_back(&z);
         opv.push_back(&op);
@@ -99,7 +95,7 @@ public:
 };
 
 // Binary operators with 2 input args of types Tin1 and Tin2 and output of type Tout
-template <typename Tin1, typename Tin2, typename Tout> class BinOperatorBase : public Operator
+template <typename Tout, typename Tin1, typename Tin2> class BinOperator : public Operator
 {
 protected:
     Datum<Tout> z, op;
@@ -113,22 +109,30 @@ public:
         unsigned wy = ( this->_ipv[1] )->width();
         z = eval(x,y,wx,wy);
     }
-    BinOperatorBase(unsigned width, string label) : z(width), op(width), Operator(label)
+    BinOperator(unsigned width, string label) : z(width), op(width), Operator(label)
     {
         _resv.push_back(&z);
         opv.push_back(&op);
     }
 };
 
-template <typename T> class UnaryOperator : public Operator
+#define BINOP(CLS,EXPR) template <typename Tout, typename Tin1, typename Tin2> class CLS : public BinOperator<Tout, Tin1, Tin2> \
+{ \
+using BinOperator<Tout, Tin1, Tin2>::BinOperator; \
+public: \
+    string oplabel() { return #CLS; } \
+    Tout eval(Tin1& x, Tin2& y, unsigned wx, unsigned wy) { return EXPR ; } \
+};
+
+template <typename Tout, typename Tin> class UnaryOperator : public Operator
 {
 protected:
-    Datum<T> z, op;
-    virtual T eval(T& x, unsigned wx) = 0;
+    Datum<Tout> z, op;
+    virtual Tout eval(Tin& x, unsigned wx) = 0;
 public:
     void sack()
     {
-        auto x = (T) *this->_ipv[0];
+        auto x = (Tin) *this->_ipv[0];
         unsigned wx = ( this->_ipv[0] )->width();
         z = eval(x, wx);
     }
@@ -139,135 +143,48 @@ public:
     }
 };
 
-// Binary operators with 2 input args of type Tin and 1 output of type Tout
-template <typename Tin, typename Tout> class BinOperator : public BinOperatorBase<Tin, Tin, Tout>
-{using BinOperatorBase<Tin, Tin, Tout>::BinOperatorBase;};
-
-// Arithmetic and Logic operators where input and output type is same i.e. T
-template <typename T> class BinOperatorAL : public BinOperator<T,T>
-{using BinOperator<T,T>::BinOperator;};
-
-// Relational operators where output type is BOOL, input is T
-template <typename T> class BinOperatorR : public BinOperator<T,BOOL>
-{using BinOperator<T,BOOL>::BinOperator;};
+class IOPort : public Operator
+{
+public:
+    Pipe* _pipe;
+    // width passed due to macro uniformity, ignored
+    IOPort(unsigned width, string label, Pipe *pipe) : _pipe(pipe), Operator(label) {}
+};
 
 // -------- concrete operator classes below this -------------
 
-template <typename T> class Plus : public BinOperatorAL<T>
-{
-using BinOperatorAL<T>::BinOperatorAL;
-public:
-    string oplabel() { return "Plus"; }
-    T eval(T& x, T& y, unsigned, unsigned) { return x + y; }
-};
+BINOP( Plus,   x + y  ) 
+BINOP( Minus,  x - y  )
+BINOP( Mult,   x * y  )
+BINOP( And,    x & y  )
+BINOP( Or,     x | y  )
+BINOP( Lt,     x < y  )
+BINOP( Gt,     x > y  )
+BINOP( Ge,     x >= y )
+BINOP( Ne,     x != y )
+BINOP( Eq,     x == y )
+BINOP( Concat, ( x << wy ) | y )
+BINOP( Bitsel, ( ( x >> y ) & 1 ) ? 1 : 0 )
 
-template <typename T> class Minus : public BinOperatorAL<T>
+template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {
-using BinOperatorAL<T>::BinOperatorAL;
-public:
-    string oplabel() { return "Minus"; }
-    T eval(T& x, T& y, unsigned, unsigned) { return x - y; }
-};
-
-template <typename T> class Mult : public BinOperatorAL<T>
-{
-using BinOperatorAL<T>::BinOperatorAL;
-public:
-    string oplabel() { return "Mult"; }
-    T eval(T& x, T& y, unsigned, unsigned) { return x * y; }
-};
-
-template <typename Tin1, typename Tin2, typename Tout> class Concat : public BinOperatorBase<Tin1,Tin2,Tout>
-{
-using BinOperatorBase<Tin1,Tin2,Tout>::BinOperatorBase;
-public:
-    string oplabel() { return "Concat"; }
-    Tout eval(Tin1& x, Tin2& y, unsigned, unsigned wy) { return (x<<wy)|y; }
-};
-
-template <typename T> class And : public BinOperatorAL<T>
-{
-using BinOperatorAL<T>::BinOperatorAL;
-public:
-    string oplabel() { return "And"; }
-    T eval(T& x, T& y, unsigned, unsigned) { return x&y; }
-};
-
-template <typename T> class Or : public BinOperatorAL<T>
-{
-using BinOperatorAL<T>::BinOperatorAL;
-public:
-    string oplabel() { return "Or"; }
-    T eval(T& x, T& y, unsigned, unsigned) { return x|y; }
-};
-
-template <typename T> class Not : public UnaryOperator<T>
-{
-using UnaryOperator<T>::UnaryOperator;
+using UnaryOperator<Tout, Tin>::UnaryOperator;
 public:
     string oplabel() { return "Not"; }
-    T eval(T& x, unsigned wx) { return ~x&(1<<(wx+1)-1); }
+    Tout eval(Tin& x, unsigned wx) { return ~x&(1<<(wx+1)-1); }
 };
 
-template <typename T> class Lt : public BinOperatorR<T>
+template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Select : public TernOperator<Tout, Tin1, Tin2, Tin3>
 {
-using BinOperatorR<T>::BinOperatorR;
-public:
-    string oplabel() { return "Lt"; }
-    BOOL eval(T& x, T& y, unsigned, unsigned) { return x < y; }
-};
-
-template <typename T> class Gt : public BinOperatorR<T>
-{
-using BinOperatorR<T>::BinOperatorR;
-public:
-    string oplabel() { return "Gt"; }
-    BOOL eval(T& x, T& y, unsigned, unsigned) { return x > y; }
-};
-
-template <typename T> class Ge : public BinOperatorR<T>
-{
-using BinOperatorR<T>::BinOperatorR;
-public:
-    string oplabel() { return "Ge"; }
-    BOOL eval(T& x, T& y, unsigned, unsigned) { return x >= y; }
-};
-
-template <typename T> class Ne : public BinOperatorR<T>
-{
-using BinOperatorR<T>::BinOperatorR;
-public:
-    string oplabel() { return "Ne"; }
-    BOOL eval(T& x, T& y, unsigned, unsigned) { return x != y; }
-};
-
-template <typename T> class Eq : public BinOperatorR<T>
-{
-using BinOperatorR<T>::BinOperatorR;
-public:
-    string oplabel() { return "Eq"; }
-    BOOL eval(T& x, T& y, unsigned, unsigned) { return x == y; }
-};
-
-template <typename T> class Bitsel : public BinOperatorBase<T,int,BOOL>
-{
-using BinOperatorBase<T, int, BOOL>::BinOperatorBase;
-public:
-    string oplabel() { return "Bitsel"; }
-    BOOL eval(T& x, int& y, unsigned, unsigned) { return ( ( x >> y ) & 1 ) ? 1 : 0; }
-};
-
-template <typename T> class Select : public TernOperatorBase<BOOL,T,T,T>
-{
-using TernOperatorBase<BOOL,T,T,T>::TernOperatorBase;
+using TernOperator<Tout, Tin1, Tin2, Tin3>::TernOperator;
 public:
     string oplabel() { return "Select"; }
-    T eval(BOOL& p, T& q, T& r, unsigned pw, unsigned qw, unsigned rw) { return p ? q : r; }
+    Tout eval(Tin1& p, Tin2& q, Tin3& r, unsigned pw, unsigned qw, unsigned rw) { return p ? q : r; }
 };
 
-template <typename T> class Slice : public Operator
+template <typename Tout, typename Tin> class Slice : public Operator
 {
-    Datum<T> y, op;
+    Datum<Tout> y, op;
     const unsigned long _mask;
     const unsigned _l;
     unsigned long getmask(unsigned h, unsigned l)
@@ -282,7 +199,7 @@ public:
     string oplabel() { return "Slice"; }
     void sack()
     {
-        auto x = (T) *this->_ipv[0];
+        auto x = (Tout) *this->_ipv[0];
         y = ( _mask & x ) >> _l;
     }
     Slice(unsigned width, string label, unsigned h, unsigned l) : y(width), op(width), _l(l),
@@ -293,14 +210,14 @@ public:
     }
 };
 
-template <typename T> class Assign : public Operator
+template <typename Tout, typename Tin> class Assign : public Operator
 {
-    Datum<T> y, op;
+    Datum<Tout> y, op;
 public:
     string oplabel() { return "Assign"; }
     void sack()
     {
-        auto x = (T) *this->_ipv[0];
+        auto x = (Tout) *this->_ipv[0];
         y = x;
     }
     Assign(unsigned width, string label): y(width), op(width), Operator(label)
@@ -310,9 +227,9 @@ public:
     }
 };
 
-class Branch : public Operator
+template <typename Tin> class Branch : public Operator
 {
-    Datum<BOOL> y = {1}, op = {1};
+    Datum<Tin> y = {1}, op = {1};
     const list<int>
         chooseFalse = {0},
         chooseTrue = {1};
@@ -320,24 +237,26 @@ public:
     string oplabel() { return "Branch"; }
     list<int> arcChooser()
     {
-        auto x = (BOOL) *this->_ipv[0];
+        auto x = (Tin) *this->_ipv[0];
         return x ? chooseTrue : chooseFalse;
     }
-    Branch(string label) : Operator(label)
+    Branch(unsigned width, string label) : Operator(label)
     {
         _resv.push_back(&y);
         opv.push_back(&op);
     }
 };
 
-template <typename T> class Phi : public Operator
+#define BRANCH Branch<uint8_t>
+
+template <typename Tout, typename Tin1, typename Tin2> class Phi : public Operator
 {
-    Datum<T> y, op;
+    Datum<Tout> y, op;
 public:
     string oplabel() { return "Phi"; }
     void select(int i)
     {
-        auto x = (T) *this->_ipv[i];
+        auto x = (Tin1) *this->_ipv[i];
         y = x;
     }
     Phi(unsigned width, string label) : y(width), op(width), Operator(label)
@@ -347,16 +266,16 @@ public:
     }
 };
 
-template <typename T> class Load : public Operator
+template <typename Tout, typename Tin> class Load : public Operator
 {
     vector<DatumBase*>& _stv;
-    Datum<T> y, op;
+    Datum<Tout> y, op;
 public:
     string oplabel() { return "Load"; }
     void sack()
     {
-        auto i = (unsigned) *this->_ipv[0];
-        y = (T) *_stv[i];
+        auto i = (Tin) *this->_ipv[0];
+        y = (Tout) *_stv[i];
     }
     Load(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), y(width), op(width), Operator(label)
     {
@@ -365,16 +284,16 @@ public:
     }
 };
 
-template <typename T> class Store : public Operator
+template <typename Tin1, typename Tin2> class Store : public Operator
 {
     vector<DatumBase*>& _stv;
 public:
     string oplabel() { return "Store"; }
     void sack()
     {
-        auto i = (unsigned) *this->_ipv[0];
-        auto val = (T) *this->_ipv[1];
-        *((Datum<T>*)_stv[i]) = val;
+        auto i = (Tin1) *this->_ipv[0];
+        auto val = (Tin2) *this->_ipv[1];
+        *((Datum<Tin2>*)_stv[i]) = val;
         // Since Store doesn't have a uack log, we log its sack
         OPLOG("sack:" << oplabel() << ":" << _dplabel << ":" << i << ":" << val)
     }
@@ -382,29 +301,9 @@ public:
     Store(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), Operator(label) {}
 };
 
-class IOPort : public Operator
+template <typename Tout> class Inport : public IOPort
 {
-public:
-    Pipe* _pipe;
-    // width passed due to macro uniformity, ignored
-    IOPort(unsigned width, string label, Pipe *pipe) : _pipe(pipe), Operator(label) {}
-};
-
-// Outport doesn't need template parameter, kept for macro uniformity
-template <typename T> class Outport : public IOPort
-{
-using IOPort::IOPort;
-public:
-    string oplabel() { return "Outport"; }
-    void sack()
-    {
-        _pipe->push(_ipv[0]);
-    }
-};
-
-template <typename T> class Inport : public IOPort
-{
-    Datum<T> y, op;
+    Datum<Tout> y, op;
 public:
     string oplabel() { return "Inport"; }
     // AHIR does read operations on update events, unlike other operators
@@ -412,12 +311,23 @@ public:
     void flowthrough() { ureq(); uack(); }
     void ureq()
     {
-        y = (T) *_pipe->pop();
+        y = (Tout) *_pipe->pop();
     }
     Inport(unsigned width, string label, Pipe *pipe) : IOPort(width,label,pipe), y(width), op(width)
     {
         _resv.push_back(&y);
         opv.push_back(&op);
+    }
+};
+
+template <typename Tin> class Outport : public IOPort
+{
+using IOPort::IOPort;
+public:
+    string oplabel() { return "Outport"; }
+    void sack()
+    {
+        _pipe->push(_ipv[0]);
     }
 };
 

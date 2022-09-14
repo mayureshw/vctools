@@ -36,13 +36,25 @@ class OpFactory
         cout << "opfactory: Uknown wire type encounted" << endl;
         exit(1);
     }
-    template <typename Opcls> Operator* create1(vcDatapathElement *dpe)
-    {
-        return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
-    }
-    template <typename Opcls> Operator* create2(vcDatapathElement *dpe)
+    template <typename Opcls> Operator* createLoadStore(vcDatapathElement *dpe)
     {
         return NULL;
+    }
+    template <typename Opcls> Operator* createIOPort(vcDatapathElement *dpe)
+    {
+        return NULL;
+    }
+    template <typename Opcls> Operator* createCall(vcDatapathElement *dpe)
+    {
+        return NULL;
+    }
+    template <typename Opcls> Operator* createSlice(vcDatapathElement *dpe)
+    {
+        return NULL;
+    }
+    template <typename Opcls> Operator* createGeneral(vcDatapathElement *dpe)
+    {
+        return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
     Operator* dpe2op(vcDatapathElement *dpe)
