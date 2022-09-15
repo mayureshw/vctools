@@ -1,12 +1,11 @@
 #ifndef _OPFACTORY_H
 #define _OPFACTORY_H
 
-#include "operators.h"
 #include "opf.h"
-
 
 class OpFactory
 {
+    SystemBase *_sys;
     typedef enum Ctyp CTYPENUM;
     typedef pair< string, vector<Ctyp> > Opfkey;
     typedef function< Operator* (vcDatapathElement*) > Opfval;
@@ -36,21 +35,55 @@ class OpFactory
         cout << "opfactory: Uknown wire type encounted" << endl;
         exit(1);
     }
-    template <typename Opcls> Operator* createLoadStore(vcDatapathElement *dpe)
+    vector<DatumBase*>& getStoragev(vcDatapathElement *dpe)
     {
-        return NULL;
+        auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
+        if ( objmap.size() != 1 )
+        {
+            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl;
+            exit(1);
+        }
+        vcStorageObject *sto;
+        for(auto nsto:objmap) sto = nsto.second;
+        return _sys->storageDatums(sto);
+    }
+    template <typename Opcls> Operator* createLoad(vcDatapathElement *dpe)
+    {
+        auto width = dpe->Get_Output_Width();
+        return new Opcls( width, dpe->Get_Id(), getStoragev(dpe) );
+    }
+    template <typename Opcls> Operator* createStore(vcDatapathElement *dpe)
+    {
+        if ( dpe->Get_Input_Wires().size() != 2 )
+        {
+            cout << "Store operator with input wires count !=2" << endl;
+            exit(1);
+        }
+        auto width = dpe->Get_Input_Wires()[1]->Get_Size();
+        return new Opcls( width, dpe->Get_Id(), getStoragev(dpe) );
     }
     template <typename Opcls> Operator* createIOPort(vcDatapathElement *dpe)
     {
-        return NULL;
+        vcPipe* vcpipe = ((vcIOport*)dpe)->Get_Pipe();
+        Pipe* pipe = _sys->pipeMap(vcpipe);
+        auto width = vcpipe->Get_Width();
+        return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id(), pipe);
     }
     template <typename Opcls> Operator* createCall(vcDatapathElement *dpe)
     {
-        return NULL;
+        auto calledVcModule = ((vcCall*)dpe)->Get_Called_Module();
+        auto cm = _sys->getModule( calledVcModule );
+        auto ipv = cm->iparamV();
+        auto opv = cm->oparamV();
+        return new Call(ipv, opv, dpe->Get_Id());
     }
     template <typename Opcls> Operator* createSlice(vcDatapathElement *dpe)
     {
-        return NULL;
+        auto vcslice = (vcSlice*) dpe;
+        int width = vcslice->Get_Output_Width();
+        int h = vcslice->Get_High_Index();
+        int l = vcslice->Get_Low_Index();
+        return new Opcls(width, dpe->Get_Id(), h, l);
     }
     template <typename Opcls> Operator* createGeneral(vcDatapathElement *dpe)
     {
@@ -68,13 +101,14 @@ public:
         auto it = _opfmap.find( {vcid, opsig} );
         if ( it == _opfmap.end() )
         {
-            cout << "Operator generator not found for vcid " << vcid << " signature";
+            cout << "Operator generator not found for element " << dpe->Get_Id() << " vcid " << vcid << " signature";
             for(auto t:opsig) cout << " " << t;
             cout << endl;
             exit(1);
         }
         return it->second(dpe);
     }
+    OpFactory(SystemBase* sys) : _sys(sys) {}
 };
 
 #endif

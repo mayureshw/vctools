@@ -73,11 +73,12 @@ uint(ST)    :- subtyp(uint, ST).
 any(ST)     :- subtyp(_, ST).
 bool(ST)    :- subtyp(bool, ST).
 
-creator( O,       createLoadStore ):- member( O, [ 'Load', 'Store' ] ), !.
-creator( O,       createIOPort    ):- member( O, [ 'Inport', 'Outport' ] ), !.
-creator( 'Call',  createCall      ):-!.
-creator( 'Slice', createSlice     ):-!.
-creator( _,       createGeneral   ).
+creator( O,       'createIOPort'  ):- member( O, [ 'Inport', 'Outport' ] ), !.
+creator( 'Load',  'createLoad'    ):-!.
+creator( 'Store', 'createStore'   ):-!.
+creator( 'Call',  'createCall'    ):-!.
+creator( 'Slice', 'createSlice'   ):-!.
+creator( _,       'createGeneral' ).
 
 %%%%%%%%%%
 
