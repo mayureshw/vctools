@@ -53,10 +53,10 @@ nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, wuint ]).
 
 sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),    !, numeric(Num).
 sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ), !, bool(Bool), numeric(Num).
-sign(O, [Bool,Bool,Bool] ) :- member( O, ['And','Or'] ),               !, bool(Bool).
+sign(O, [NF,NF,NF]       ) :- member( O, ['And','Or'] ),               !, nofloat(NF).
 sign(O, [Any]            ) :- member( O, ['Inport','Outport'] ),       !, any(Any).
 sign('Not',    [Bool,Bool]        ):-!, bool(Bool).
-sign('Assign', [Any,Any]          ):-!, any(Any).
+sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
 sign('Branch', [Bool]             ):-!, bool(Bool).
 sign('Load',   [Any,UInt]         ):-!, any(Any), uint(UInt).
@@ -69,6 +69,7 @@ sign('Call',   []                 ):-!.
 
 numeric(ST) :- ( T = uint; T = float ), subtyp(T, ST).
 nofloat(ST) :- ( T = uint; T = wuint ), subtyp(T, ST).
+floaT(ST)   :- subtyp(float, ST).
 uint(ST)    :- subtyp(uint, ST).
 any(ST)     :- subtyp(_, ST).
 bool(ST)    :- subtyp(bool, ST).
