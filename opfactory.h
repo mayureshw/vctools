@@ -96,8 +96,11 @@ public:
         string vcid = ( kind == "vcBinarySplitOperator" or kind == "vcUnarySplitOperator" )
             ? ((vcSplitOperator*)dpe)->Get_Op_Id() : kind;
         vector<Ctyp> opsig;
-        for (auto w:dpe->Get_Output_Wires()) opsig.push_back( wire2ctyp(w) );
-        for (auto w:dpe->Get_Input_Wires()) opsig.push_back( wire2ctyp(w) );
+        if ( kind != "vcCall" )
+        {
+            for (auto w:dpe->Get_Output_Wires()) opsig.push_back( wire2ctyp(w) );
+            for (auto w:dpe->Get_Input_Wires()) opsig.push_back( wire2ctyp(w) );
+        }
         auto it = _opfmap.find( {vcid, opsig} );
         if ( it == _opfmap.end() )
         {
