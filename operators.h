@@ -18,10 +18,6 @@
 #   define OPLOG(ARGS)
 #endif
 
-// It is advisable to use concrete functions as callbacks to save vtbl cost
-// i.e. Plus<T>::sack is better than Operator:sack (but not achived currently)
-// (Unfortunately uack still uses virtual function.)
-
 // ----------- base classes for various operators --------------
 class Operator
 {
@@ -163,7 +159,7 @@ BINOP( Gt,     x > y  )
 BINOP( Ge,     x >= y )
 BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
-BINOP( Concat, ( x << wy ) | y )
+BINOP( Concat, ( ((Tout) x) << wy ) | y )
 BINOP( Bitsel, ( ( x >> y ) & 1 ) ? 1 : 0 )
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
@@ -185,21 +181,21 @@ public:
 template <typename Tout, typename Tin> class Slice : public Operator
 {
     Datum<Tout> y, op;
-    const unsigned long _mask;
+    const Tin _mask;
     const unsigned _l;
-    unsigned long getmask(unsigned h, unsigned l)
+    Tin getmask(unsigned h, unsigned l)
     {
         const unsigned long one = 1;
         // can't use 1<<(h+1) as if h is msb position, results are undefined
-        unsigned long hmask = ( ( ( one << h ) - 1 ) << 1 ) + 1;
-        unsigned long lmask = ( ( one << l ) - 1 );
+        Tin hmask = ( ( ( one << h ) - 1 ) << 1 ) + 1;
+        Tin lmask = ( ( one << l ) - 1 );
         return hmask & ~lmask;
     }
 public:
     string oplabel() { return "Slice"; }
     void sack()
     {
-        auto x = (Tout) *this->_ipv[0];
+        auto x = (Tin) *this->_ipv[0];
         y = ( _mask & x ) >> _l;
     }
     Slice(unsigned width, string label, unsigned h, unsigned l) : y(width), op(width), _l(l),
@@ -295,7 +291,7 @@ public:
         auto val = (Tin2) *this->_ipv[1];
         *((Datum<Tin2>*)_stv[i]) = val;
         // Since Store doesn't have a uack log, we log its sack
-        OPLOG("sack:" << oplabel() << ":" << _dplabel << ":" << i << ":" << val)
+        OPLOG("sack:" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
     }
     // width passed due to macro uniformity, ignored
     Store(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), Operator(label) {}
