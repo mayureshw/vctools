@@ -6,11 +6,10 @@
 class OpFactory
 {
     SystemBase *_sys;
-    typedef enum Ctyp CTYPENUM;
+    typedef enum CTYPENUM Ctyp ;
     typedef pair< string, vector<Ctyp> > Opfkey;
     typedef function< Operator* (vcDatapathElement*) > Opfval;
     const map<Opfkey, Opfval> _opfmap = OPFMAP ;
-    const map<string, VCtyp> _vctypmap = VCTYPMAP;
     Ctyp wire2ctyp(vcWire* w)
     {
         assert(w);
@@ -91,16 +90,6 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
-    VCtyp vctyp(string Clsname)
-    {
-        auto it = _vctypmap.find(Clsname);
-        if ( it == _vctypmap.end() )
-        {
-            cout << "opfactory: Unknown vC type " << Clsname << endl;
-            exit(1);
-        }
-        return it->second;
-    }
     Operator* dpe2op(vcDatapathElement *dpe)
     {
         string kind = dpe->Kind();

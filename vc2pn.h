@@ -1049,6 +1049,7 @@ class System : public SystemBase
     PNPlace *_sysPreExitPlace;
     PNPTArc *_sysExitArc;
     OpFactory _opfactory = {this};
+    const map<string, VCtyp> _vctypmap = VCTYPMAP;
 #ifdef USECEP
     IntervalManager *_intervalManager;
 #endif
@@ -1091,7 +1092,16 @@ class System : public SystemBase
     }
 public:
     PNInfo _pni;
-    VCtyp vctyp(string clsname) { return _opfactory.vctyp(clsname); }
+    VCtyp vctyp(string Clsname)
+    {
+        auto it = _vctypmap.find(Clsname);
+        if ( it == _vctypmap.end() )
+        {
+            cout << "opfactory: Unknown vC type " << Clsname << endl;
+            exit(1);
+        }
+        return it->second;
+    }
     Operator* createOperator(vcDatapathElement *dpe) { return _opfactory.dpe2op(dpe); }
     ModuleBase* getModule(vcModule* vcm)
     {
