@@ -1154,7 +1154,7 @@ public:
             cout << "Pipes of width > " << MAXINTWIDTH << " not supported, got " << width << endl;
             exit(1);
         }
-        Pipe* retval = PIPEINST
+        Pipe* retval = _opfactory.vcp2p(pipe);
 
         _pipemap.emplace(pipe, retval);
         return retval;

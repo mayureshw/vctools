@@ -1,6 +1,7 @@
 #ifndef _OPFACTORY_H
 #define _OPFACTORY_H
 
+#include <tuple>
 #include "opf.h"
 
 class OpFactory
@@ -10,6 +11,18 @@ class OpFactory
     typedef pair< string, vector<Ctyp> > Opfkey;
     typedef function< Operator* (vcDatapathElement*) > Opfval;
     const map<Opfkey, Opfval> _opfmap = OPFMAP ;
+
+    typedef enum PIFOENUM Pifotyp;
+    typedef enum PBLKENUM Pblktyp;
+    typedef tuple< Ctyp, Pifotyp, Pblktyp > Pfkey;
+    typedef function< Pipe*(int, int, string) > Pfval;
+    const map<Pfkey, Pfval> _pfmap = PFMAP;
+
+    Ctyp width2ctyp(int width)
+    {
+        return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
+            width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
+    }
     Ctyp wire2ctyp(vcWire* w)
     {
         assert(w);
@@ -21,9 +34,7 @@ class OpFactory
             cout << "opfactory: Array type unexpected for wire" << endl;
             exit(1);
         }
-        if ( wiretyp->Is_Int_Type() )
-            return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
-                width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
+        if ( wiretyp->Is_Int_Type() ) return width2ctyp( width );
         if ( wiretyp->Is_Float_Type() )
         {
             if ( width == 32 ) return float_;
@@ -110,6 +121,19 @@ public:
             exit(1);
         }
         return it->second(dpe);
+    }
+    Pipe* vcp2p(vcPipe *vcp)
+    {
+        auto ctyp = width2ctyp( vcp->Get_Width() );
+        auto pifo = vcp->Get_Lifo_Mode() ? Lifo_ : Fifo_;
+        auto pblk = vcp->Get_Signal() ? SignalPipe_ : vcp->Get_No_Block_Mode() ? NonBlockingPipe_ : BlockingPipe_;
+
+        auto it = _pfmap.find( { ctyp, pifo, pblk } );
+        if ( it == _pfmap.end() )
+        {
+            cout << "Pipe generator not found for pipe " << vcp->Get_Id() << " signature " << ctyp << " " << pifo << " " << pblk << endl;
+        }
+        return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id() );
     }
     OpFactory(SystemBase* sys) : _sys(sys) {}
 };
