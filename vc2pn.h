@@ -22,14 +22,6 @@ using namespace std::placeholders;
 
 const string CEPDAT = "cepdat"; // Want to parameterize this file?
 
-#define MAXINTWIDTH (sizeof(long)<<3)
-
-#define PIPEWIDTH(PM,PT,CTYP) (Pipe*) new PM<CTYP,PT>(depth,width,pipe->Get_Id())
-#define TRYCTYP(PM,PT,CTYP) width <= ( sizeof(CTYP) << 3 ) ? PIPEWIDTH(PM,PT,CTYP)
-#define PIPETYP(PM,PT) TRYCTYP(PM,PT,unsigned char) : TRYCTYP(PM,PT,unsigned short) : TRYCTYP(PM,PT,unsigned int) : (Pipe*) new PM<unsigned long,PT>(depth,width,pipe->Get_Id())
-#define PIPEMODE(PM) pipe->Get_Signal() ? PIPETYP(PM,SignalPipe) : pipe->Get_No_Block_Mode() ? PIPETYP(PM,NonBlockingPipe) : PIPETYP(PM,BlockingPipe)
-#define PIPEINST pipe->Get_Lifo_Mode() ? PIPEMODE(Lifo) : PIPEMODE(Fifo);
-
 typedef enum { int_, float_ } Wiretyp;
 
 // Only essential of the vc world classes have a counterpart here as they carry
@@ -1147,15 +1139,7 @@ public:
         auto it = _pipemap.find(pipe);
         if ( it != _pipemap.end() ) return it->second;
 
-        int depth = pipe->Get_Depth();
-        int width = pipe->Get_Width();
-        if ( width > MAXINTWIDTH )
-        {
-            cout << "Pipes of width > " << MAXINTWIDTH << " not supported, got " << width << endl;
-            exit(1);
-        }
         Pipe* retval = _opfactory.vcp2p(pipe);
-
         _pipemap.emplace(pipe, retval);
         return retval;
     }
