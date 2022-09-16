@@ -10,6 +10,7 @@ class OpFactory
     typedef pair< string, vector<Ctyp> > Opfkey;
     typedef function< Operator* (vcDatapathElement*) > Opfval;
     const map<Opfkey, Opfval> _opfmap = OPFMAP ;
+    const map<string, VCtyp> _vctypmap = VCTYPMAP;
     Ctyp wire2ctyp(vcWire* w)
     {
         assert(w);
@@ -22,12 +23,12 @@ class OpFactory
             exit(1);
         }
         if ( wiretyp->Is_Int_Type() )
-            return width <= 8 ? uint8_t__ : width <= 16 ? uint16_t__ :
-                width <= 32 ? uint32_t__ : width <= 64 ? uint64_t__ : wuint__;
+            return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
+                width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
         if ( wiretyp->Is_Float_Type() )
         {
-            if ( width == 32 ) return float__;
-            if ( width == 64 ) return double__;
+            if ( width == 32 ) return float_;
+            if ( width == 64 ) return double_;
             cout << "opfactory: Unsupported floating point width " << width << endl;
             exit(1);
         }
@@ -90,6 +91,16 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
+    VCtyp vctyp(string Clsname)
+    {
+        auto it = _vctypmap.find(Clsname);
+        if ( it == _vctypmap.end() )
+        {
+            cout << "opfactory: Unknown vC type " << Clsname << endl;
+            exit(1);
+        }
+        return it->second;
+    }
     Operator* dpe2op(vcDatapathElement *dpe)
     {
         string kind = dpe->Kind();

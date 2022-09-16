@@ -16,33 +16,36 @@
     from utils.
 
 % operators identified by vC class
-vcid( 'Assign',  vcInterlockBuffer ).
-vcid( 'Phi',     vcPhi             ).
-vcid( 'Phi',     vcPhiPipelined    ).
-vcid( 'Branch',  vcBranch          ).
-vcid( 'Assign',  vcEquivalence     ).
-vcid( 'Load',    vcLoad            ).
-vcid( 'Store',   vcStore           ).
-vcid( 'Inport',  vcInport          ).
-vcid( 'Outport', vcOutport         ).
-vcid( 'Call',    vcCall            ).
-vcid( 'Select',  vcSelect          ).
-vcid( 'Slice',   vcSlice           ).
+opcls( 'Assign',  vcInterlockBuffer ).
+opcls( 'Phi',     vcPhi             ).
+opcls( 'Phi',     vcPhiPipelined    ).
+opcls( 'Branch',  vcBranch          ).
+opcls( 'Assign',  vcEquivalence     ).
+opcls( 'Load',    vcLoad            ).
+opcls( 'Store',   vcStore           ).
+opcls( 'Inport',  vcInport          ).
+opcls( 'Outport', vcOutport         ).
+opcls( 'Call',    vcCall            ).
+opcls( 'Select',  vcSelect          ).
+opcls( 'Slice',   vcSlice           ).
+
+extracls( vcBinarySplitOperator ).
+extracls( vcUnarySplitOperator  ).
 
 % operators identified by vC operator
-vcid( 'Plus',   '+'  ).
-vcid( 'Minus',  '-'  ).
-vcid( 'Mult',   '*'  ).
-vcid( 'Lt',     '<'  ).
-vcid( 'Gt',     '>'  ).
-vcid( 'Ge',     '>=' ).
-vcid( 'Ne',     '!=' ).
-vcid( 'Eq',     '==' ).
-vcid( 'And',    '&'  ).
-vcid( 'Or',     '|'  ).
-vcid( 'Not',    '~'  ).
-vcid( 'Bitsel', '[]' ).
-vcid( 'Concat', '&&' ).
+opop( 'Plus',   '+'  ).
+opop( 'Minus',  '-'  ).
+opop( 'Mult',   '*'  ).
+opop( 'Lt',     '<'  ).
+opop( 'Gt',     '>'  ).
+opop( 'Ge',     '>=' ).
+opop( 'Ne',     '!=' ).
+opop( 'Eq',     '==' ).
+opop( 'And',    '&'  ).
+opop( 'Or',     '|'  ).
+opop( 'Not',    '~'  ).
+opop( 'Bitsel', '[]' ).
+opop( 'Concat', '&&' ).
 
 subtyps( bool,  [ uint8_t ] ).
 subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
@@ -83,14 +86,17 @@ creator( _,       'createGeneral' ).
 
 %%%%%%%%%%
 
-suf_(T, TSuf) :- str_cat(T, '__', TSuf).
+vcid(O, VCID) :- opcls(O, VCID) ; opop(O, VCID).
+
+vctyp( T ) :- opcls(_, T); extracls( T ).
+vctypsuf( T ) :- vctyp( T1 ), suf_( T1, T ).
+vctypmap( br( [ str(T), Enum ] ) ) :- vctyp(T), suf_(T, Enum).
+
+suf_(T, TSuf) :- str_cat(T, '_', TSuf).
 suf_L(L, Lsuf) :- map(L, (A,B,suf_(A,B)), Lsuf).
 
 :-table nfge/2.
 nfge( NF1, NF2 ) :- nonFloatOrder(L), nth(N1, L, NF1), nth(N2, L, NF2), N1 >= N2.
-
-:-table operator/1.
-operator(O) :- vcid(O,_).
 
 :-table subtyp/2.
 subtyp(T, ST) :- subtyps(T, STs), member(ST, STs).
@@ -109,13 +115,17 @@ opfmapkv( br( [ K, V ] ) ) :- opfmapk(O, Sig, K), opfmapv(O, Sig, V).
 
 opfmap(br(L)) :- findall(V, opfmapkv(V), L).
 
+cpp('#ifndef _OPF_H').
+cpp('#define _OPF_H').
 % TODO: wuint defined temporarily
 cpp(def('wuint','unsigned long')).
 cpp(def('CTYPENUM',br(L))) :- findall(TSuf, ctyp(TSuf), L1), sort(L1, L).
+cpp(stmt(typdef('VCtyp',enum(L)))) :- findall(TSuf, vctypsuf(TSuf), L1), sort(L1, L).
+cpp(def('VCTYPMAP',br(L))) :- findall(V, vctypmap(V), L).
 cpp(def('OPRET',typ('Operator',[],'*'))).
 cpp(def('DPEARG',tv(typ('vcDatapathElement',[],'*'), [dpe]))).
 cpp(def('OPFMAP',Cpp)) :- opfmap(Cpp).
+cpp('#endif').
 
 %%% Test drivers
 :- cpp(CPP), unparse(CPP), fail.
-%:- operator(O), sign(O, Sig), writeln((O,Sig)), fail.

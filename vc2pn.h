@@ -10,6 +10,7 @@
 #include "pninfo.h"
 #include "operators.h"
 #include "pipes.h"
+#include "opf.h"
 #include "vc2pnbase.h"
 #include "opfactory.h"
 
@@ -29,97 +30,6 @@ const string CEPDAT = "cepdat"; // Want to parameterize this file?
 #define PIPEMODE(PM) pipe->Get_Signal() ? PIPETYP(PM,SignalPipe) : pipe->Get_No_Block_Mode() ? PIPETYP(PM,NonBlockingPipe) : PIPETYP(PM,BlockingPipe)
 #define PIPEINST pipe->Get_Lifo_Mode() ? PIPEMODE(Lifo) : PIPEMODE(Fifo);
 
-#define TRYTYP(TYP,OPCLS,...) if (width <= sizeof(TYP)<<3) _op = new OPCLS<TYP>(width,label()__VA_OPT__(,)__VA_ARGS__); else
-
-#define OPINSTINT(OPCLS,...) \
-    { \
-        TRYTYP(unsigned char,OPCLS,__VA_ARGS__) \
-        TRYTYP(unsigned short,OPCLS,__VA_ARGS__) \
-        TRYTYP(unsigned int,OPCLS,__VA_ARGS__) \
-        TRYTYP(unsigned long,OPCLS,__VA_ARGS__) \
-        { \
-            cout << "No suitable integer type found for width=" << width << endl; \
-            exit(1); \
-        } \
-    } \
-
-// Where operator has 1 type argument
-#define OPINST1(OPCLS,TTYP) \
-    switch(TTYP) \
-    { \
-        case int_: \
-            { \
-            auto width = elem()->Get_Output_Width(); \
-            OPINSTINT(OPCLS) \
-            } \
-            break; \
-        case float_: \
-            _op = new OPCLS<float>(elem()->Get_Output_Width(),label()); \
-            break; \
-        default: \
-            cout << "vc2pn: unknown type" << endl; \
-            exit(1); \
-    } \
-    break; \
-
-// For load and store
-#define OPINST2(OPCLS) \
-        auto objmap = ( (vcLoadStore*) _elem )->Get_Memory_Space()->Get_Object_Map(); \
-        if ( objmap.size() != 1 ) \
-        { \
-            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl; \
-            exit(1); \
-        } \
-        vcStorageObject *sto; \
-        for(auto nsto:objmap) sto = nsto.second; \
-        vector<DatumBase*>& storagev = _module->storageDatums(sto); \
-        Wiretyp wtyp = vctWiretyp(sto->Get_Type()); \
-        switch(wtyp) \
-        { \
-            case int_: \
-                OPINSTINT(OPCLS,storagev) \
-                break; \
-            case float_: \
-                _op = new OPCLS<float>(width,label(),storagev); \
-                break; \
-            default: \
-                cout << "Unhandled storage type " << wtyp; \
-                exit(1); \
-        } \
-
-
-// For Inport and Outport
-#define OPINST3(OPCLS) \
-    { \
-        vcPipe* vcpipe = ((vcIOport*)_elem)->Get_Pipe(); \
-        Pipe* pipe = _module->pipeMap(vcpipe); \
-        auto width = vcpipe->Get_Width(); \
-        OPINSTINT(OPCLS,pipe) \
-    } \
-    break; \
-
-// For integer only operators, though there could be different flavors of integers depending on size
-#define OPINST4(OPCLS,TTYP) \
-    switch(TTYP) \
-    { \
-        case int_: \
-            { \
-            auto width = elem()->Get_Output_Width(); \
-            OPINSTINT(OPCLS) \
-            } \
-            break; \
-        case float_: \
-            cout << "floating point operation not supported for " << TTYP << endl; \
-            exit(1); \
-            break; \
-        default: \
-            cout << "vc2pn: unknown type" << endl; \
-            exit(1); \
-    } \
-    break; \
-
-typedef enum { vcInport_, vcOutport_, vcBranch_, vcPhi_, vcPhiPipelined_, vcIOport_, vcBinarySplitOperator_, vcUnarySplitOperator_, vcInterlockBuffer_, vcEquivalence_, vcLoad_, vcStore_, vcCall_, vcSelect_, vcSlice_ } Vctyp;
-typedef enum { plus_, minus_, mult_, assign_, phi_, lt_, gt_, ge_, ne_, eq_, and_, or_, not_, branch_, equiv_, load_, store_, inport_, outport_, call_, bitsel_, concat_, select_, slice_ } Optyp;
 typedef enum { int_, float_ } Wiretyp;
 
 // Only essential of the vc world classes have a counterpart here as they carry
@@ -149,6 +59,7 @@ protected:
     virtual vcRoot* elem() = 0;
 public:
     string label() { return _label; }
+    SystemBase* sys() { return _module->sys(); }
     Element(vcRoot* elem, ModuleBase* module) : _elem(elem), _module(module) {}
     virtual void buildPN(PNInfo&)=0;
 };
@@ -184,11 +95,7 @@ class DPElement : public Element
     void sreq2ack(PNInfo& pni) { buildSreqToAckPath(_reqs[0], _acks[0], pni); }
 public:
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
-    static const map<Vctyp,Optyp> vctoptmap;
-    static const map<string,Optyp> opidoptmap;
-    static const map<string,Vctyp> vctypmap;
-    Vctyp _vctyp;
-    Optyp _optyp;
+    VCtyp _vctyp;
     // buildSreqToAckPath handles various flow through scenarios, hence its
     // name has become a misnomer and should be changed.
     // Note that strt, curend can be place or transition, further description
@@ -405,7 +312,7 @@ public:
             auto uack = _acks[1];
 
             auto calledVcModule = ((vcCall*)_elem)->Get_Called_Module();
-            auto calledModule = _module->getModule( calledVcModule );
+            auto calledModule = sys()->getModule( calledVcModule );
             auto calledExitPlace = calledModule->exitPlace();
             auto calledEntryPlace = calledModule->entryPlace();
             auto calledMutexPlace = calledModule->mutexPlace();
@@ -462,11 +369,6 @@ public:
             buildPNBranch(pni);
         else if ( _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_ )
             buildPNPhi(pni);
-        else if ( _vctyp == vcIOport_ )
-        {
-            cout << "vc2pn: vcIOport buildPN is not implemented" << endl;
-            exit(1);
-        }
         else if ( ( _reqs.size() == 2 ) && ( _acks.size() == 2 ) ) // Default handling
             buildPNDefault(pni);
         else
@@ -477,36 +379,6 @@ public:
         if ( isDeemedGuarded() ) wrapPNWithGuard(pni);
     }
 
-    // op method constructs operator instance for this DPE with its support methods below:
-    Optyp optyp()
-    {
-        Optyp retval;
-        bool found;
-        if ( _vctyp == vcBinarySplitOperator_ or _vctyp == vcUnarySplitOperator_ )
-        {
-            string opid = ((vcSplitOperator*)_elem)->Get_Op_Id();
-            auto it = opidoptmap.find(opid);
-            found = it != opidoptmap.end();
-            if ( found ) retval = it->second;
-            else
-            {
-                cout << "vc2pn: operator not found in opidoptmap " << opid << endl;
-                exit(1);
-            }
-        }
-        else
-        {
-            auto it = vctoptmap.find(_vctyp);
-            found = it != vctoptmap.end();
-            if ( found ) retval = it->second;
-            else
-            {
-                cout << "vc2pn: operator not found in vctoptmap " << _elem->Kind() << endl;
-                exit(1);
-            }
-        }
-        return retval;
-    }
     vector<Wiretyp> inptyps() { return vcWiresTypes(elem()->Get_Input_Wires()); }
     vector<Wiretyp> optyps() { return vcWiresTypes(elem()->Get_Output_Wires()); }
     void setGuardBranchInpv()
@@ -517,7 +389,7 @@ public:
         if ( w->Kind() == "vcInputWire" )
             inpdatum = _module->inparamDatum( w->Get_Id() );
         else if ( w->Is_Constant() )
-            inpdatum = _module->valueDatum( ((vcConstantWire*) w)->Get_Value() );
+            inpdatum = sys()->valueDatum( ((vcConstantWire*) w)->Get_Value() );
         else
             inpdatum = _module->opregForWire(w);
         inpv.push_back(inpdatum);
@@ -532,7 +404,7 @@ public:
             if ( w->Kind() == "vcInputWire" )
                 inpdatum = _module->inparamDatum( w->Get_Id() );
             else if ( w->Is_Constant() )
-                inpdatum = _module->valueDatum( ((vcConstantWire*) w)->Get_Value() );
+                inpdatum = sys()->valueDatum( ((vcConstantWire*) w)->Get_Value() );
             else
                 inpdatum = _module->opregForWire(w);
             inpv.push_back(inpdatum);
@@ -545,101 +417,15 @@ public:
     {
         _guardBranchOp = new BRANCH(0, label()+"_guardc");
     }
-    void setop()
-    {
-        _op = _module->createOperator(elem());
-        //auto ityps = inptyps();
-        //auto otyps = optyps();
-        //switch(_optyp)
-        //{
-        //    case plus_: OPINST1(Plus,otyps[0])
-        //    case minus_: OPINST1(Minus,otyps[0])
-        //    case mult_: OPINST1(Mult,otyps[0])
-        //    case lt_: OPINST1(Lt,otyps[0])
-        //    case gt_: OPINST1(Gt,otyps[0])
-        //    case ge_: OPINST1(Ge,otyps[0])
-        //    case ne_: OPINST1(Ne,otyps[0])
-        //    case eq_: OPINST1(Eq,otyps[0])
-        //    case assign_: OPINST1(Assign,otyps[0])
-        //    case branch_: _op = new BRANCH(label());
-        //        break;
-        //    case phi_: OPINST1(Phi,otyps[0])
-        //    case equiv_: OPINST1(Assign,otyps[0])
-        //    case load_:
-        //        {
-        //        auto width = elem()->Get_Output_Width();
-        //        OPINST2(Load)
-        //        }
-        //        break;
-        //    case store_:
-        //        {
-        //        if ( elem()->Get_Input_Wires().size() != 2 )
-        //        {
-        //            cout << "Store operator with input wires count !=2" << endl;
-        //            exit(1);
-        //        }
-        //        auto width = elem()->Get_Input_Wires()[1]->Get_Size();
-        //        OPINST2(Store)
-        //        }
-        //        break;
-        //    case inport_: OPINST3(Inport)
-        //    case outport_: OPINST3(Outport)
-        //    case bitsel_:
-        //        {
-        //            _op = new Bitsel<unsigned long>(1, label());
-        //            break;
-        //        }
-        //    case concat_:
-        //        {
-        //            _op = new Concat<unsigned long, unsigned long, unsigned long>(elem()->Get_Output_Width(), label());
-        //            break;
-        //        }
-        //    case and_: OPINST4(And,otyps[0])
-        //    case or_: OPINST4(Or,otyps[0])
-        //    case not_: OPINST4(Not,otyps[0])
-        //    case select_: OPINST1(Select,otyps[0])
-        //    case slice_:
-        //        {
-        //            auto vcslice = (vcSlice*) elem();
-        //            int width = vcslice->Get_Output_Width();
-        //            int h = vcslice->Get_High_Index();
-        //            int l = vcslice->Get_Low_Index();
-        //            _op = new Slice<unsigned long>(width, label(), h, l);
-        //        }
-        //        break;
-        //    case call_:
-        //        {
-        //            auto calledVcModule = ((vcCall*)_elem)->Get_Called_Module();
-        //            auto cm = _module->getModule( calledVcModule );
-        //            auto ipv = cm->iparamV();
-        //            auto opv = cm->oparamV();
-        //            _op = new Call(ipv, opv, label());
-        //        }
-        //        break;
-        //    default:
-        //        cout << "vc2pn: unhandled operator " << _optyp << endl;
-        //        exit(1);
-        //}
-    }
-
     vector<DatumBase*>& opv() { return _op->opv; }
 
     DPElement(vcDatapathElement* elem, ModuleBase* module) : Element(elem, module), _isGuarded(elem->Get_Guard_Wire()!=NULL)
     {
         _label = _module->name() + "/" + _elem->Get_Id();
+        _vctyp = sys()->vctyp( _elem->Kind() );
 
-        auto it = vctypmap.find(elem->Kind());
-        if (it != vctypmap.end() )
-            _vctyp = it->second;
-        else
-        {
-            cout << "type not found in vctypmap " << elem->Kind() << endl;
-            exit(1);
-        }
-
-        _optyp = optyp();
-
-        setop(); // Some createReqs need _op initialized, so this is before createReqs
+        // Some createReqs need _op initialized, so this is before createReqs
+        _op = sys()->createOperator(elem);
         createReqs();
         createAcks();
         if ( isDeemedGuarded() )
@@ -1028,7 +814,7 @@ class Module : public ModuleBase
     ElementFactory _ef { ElementFactory(this) };
 public:
     bool _isDaemon;
-    Operator* createOperator(vcDatapathElement* dpe) { return _sys->createOperator(dpe); }
+    SystemBase* sys() { return _sys; }
     DPElement* getDPE(vcDatapathElement* vcdpe) { return _ef.getDPElement(vcdpe); }
     CPElement* getCPE(vcCPElement* cpe) { return _ef.getGroupCPElement(_cp->Get_Group(cpe)); }
     GETCPE(vcCPElementGroup,GroupCPElement)
@@ -1039,7 +825,6 @@ public:
     PNPlace* mutexPlace() { return _moduleMutexOrDaemonPlace; }
     PNPlace* entryPlace() { return _moduleEntryPlace; }
     PNPlace* exitPlace() { return _moduleExitPlace; }
-    ModuleBase* getModule(vcModule* vcm) { return _sys->getModule(vcm); }
     DatumBase* opregForWire(vcWire *w)
     {
         vcDatapathElement *driver = w->Get_Driver();
@@ -1063,9 +848,6 @@ public:
         return driveropv[driveropindx];
     }
     string name() { return _vcm->Get_Id(); }
-    DatumBase* valueDatum(vcValue* vcval) { return _sys->valueDatum(vcval); }
-    vector<DatumBase*>& storageDatums(vcStorageObject* sto) { return _sys->storageDatums(sto); }
-    Pipe* pipeMap(vcPipe* pipe) { return _sys->pipeMap(pipe); }
     DatumBase* inparamDatum(string param)
     {
         auto it = _inparamDatum.find(param);
@@ -1148,7 +930,7 @@ public:
             vcWire *owire = oparam.second;
             DatumBase *datum;
             if ( owire->Is_Constant() )
-                datum = valueDatum( ((vcConstantWire*) owire)->Get_Value() );
+                datum = _sys->valueDatum( ((vcConstantWire*) owire)->Get_Value() );
             else
                 datum = opregForWire(owire);
             _outparamDatum.emplace(oparam.first, datum);
@@ -1309,6 +1091,7 @@ class System : public SystemBase
     }
 public:
     PNInfo _pni;
+    VCtyp vctyp(string clsname) { return _opfactory.vctyp(clsname); }
     Operator* createOperator(vcDatapathElement *dpe) { return _opfactory.dpe2op(dpe); }
     ModuleBase* getModule(vcModule* vcm)
     {

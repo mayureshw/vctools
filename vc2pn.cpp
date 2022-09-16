@@ -6,59 +6,6 @@ using namespace std;
 
 PETRINET_STATICS
 
-#define VCMAP(T) { #T, T##_ },
-const map<string,Vctyp> DPElement::vctypmap =
-    {
-        VCMAP(vcInport)
-        VCMAP(vcOutport)
-        VCMAP(vcBranch)
-        VCMAP(vcPhi)
-        VCMAP(vcPhiPipelined)
-        VCMAP(vcIOport)
-        VCMAP(vcBinarySplitOperator)
-        VCMAP(vcUnarySplitOperator)
-        VCMAP(vcInterlockBuffer)
-        VCMAP(vcEquivalence)
-        VCMAP(vcLoad)
-        VCMAP(vcStore)
-        VCMAP(vcCall)
-        VCMAP(vcSelect)
-        VCMAP(vcSlice)
-    };
-
-const map<string,Optyp> DPElement::opidoptmap =
-    {
-        {"+",plus_},
-        {"-",minus_},
-        {"*",mult_},
-        {"<",lt_},
-        {">",gt_},
-        {">=",ge_},
-        {"!=",ne_},
-        {"==",eq_},
-        {"&",and_},
-        {"|",or_},
-        {"~",not_},
-        {"[]",bitsel_},
-        {"&&",concat_},
-    };
-
-const map<Vctyp,Optyp> DPElement::vctoptmap =
-    {
-        {vcInterlockBuffer_,assign_},
-        {vcPhi_,phi_},
-        {vcPhiPipelined_,phi_},
-        {vcBranch_,branch_},
-        {vcEquivalence_,equiv_},
-        {vcLoad_,load_},
-        {vcStore_,store_},
-        {vcInport_,inport_},
-        {vcOutport_,outport_},
-        {vcCall_,call_},
-        {vcSelect_,select_},
-        {vcSlice_,slice_},
-    };
-
 // A few global methods for entities that we didn't model in vc2pn layer
 Wiretyp vctWiretyp(vcType* vct)
 {
