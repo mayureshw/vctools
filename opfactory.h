@@ -23,28 +23,37 @@ class OpFactory
         return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
             width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
     }
-    Ctyp wire2ctyp(vcWire* w)
+    Ctyp vctyp2ctyp(vcType *vct)
     {
-        assert(w);
-        auto wiretyp = w->Get_Type();
-        auto kind = wiretyp->Kind();
-        auto width = wiretyp->Size();
-        if ( kind == "vcArrayType" )
-        {
-            cout << "opfactory: Array type unexpected for wire" << endl;
-            exit(1);
-        }
-        if ( wiretyp->Is_Int_Type() ) return width2ctyp( width );
-        if ( wiretyp->Is_Float_Type() )
+        auto width = vct->Size();
+        if ( vct->Is_Int_Type() ) return width2ctyp( width );
+        if ( vct->Is_Float_Type() )
         {
             if ( width == 32 ) return float_;
             if ( width == 64 ) return double_;
             cout << "opfactory: Unsupported floating point width " << width << endl;
             exit(1);
         }
-
-        cout << "opfactory: Uknown wire type encounted" << endl;
+        cout << "opfactory: Uknown type encounted" << endl;
         exit(1);
+    }
+    Ctyp scalar2ctyp(vcType* vct)
+    {
+        if ( vct->Kind() == "vcArrayType" )
+        {
+            cout << "opfactory: Array type unexpected in scalar2ctyp" << endl;
+            exit(1);
+        }
+        return vctyp2ctyp(vct);
+    }
+    Ctyp arr2ctyp(vcType* vct)
+    {
+        if ( vct->Kind() != "vcArrayType" )
+        {
+            cout << "opfactory: Scalar type unexpected in arr2ctyp" << endl;
+            exit(1);
+        }
+        return vctyp2ctyp( ((vcArrayType*)vct)->Get_Element_Type() );
     }
     vector<DatumBase*>& getStoragev(vcDatapathElement *dpe)
     {
@@ -109,8 +118,8 @@ public:
         vector<Ctyp> opsig;
         if ( kind != "vcCall" )
         {
-            for (auto w:dpe->Get_Output_Wires()) opsig.push_back( wire2ctyp(w) );
-            for (auto w:dpe->Get_Input_Wires()) opsig.push_back( wire2ctyp(w) );
+            for (auto w:dpe->Get_Output_Wires()) opsig.push_back( scalar2ctyp(w->Get_Type()) );
+            for (auto w:dpe->Get_Input_Wires()) opsig.push_back( scalar2ctyp(w->Get_Type()) );
         }
         auto it = _opfmap.find( {vcid, opsig} );
         if ( it == _opfmap.end() )
