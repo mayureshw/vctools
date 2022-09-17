@@ -98,7 +98,7 @@ class OpFactory
     template <typename Opcls> Operator* createIOPort(vcDatapathElement *dpe)
     {
         vcPipe* vcpipe = ((vcIOport*)dpe)->Get_Pipe();
-        Pipe* pipe = _sys->pipeMap(vcpipe); // TODO: get pipemap here
+        Pipe* pipe = _sys->pipeMap(vcpipe);
         auto width = vcpipe->Get_Width();
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id(), pipe);
     }
