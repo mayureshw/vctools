@@ -22,20 +22,6 @@ using namespace std::placeholders;
 
 const string CEPDAT = "cepdat"; // Want to parameterize this file?
 
-typedef enum { int_, float_ } Wiretyp;
-
-// Only essential of the vc world classes have a counterpart here as they carry
-// substantial functionality. Some other classes such as vcModule, vcType,
-// vcWire etc. do not have a counterpart here. Hence some operations on these
-// classes do not have their own home, and hence are made into global
-// functions.
-Wiretyp vctWiretyp(vcType*);
-unsigned vctDim(vcType*);
-DatumBase* vct2datum(vcType*);
-void vct2datums(vcType*, unsigned, vector<DatumBase*>&);
-vector<Wiretyp> vcWiresTypes(vector<vcWire*>&);
-
-
 // Bridge classes between vc IR and Petri net simulator
 // Can use inheritance as long as we don't need extra attribs, else use
 // containment
@@ -371,8 +357,6 @@ public:
         if ( isDeemedGuarded() ) wrapPNWithGuard(pni);
     }
 
-    vector<Wiretyp> inptyps() { return vcWiresTypes(elem()->Get_Input_Wires()); }
-    vector<Wiretyp> optyps() { return vcWiresTypes(elem()->Get_Output_Wires()); }
     void setGuardBranchInpv()
     {
         vector<DatumBase*> inpv;
@@ -911,7 +895,7 @@ public:
         for(auto iparam: _vcm->Get_Input_Arguments())
         {
             vcType* paramtyp = iparam.second->Get_Type();
-            DatumBase* datum = vct2datum(paramtyp);
+            DatumBase* datum = _sys->vct2datum(paramtyp);
             _inparamDatum.emplace(iparam.first, datum);
         }
     }
@@ -1031,8 +1015,6 @@ public:
 class System : public SystemBase
 {
     map<string,Module*> _modules;
-    map<vcValue*,DatumBase*> _valueDatum;
-    map<vcStorageObject*,vector<DatumBase*>> _storageDatums;
     map<vcPipe*,Pipe*> _pipemap;
     map<string,PipeFeeder*> _feedermap;
     map<string,PipeReader*> _readermap;
@@ -1095,6 +1077,8 @@ public:
         return it->second;
     }
     Operator* createOperator(vcDatapathElement *dpe) { return _opfactory.dpe2op(dpe); }
+    DatumBase* vct2datum(vcType* vct) { return _opfactory.vct2datum(vct); }
+    DatumBase* valueDatum(vcValue* vcval) { return _opfactory.valueDatum(vcval); }
     ModuleBase* getModule(vcModule* vcm)
     {
         string modulename = vcm->Get_Id();
@@ -1109,31 +1093,6 @@ public:
     void printPNPNMLFile() { _pn->printpnml(); }
     void wait() { _pn->wait(); }
     PetriNet* pn() { return _pn; }
-    DatumBase* valueDatum(vcValue* vcval)
-    {
-        auto it = _valueDatum.find(vcval);
-        if ( it != _valueDatum.end() ) return it->second;
-
-        vcType* vctyp = vcval->Get_Type();
-        DatumBase* retdat = vct2datum(vctyp);
-        string val = ((vcIntValue*)vcval)->Get_Value();
-        *retdat = val;
-        _valueDatum.emplace(vcval, retdat);
-        return retdat;
-    }
-    vector<DatumBase*>& storageDatums(vcStorageObject* sto)
-    {
-        auto it = _storageDatums.find(sto);
-        if ( it != _storageDatums.end() ) return it->second;
-
-        auto stoTyp = sto->Get_Type();
-        auto wtyp = vctWiretyp(stoTyp);
-        auto dim = vctDim(stoTyp);
-        vector<DatumBase*> retdat;
-        vct2datums(stoTyp, dim, retdat);
-        _storageDatums.emplace(sto, retdat);
-        return _storageDatums[sto];
-    }
     Pipe* pipeMap(vcPipe* pipe)
     {
         auto it = _pipemap.find(pipe);
@@ -1243,8 +1202,6 @@ public:
         for(auto m:_modules) delete m.second;
         _pn->deleteElems();
         delete _pn;
-        for(auto d:_valueDatum) delete d.second;
-        for(auto dv:_storageDatums) for(auto d:dv.second) delete d;
         for(auto p:_pipemap) delete p.second;
         for(auto p:_feedermap) delete p.second;
         for(auto p:_readermap) delete p.second;

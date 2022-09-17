@@ -10,11 +10,11 @@ class SystemBase
 public:
     virtual PetriNet* pn() = 0;
     virtual DatumBase* valueDatum(vcValue*) = 0;
-    virtual vector<DatumBase*>& storageDatums(vcStorageObject*) = 0;
     virtual Pipe* pipeMap(vcPipe*) = 0;
     virtual ModuleBase* getModule(vcModule*) = 0;
     virtual Operator* createOperator(vcDatapathElement*) = 0;
     virtual VCtyp vctyp(string) = 0;
+    virtual DatumBase* vct2datum(vcType*) = 0;
 };
 
 class ModuleBase

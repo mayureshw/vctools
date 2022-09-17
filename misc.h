@@ -13,6 +13,8 @@ using namespace std::placeholders;
 // construction time and then use []. If the construction method varies, do not
 // pass the constructor at construction time and do not use []. Pass it to get.
 
+// TODO: [] or get methods done return a reference like maps do
+
 template <typename KT, typename VT> class internmap
 {
     function<VT(KT)> _constructor;

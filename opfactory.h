@@ -4,6 +4,23 @@
 #include <tuple>
 #include "opf.h"
 
+#define CTYPENUM { double_, float_, uint16_t_, uint32_t_, uint64_t_, uint8_t_, wuint_ }
+
+#define CTYPSWITCH( CTYP, FN, ... ) \
+    switch ( CTYP ) \
+    { \
+        case double_   : return FN<double  > ( __VA_ARGS__ ); \
+        case float_    : return FN<float   > ( __VA_ARGS__ ); \
+        case uint16_t_ : return FN<uint16_t> ( __VA_ARGS__ ); \
+        case uint32_t_ : return FN<uint32_t> ( __VA_ARGS__ ); \
+        case uint64_t_ : return FN<uint64_t> ( __VA_ARGS__ ); \
+        case uint8_t_  : return FN<uint8_t > ( __VA_ARGS__ ); \
+        case wuint_    : return FN<wuint   > ( __VA_ARGS__ ); \
+        default : \
+            cout << "Encountered unknown type " << CTYP << endl; \
+            exit(1); \
+    }
+
 class OpFactory
 {
     SystemBase *_sys;
@@ -18,13 +35,21 @@ class OpFactory
     typedef function< Pipe*(int, int, string) > Pfval;
     const map<Pfkey, Pfval> _pfmap = PFMAP;
 
+    internmap<vcValue*,DatumBase*> _valueDatum {bind(&OpFactory::vcv2datum,this,_1)};
+    map<vcStorageObject*,vector<DatumBase*>> _storageDatums;
+
     Ctyp width2ctyp(int width)
     {
         return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
             width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
     }
-    Ctyp vctyp2ctyp(vcType *vct)
+    Ctyp vctyp2ctyp(vcType* vct)
     {
+        if ( vct->Kind() == "vcArrayType" )
+        {
+            cout << "opfactory: Array type unexpected in vctyp2ctyp" << endl;
+            exit(1);
+        }
         auto width = vct->Size();
         if ( vct->Is_Int_Type() ) return width2ctyp( width );
         if ( vct->Is_Float_Type() )
@@ -37,24 +62,6 @@ class OpFactory
         cout << "opfactory: Uknown type encounted" << endl;
         exit(1);
     }
-    Ctyp scalar2ctyp(vcType* vct)
-    {
-        if ( vct->Kind() == "vcArrayType" )
-        {
-            cout << "opfactory: Array type unexpected in scalar2ctyp" << endl;
-            exit(1);
-        }
-        return vctyp2ctyp(vct);
-    }
-    Ctyp arr2ctyp(vcType* vct)
-    {
-        if ( vct->Kind() != "vcArrayType" )
-        {
-            cout << "opfactory: Scalar type unexpected in arr2ctyp" << endl;
-            exit(1);
-        }
-        return vctyp2ctyp( ((vcArrayType*)vct)->Get_Element_Type() );
-    }
     vector<DatumBase*>& getStoragev(vcDatapathElement *dpe)
     {
         auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
@@ -65,12 +72,18 @@ class OpFactory
         }
         vcStorageObject *sto;
         for(auto nsto:objmap) sto = nsto.second;
-        return _sys->storageDatums(sto);
+        auto it = _storageDatums.find(sto);
+        if ( it == _storageDatums.end() )
+        {
+            _storageDatums.emplace(sto, sto2datumv(sto));
+            return _storageDatums[sto];
+        }
+        return it->second;
     }
     template <typename Opcls> Operator* createLoad(vcDatapathElement *dpe)
     {
         auto width = dpe->Get_Output_Width();
-        return new Opcls( width, dpe->Get_Id(), getStoragev(dpe) );
+        return new Opcls( width, dpe->Get_Id(), getStoragev( dpe ) );
     }
     template <typename Opcls> Operator* createStore(vcDatapathElement *dpe)
     {
@@ -85,7 +98,7 @@ class OpFactory
     template <typename Opcls> Operator* createIOPort(vcDatapathElement *dpe)
     {
         vcPipe* vcpipe = ((vcIOport*)dpe)->Get_Pipe();
-        Pipe* pipe = _sys->pipeMap(vcpipe);
+        Pipe* pipe = _sys->pipeMap(vcpipe); // TODO: get pipemap here
         auto width = vcpipe->Get_Width();
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id(), pipe);
     }
@@ -118,8 +131,8 @@ public:
         vector<Ctyp> opsig;
         if ( kind != "vcCall" )
         {
-            for (auto w:dpe->Get_Output_Wires()) opsig.push_back( scalar2ctyp(w->Get_Type()) );
-            for (auto w:dpe->Get_Input_Wires()) opsig.push_back( scalar2ctyp(w->Get_Type()) );
+            for (auto w:dpe->Get_Output_Wires()) opsig.push_back( vctyp2ctyp(w->Get_Type()) );
+            for (auto w:dpe->Get_Input_Wires()) opsig.push_back( vctyp2ctyp(w->Get_Type()) );
         }
         auto it = _opfmap.find( {vcid, opsig} );
         if ( it == _opfmap.end() )
@@ -144,7 +157,68 @@ public:
         }
         return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id() );
     }
+    template < typename T > DatumBase* createDatum(unsigned width)
+    {
+        return new Datum<T>( width );
+    }
+    template < typename T > void createDatums(unsigned width, unsigned dim, vector<DatumBase*>& datums)
+    {
+        for(int i=0; i<dim; i++) datums.push_back( new Datum<T>(width) );
+    }
+    DatumBase* vct2datum(vcType* vct)
+    {
+        auto ctyp  = vctyp2ctyp( vct );
+        auto width = vct->Size();
+        CTYPSWITCH( ctyp, createDatum, width );
+    }
+    void vct2datums(vcType* vct, unsigned dim, vector<DatumBase*>& datums)
+    {
+        auto ctyp  = vctyp2ctyp( vct );
+        auto width = vct->Size();
+        CTYPSWITCH( ctyp, createDatums, width, dim, datums );
+    }
+    DatumBase* vcv2datum(vcValue* vcval)
+    {
+        auto valtyp = vcval->Get_Type();
+        string val;
+        if ( valtyp->Is_Int_Type() ) val = ((vcIntValue*)vcval)->Get_Value();
+        else if ( valtyp->Is_Float_Type() ) val = ((vcFloatValue*)vcval)->Get_Value();
+        else
+        {
+            cout << "Unhandled value type " << valtyp->Kind() << endl;
+            exit(1);
+        }
+        auto retdat = vct2datum( valtyp );
+        *retdat = val;
+        return retdat;
+    }
+    DatumBase* valueDatum(vcValue* vcval) { return _valueDatum[vcval]; }
+    vector<DatumBase*> sto2datumv(vcStorageObject* sto)
+    {
+        auto stoTyp = sto->Get_Type();
+        int dim;
+        vcType* elemTyp;
+        if ( stoTyp->Kind() == "vcArrayType" )
+        {
+            auto arrayTyp = (vcArrayType*) stoTyp;
+            dim =  arrayTyp->Get_Dimension();
+            elemTyp = arrayTyp->Get_Element_Type();
+        }
+        else
+        {
+            dim = 1;
+            elemTyp = stoTyp;
+        }
+        vector<DatumBase*> retdat;
+        vct2datums(elemTyp, dim, retdat);
+        return retdat;
+    }
     OpFactory(SystemBase* sys) : _sys(sys) {}
+    ~OpFactory()
+    {
+        for(auto d:_valueDatum.getmap()) delete d.second;
+        for(auto dv:_storageDatums) for(auto d:dv.second) delete d;
+    }
 };
 
 #endif
