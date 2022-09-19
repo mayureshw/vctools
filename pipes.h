@@ -90,7 +90,7 @@ public:
         {
             unsigned i = pushpos();
             _nElems++;
-            *_store[i] = din;
+            _store[i]->blindcopy(din);
             PIPELOG("push:" << _label << ":" << din->str())
         }
     }
@@ -351,7 +351,7 @@ public:
     {
         DatumBase *popped = _p->pop();
         DatumBase *dptr = popped->clone();
-        *dptr = popped;
+        dptr->blindcopy(popped);
         _retv.push_back( dptr );
         if ( _retv.size() == _sz ) _exitActions();
         // There is no need to reset any attributes as next read cycle can
