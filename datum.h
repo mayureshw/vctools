@@ -3,64 +3,83 @@
 
 #include <iostream>
 #include <string>
+#include <bitset>
+#include "opf.h"
 
 class DatumBase
 {
+protected:
+    const unsigned _width;
 public:
-    virtual void operator = (DatumBase*) = 0;
-    virtual void operator = (string& bitstring) = 0;
     virtual DatumBase* clone() = 0;
     virtual string str() = 0;
+    virtual void operator = (string&) = 0;
+    // Deliberately named 'blind'. Caller takes responsibility of type safety
+    // both Datums involved should be of same type. For performance reason we
+    // do not validate types and refrain from using dynamic_casst
+    // Do test with DATUMDBG whenever a new call to blindcopy is added
+    virtual void blindcopy(DatumBase*) = 0;
+    unsigned width() { return _width; }
+    DatumBase(unsigned width) : _width(width) {}
     virtual ~DatumBase() {}
-    virtual unsigned width() = 0;
-    virtual operator unsigned long () = 0;
 };
 
 template <typename T> class Datum : public DatumBase
 {
-    const unsigned _width;
+using DatumBase::DatumBase;
 public:
     T val;
-    unsigned width() { return _width; }
-    void operator = (DatumBase* other) { val = (T)*other; }
+    // See comments in DatumBase
+    void blindcopy(DatumBase *other)
+    {
+#       ifdef DATUMDBG
+        assert( dynamic_cast<Datum<T>*>(other) );
+#       endif
+        val = ( (Datum<T>*) other )->val;
+    }
     void operator = (T val_) { val = val_; }
-    // If T were to be string, there will be ambiguity, currently T can't be string
     void operator = (string& bitstring)
     {
-        // We don't use stoi, or hacks like *(int *)&val = etc. as the method
-        // needs to work for various sizes of val
-        auto valbits = sizeof(val) << 3;
-        if ( bitstring.size() > valbits )
+        if constexpr ( ISWUINT(T) )
         {
-            cout << "bitstring overflow for datum " << bitstring << " size=" << valbits << endl;
-            exit(1);
-        }
-        val = 0;
-        // NOTE: WE ARE ENDIAN SENSITIVE HERE - LITTLE ENDIAN IS SUPPORTED
-        char* byteptr = (char*) &val;
-        char mask = 1;
-        for(int i=0; i < bitstring.size(); i++)
-        {
-            if( bitstring[i] == '1' ) *byteptr |= mask;
-            mask <<=1;
-            if ( mask == 0 )
+            if ( bitstring.size() > WIDEUINTSZ )
             {
-                byteptr++;
-                mask = 1;
+                cout << "bitstring overflow for datum " << bitstring;
+                cout << " Wide int size (configurable) limit is: " << WIDEUINTSZ << " sought " << bitstring.size() << endl;
+            }
+            val = WUINT(bitstring);
+        }
+        else
+        {
+            // We don't use stoi, or hacks like *(int *)&val = etc. as the method
+            // needs to work for various sizes of val
+            auto valbits = sizeof(val) << 3;
+            if ( bitstring.size() > valbits )
+            {
+                cout << "bitstring overflow for datum " << bitstring << " size=" << valbits << endl;
+                exit(1);
+            }
+            val = 0;
+            // NOTE: WE ARE ENDIAN SENSITIVE HERE - LITTLE ENDIAN IS SUPPORTED
+            char* byteptr = (char*) &val;
+            char mask = 1;
+            for(int i=0; i < bitstring.size(); i++)
+            {
+                if( bitstring[i] == '1' ) *byteptr |= mask;
+                mask <<=1;
+                if ( mask == 0 )
+                {
+                    byteptr++;
+                    mask = 1;
+                }
             }
         }
     }
     DatumBase* clone() { return new Datum<T>(_width); } // caller to manage delete
-    string str() { return to_string(val); }
-    operator unsigned long () { return (unsigned long) val; }
-    Datum(unsigned width) : _width(width)
+    string str()
     {
-        auto tsz = sizeof(T)<<3;
-        if ( width > tsz )
-        {
-            cout << "Attempt to instantiate datum of width=" << width << " with type size=" << tsz << endl;
-            exit(1);
-        }
+        if constexpr ( ISWUINT(T) ) return val.to_string();
+        else return to_string(val);
     }
 };
 
