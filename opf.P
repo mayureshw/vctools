@@ -49,18 +49,18 @@ opop( 'Not',    '~'  ).
 opop( 'Bitsel', '[]' ).
 opop( 'Concat', '&&' ).
 
-subtyps( bool,  [ uint8_t ] ).
-subtyps( uint,  [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
-subtyps( wuint, [ wuint ] ).
+subtyps( bool,    [ uint8_t ] ).
+subtyps( uint,    [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
+subtyps( 'WUINT', [ 'WUINT' ] ).
 subtyps( float, [ float, double ] ).
 
-nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, wuint ]).
+nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
 sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),    !, numeric(Num).
 sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ), !, bool(Bool), numeric(Num).
 sign(O, [NF,NF,NF]       ) :- member( O, ['And','Or'] ),               !, nofloat(NF).
 sign(O, [Any]            ) :- member( O, ['Inport','Outport'] ),       !, any(Any).
-sign('Not',    [Bool,Bool]        ):-!, bool(Bool).
+sign('Not',    [NF,NF]            ):-!, nofloat(NF).
 sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
 sign('Branch', [Bool]             ):-!, bool(Bool).
@@ -72,8 +72,8 @@ sign('Concat', [NF1,NF2,NF3]      ):-!, nofloat(NF1), nofloat(NF2), nofloat(NF3)
 sign('Slice',  [NF1,NF2]          ):-!, nofloat(NF1), nofloat(NF2), nfge(NF2,NF1).
 sign('Call',   []                 ):-!.
 
-numeric(ST) :- ( T = uint; T = float ), subtyp(T, ST).
-nofloat(ST) :- ( T = uint; T = wuint ), subtyp(T, ST).
+numeric(ST) :- ( T = uint; T = float   ), subtyp(T, ST).
+nofloat(ST) :- ( T = uint; T = 'WUINT' ), subtyp(T, ST).
 floaT(ST)   :- subtyp(float, ST).
 uint(ST)    :- subtyp(uint, ST).
 any(ST)     :- subtyp(_, ST).
@@ -136,8 +136,8 @@ pfmap(br(L)) :- findall(V, pfmapkv(V), L).
 cpp('#ifndef _OPF_H').
 cpp('#define _OPF_H').
 
-% TODO: wuint defined temporarily
-cpp(def('wuint','unsigned long')).
+cpp(def('WUINT','bitset<WIDEUINTSZ>')).
+cpp(def('ISWUINT(T)','is_same<T,WUINT>::value')).
 cpp(def('CTYPENUM',br(L))) :- findall(TSuf, ctyp(TSuf), L1), sort(L1, L).
 cpp(stmt(typdef('VCtyp',enum(L)))) :- findall(TSuf, vctypsuf(TSuf), L1), sort(L1, L).
 cpp(def('VCTYPMAP',br(L))) :- findall(V, vctypmap(V), L).
