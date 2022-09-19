@@ -6,6 +6,7 @@
 #include <iostream>
 #include "datum.h"
 #include "pipes.h"
+#include "opf.h"
 
 #ifdef OPDBG
     static ofstream oplog("ops.log");
@@ -17,6 +18,9 @@
 #else
 #   define OPLOG(ARGS)
 #endif
+
+#define INPVAL(T,I) ((Datum<T>*)_ipv[I])->val
+#define INPWIDTH(I) _ipv[I]->width()
 
 // ----------- base classes for various operators --------------
 class Operator
@@ -58,8 +62,8 @@ public:
     {
         for(int i=0; i<_resv.size(); i++)
         {
-            OPLOG("uack" << to_string(i) << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
-            *opv[i] = _resv[i];
+            OPLOG("uack" << i << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
+            opv[i]->blindcopy(_resv[i]);
         }
     }
     void setinpv(const vector<DatumBase*>& ipv) { _ipv = ipv; }
@@ -71,16 +75,16 @@ template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Tern
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin1& p, Tin2& q, Tin3& r, unsigned wp, unsigned wq, unsigned wr) = 0;
+    virtual Tout eval(Tin1 p, Tin2 q, Tin3 r, unsigned wp, unsigned wq, unsigned wr) = 0;
 public:
     void sack()
     {
-        auto p = (Tin1) *this->_ipv[0];
-        auto q = (Tin2) *this->_ipv[1];
-        auto r = (Tin3) *this->_ipv[2];
-        unsigned wp = ( this->_ipv[0] )->width();
-        unsigned wq = ( this->_ipv[1] )->width();
-        unsigned wr = ( this->_ipv[1] )->width();
+        auto p = INPVAL(Tin1, 0);
+        auto q = INPVAL(Tin2, 1);
+        auto r = INPVAL(Tin3, 2);
+        unsigned wp = INPWIDTH(0);
+        unsigned wq = INPWIDTH(1);
+        unsigned wr = INPWIDTH(2);
         z = eval(p,q,r,wp,wq,wr);
     }
     TernOperator(unsigned width, string label) : z(width), op(width), Operator(label)
@@ -95,14 +99,14 @@ template <typename Tout, typename Tin1, typename Tin2> class BinOperator : publi
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin1& x, Tin2& y, unsigned wx, unsigned wy) = 0;
+    virtual Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy) = 0;
 public:
     void sack()
     {
-        auto x = (Tin1)*this->_ipv[0];
-        auto y = (Tin2)*this->_ipv[1];
-        unsigned wx = ( this->_ipv[0] )->width();
-        unsigned wy = ( this->_ipv[1] )->width();
+        auto x = INPVAL(Tin1,0);
+        auto y = INPVAL(Tin2,1);
+        unsigned wx = INPWIDTH(0);
+        unsigned wy = INPWIDTH(1);
         z = eval(x,y,wx,wy);
     }
     BinOperator(unsigned width, string label) : z(width), op(width), Operator(label)
@@ -117,19 +121,19 @@ public:
 using BinOperator<Tout, Tin1, Tin2>::BinOperator; \
 public: \
     string oplabel() { return #CLS; } \
-    Tout eval(Tin1& x, Tin2& y, unsigned wx, unsigned wy) { return EXPR ; } \
+    Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy) { return EXPR ; } \
 };
 
 template <typename Tout, typename Tin> class UnaryOperator : public Operator
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin& x, unsigned wx) = 0;
+    virtual Tout eval(Tin x, unsigned wx) = 0;
 public:
     void sack()
     {
-        auto x = (Tin) *this->_ipv[0];
-        unsigned wx = ( this->_ipv[0] )->width();
+        auto x = INPVAL(Tin,0);
+        unsigned wx = INPWIDTH(0);
         z = eval(x, wx);
     }
     UnaryOperator(unsigned width, string label) : z(width), op(width), Operator(label)
@@ -159,15 +163,20 @@ BINOP( Gt,     x > y  )
 BINOP( Ge,     x >= y )
 BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
-BINOP( Concat, ( ((Tout) x) << wy ) | y )
-BINOP( Bitsel, ( ( x >> y ) & 1 ) ? 1 : 0 )
+BINOP( Concat, ( ((Tout) x) << wy ) | (Tout) y )
+BINOP( Bitsel, ( ( x >> y ) & (Tin1) 1 ) != 0 ? 1 : 0 )
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {
-using UnaryOperator<Tout, Tin>::UnaryOperator;
+    Tin _mask = 0;
 public:
     string oplabel() { return "Not"; }
-    Tout eval(Tin& x, unsigned wx) { return ~x&(1<<(wx+1)-1); }
+    Tout eval(Tin x, unsigned wx) { return ~x & _mask; }
+    Not(unsigned width, string label) : UnaryOperator<Tout, Tin>(width, label)
+    {
+        if constexpr ( ISWUINT(Tin) ) for(int i=0; i<width; i++) _mask[i] = 1;
+        else _mask = 1 << ( width + 1 ) - 1;
+    }
 };
 
 template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Select : public TernOperator<Tout, Tin1, Tin2, Tin3>
@@ -175,28 +184,40 @@ template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Sele
 using TernOperator<Tout, Tin1, Tin2, Tin3>::TernOperator;
 public:
     string oplabel() { return "Select"; }
-    Tout eval(Tin1& p, Tin2& q, Tin3& r, unsigned pw, unsigned qw, unsigned rw) { return p ? q : r; }
+    Tout eval(Tin1 p, Tin2 q, Tin3 r, unsigned pw, unsigned qw, unsigned rw) { return p ? q : r; }
 };
 
 template <typename Tout, typename Tin> class Slice : public Operator
 {
     Datum<Tout> y, op;
-    const Tin _mask;
+    Tin _mask;
     const unsigned _l;
     Tin getmask(unsigned h, unsigned l)
     {
-        const unsigned long one = 1;
-        // can't use 1<<(h+1) as if h is msb position, results are undefined
-        Tin hmask = ( ( ( one << h ) - 1 ) << 1 ) + 1;
-        Tin lmask = ( ( one << l ) - 1 );
-        return hmask & ~lmask;
+        if constexpr ( ISWUINT(Tin) )
+        {
+            Tin mask;
+            for(int i=l; i<=h; i++) mask[i] = 1;
+            return mask;
+        }
+        else
+        {
+            const Tin one = 1;
+            // can't use 1<<(h+1) as if h is msb position, results are undefined
+            Tin hmask = ( ( ( one << h ) - 1 ) << 1 ) + 1;
+            Tin lmask = ( ( one << l ) - 1 );
+            return hmask & ~lmask;
+        }
     }
 public:
     string oplabel() { return "Slice"; }
     void sack()
     {
-        auto x = (Tin) *this->_ipv[0];
-        y = ( _mask & x ) >> _l;
+        auto x = INPVAL(Tin,0);
+        if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
+            y = ( ( _mask & x ) >> _l ).to_ulong();
+        else
+            y = ( _mask & x ) >> _l;
     }
     Slice(unsigned width, string label, unsigned h, unsigned l) : y(width), op(width), _l(l),
         _mask(getmask(h,l)), Operator(label)
@@ -213,8 +234,11 @@ public:
     string oplabel() { return "Assign"; }
     void sack()
     {
-        auto x = (Tout) *this->_ipv[0];
-        y = x;
+        auto x = INPVAL(Tin,0);
+        if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
+            y = x.to_ulong();
+        else
+            y = (Tout) x;
     }
     Assign(unsigned width, string label): y(width), op(width), Operator(label)
     {
@@ -233,7 +257,7 @@ public:
     string oplabel() { return "Branch"; }
     list<int> arcChooser()
     {
-        auto x = (Tin) *this->_ipv[0];
+        auto x = INPVAL(Tin,0);
         return x ? chooseTrue : chooseFalse;
     }
     Branch(unsigned width, string label) : Operator(label)
@@ -250,11 +274,7 @@ template <typename Tout, typename Tin1, typename Tin2> class Phi : public Operat
     Datum<Tout> y, op;
 public:
     string oplabel() { return "Phi"; }
-    void select(int i)
-    {
-        auto x = (Tin1) *this->_ipv[i];
-        y = x;
-    }
+    void select(int i) { y = i == 0 ? INPVAL(Tin1,0) : INPVAL(Tin2,1); }
     Phi(unsigned width, string label) : y(width), op(width), Operator(label)
     {
         _resv.push_back(&y);
@@ -270,8 +290,8 @@ public:
     string oplabel() { return "Load"; }
     void sack()
     {
-        auto i = (Tin) *this->_ipv[0];
-        y = (Tout) *_stv[i];
+        auto i = INPVAL(Tin,0);
+        y = ((Datum<Tout>*) _stv[i])->val;
     }
     Load(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), y(width), op(width), Operator(label)
     {
@@ -287,9 +307,9 @@ public:
     string oplabel() { return "Store"; }
     void sack()
     {
-        auto i = (Tin1) *this->_ipv[0];
-        auto val = (Tin2) *this->_ipv[1];
-        *((Datum<Tin2>*)_stv[i]) = val;
+        auto i = INPVAL(Tin1,0);
+        auto val = INPVAL(Tin2,1);
+        ((Datum<Tin2>*)_stv[i])->val = val;
         // Since Store doesn't have a uack log, we log its sack
         OPLOG("sack:" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
     }
@@ -307,7 +327,7 @@ public:
     void flowthrough() { ureq(); uack(); }
     void ureq()
     {
-        y = (Tout) *_pipe->pop();
+        y = ((Datum<Tout>*) _pipe->pop())->val;
     }
     Inport(unsigned width, string label, Pipe *pipe) : IOPort(width,label,pipe), y(width), op(width)
     {
@@ -334,7 +354,7 @@ public:
     string oplabel() { return "Call"; }
     void sack()
     {
-        for(int i=0; i<_ipv.size(); i++) *_moduleipv[i] = _ipv[i];
+        for(int i=0; i<_ipv.size(); i++) _moduleipv[i]->blindcopy(_ipv[i]);
     }
     Call(vector<DatumBase*>& moduleipv, vector<DatumBase*>& moduleopv, string label) : _moduleipv(moduleipv), Operator(label)
     {
