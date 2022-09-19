@@ -4,8 +4,6 @@
 #include <tuple>
 #include "opf.h"
 
-#define CTYPENUM { double_, float_, uint16_t_, uint32_t_, uint64_t_, uint8_t_, wuint_ }
-
 #define CTYPSWITCH( CTYP, FN, ... ) \
     switch ( CTYP ) \
     { \
@@ -15,7 +13,7 @@
         case uint32_t_ : return FN<uint32_t> ( __VA_ARGS__ ); \
         case uint64_t_ : return FN<uint64_t> ( __VA_ARGS__ ); \
         case uint8_t_  : return FN<uint8_t > ( __VA_ARGS__ ); \
-        case wuint_    : return FN<wuint   > ( __VA_ARGS__ ); \
+        case WUINT_    : return FN<WUINT   > ( __VA_ARGS__ ); \
         default : \
             cout << "Encountered unknown type " << CTYP << endl; \
             exit(1); \
@@ -40,8 +38,13 @@ class OpFactory
 
     Ctyp width2ctyp(int width)
     {
+        if ( width > WIDEUINTSZ )
+        {
+            cout << "Wide int size (configurable) limit is: " << WIDEUINTSZ << " sought " << width << endl;
+            exit(1);
+        }
         return width <= 8 ? uint8_t_ : width <= 16 ? uint16_t_ :
-            width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : wuint_;
+            width <= 32 ? uint32_t_ : width <= 64 ? uint64_t_ : WUINT_;
     }
     Ctyp vctyp2ctyp(vcType* vct)
     {
