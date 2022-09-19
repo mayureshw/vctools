@@ -16,6 +16,7 @@ VCFILES		=	$(AASRCS:.aa=.vc)
 TESTSRCS	=	$(AASRCS:.aa=.cpp)
 TESTEXES	=	$(TESTSRCS:.cpp=.out)
 DFILES		=	$(TESTSRCS:.cpp=.d)
+CXXFLAGS	+=	-DWIDEUINTSZ=128
 
 
 %.out:	%.cpp %.vc
