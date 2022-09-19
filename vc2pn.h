@@ -870,7 +870,7 @@ public:
         {
             string arg = _vcm->Get_Ordered_Input_Arguments()[i];
             DatumBase* argdatum = inparamDatum(arg);
-            *argdatum = inpv[i];
+            argdatum->blindcopy(inpv[i]);
         }
         _moduleEntryPlace->addtokens(1);
     }
