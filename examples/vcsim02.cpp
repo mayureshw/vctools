@@ -5,7 +5,7 @@ using namespace std;
 
 int main()
 {
-    Datum<int> a(8), b(8), c(8);
+    Datum<uint8_t> a(8), b(8), c(8);
     a = 10; b = 20; c = 30;
     vector<pair<string,vector<DatumBase*>>> feeds = 
         {
