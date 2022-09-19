@@ -164,7 +164,19 @@ BINOP( Ge,     x >= y )
 BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
 BINOP( Concat, ( ((Tout) x) << wy ) | (Tout) y )
-BINOP( Bitsel, ( ( x >> y ) & (Tin1) 1 ) != 0 ? 1 : 0 )
+
+template <typename Tout, typename Tin1, typename Tin2> class Bitsel : public BinOperator<Tout, Tin1, Tin2>
+{
+using BinOperator<Tout, Tin1, Tin2>::BinOperator;
+public:
+    string oplabel() { return "Bitsel"; }
+    Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy)
+    {
+        if constexpr ( ISWUINT(Tin2) )
+            return ( ( x >> y.to_ulong() ) & (Tin1) 1 ) != 0 ? 1 : 0;
+        else return ( ( x >> y ) & (Tin1) 1 ) != 0 ? 1 : 0;
+    }
+};
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {

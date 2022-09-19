@@ -47,7 +47,8 @@ public:
                 cout << "bitstring overflow for datum " << bitstring;
                 cout << " Wide int size (configurable) limit is: " << WIDEUINTSZ << " sought " << bitstring.size() << endl;
             }
-            val = WUINT(bitstring);
+            string revbitstring = string(bitstring.rbegin(), bitstring.rend());
+            val = WUINT(revbitstring);
         }
         else
         {
