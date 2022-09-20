@@ -1057,12 +1057,12 @@ class System : public SystemBase
         for(auto p:_feedermap) { p.second->buildPN(_pni); }
         for(auto p:_readermap) { p.second->buildPN(_pni); }
         buildSysExitPN(_pni);
-#ifdef USECEP
+#       ifdef USECEP
         _intervalManager = new IntervalManager(CEPDAT);
         _pn = new PetriNet( _pni.pnes, [this](unsigned e){ this->_intervalManager->route(e); } );
-#else
+#       else
         _pn = new PetriNet( _pni.pnes );
-#endif
+#       endif
     }
 public:
     PNInfo _pni;
@@ -1205,9 +1205,9 @@ public:
         for(auto p:_pipemap) delete p.second;
         for(auto p:_feedermap) delete p.second;
         for(auto p:_readermap) delete p.second;
-#ifdef USECEP
+#       ifdef USECEP
         delete _intervalManager;
-#endif
+#       endif
     }
 };
 
