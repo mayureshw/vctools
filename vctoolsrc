@@ -3,11 +3,12 @@ export AHIRDIR=$GITHUBHOME/ahir
 export XSBCPPIFDIR=$GITHUBHOME/xsbcppif
 export CEPTOOLDIR=$GITHUBHOME/ceptool
 export PATH=$PATH:$AHIRDIR/prebuilt_ubuntu_16.04_release/bin
+export PATH=$PATH:$VCTOOLSDIR
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VCTOOLSDIR
 
 if [ ! -z "$XSBDIR" ]
 then
-    export XSBLIBPATH=$CEPTOOLDIR
-    export PATH=$PATH:$XSBDIR/bin
+    export XSBLIBPATH=$CEPTOOLDIR,$VCTOOLSDIR
+    export PATH=$PATH:$XSBDIR/bin:$CEPTOOLDIR
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XSBDIR/config/`$XSBDIR/build/config.guess`/bin
 fi
