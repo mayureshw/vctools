@@ -95,9 +95,9 @@ public:
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        cout << "Usage: " << argv[0] << " <vcfile>" << endl;
+        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile>" << endl;
         exit(1);
     }
     vcSystem::_opt_flag = true;
@@ -113,6 +113,6 @@ int main(int argc, char* argv[])
 
     SysIR sysir(vcs,sys);
 
-    ofstream pfile("vcir.dat");
+    ofstream pfile(argv[2]);
     sysir.exportIR(pfile);
 }
