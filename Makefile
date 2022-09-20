@@ -1,3 +1,5 @@
+include Makefile.conf
+
 OS	=	$(shell uname -s)
 
 ifeq ($(OS),NetBSD)
@@ -16,7 +18,7 @@ AHIRGRAMDIR	=	$(AHIRDIR)/v2/libAhirV2/grammar
 VCGRAMMAR	=	$(AHIRGRAMDIR)/vc.g
 AHIRSRCS	=	$(wildcard $(AHIRSRCDIR)/*.cpp)
 PARSERSRCS	=	vcParser.cpp vcLexer.cpp
-VCTOOLSRCS	=	vc2pn.cpp cprcheck.cpp
+VCTOOLSRCS	=	vcsim.cpp cprcheck.cpp
 PARSERHDRS	=	$(PARSERSRCS:.cpp=.hpp) vcParserTokenTypes.hpp
 MISCFILES	=	vcParserTokenTypes.txt
 AHIROBJS	=	$(notdir $(AHIRSRCS:.cpp=.o))
@@ -37,7 +39,8 @@ BINS		+=	vc2p.out
 VCTOOLSRCS	+=	vc2p.cpp
 endif
 
-#$(OPTBINS):CXXFLAGS	+=	-O3
+vc2p.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
+$(OPTBINS):CXXFLAGS	+=	-O3
 
 # Need to touch the file as antlr doesn't change the timestamp if the file wasn't changed
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
@@ -58,14 +61,14 @@ $(DFILES):		$(PARSERHDRS)
 
 $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 
-libvcsim.so:	vc2pn.o libahirvc.a
+libvcsim.so:	vcsim.o libahirvc.a
 	$(CXX) -shared $^ $(LDFLAGS) -o $@
 
 cprcheck.out:	cprcheck.o libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 vc2p.out:	vc2p.o libvcsim.so libahirvc.a
-	$(CXX) $^ $(LDFLAGS) -o $@
+	$(CXX) $< $(LDFLAGS) -o $@
 
 ifdef XSBDIR
 opf.h:	opf.P
@@ -75,7 +78,6 @@ endif
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
 
-include Makefile.conf
 CONFOPTS	=	USECEP DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML
 CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
 CXXFLAGS	+=	-DWIDEUINTSZ=$(WIDEUINTSZ)
