@@ -3,7 +3,7 @@
 
 #ifdef USECEP
 #   include "cpp2xsb.h"
-#   define DPN_USE_EVENT_LISTENER
+#   define PN_USE_EVENT_LISTENER
 #endif
 
 #include "petrinet.h"
