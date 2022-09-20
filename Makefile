@@ -28,7 +28,7 @@ CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-fPIC -g
 VPATH		+=	$(AHIRSRCDIR)
 
-BINS		=	libahirvc.a $(VCTOOLSDIR)/libvcsim.so cprcheck.out
+BINS		=	libahirvc.a libvcsim.so cprcheck.out
 EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
@@ -37,7 +37,7 @@ BINS		+=	vc2p.out
 VCTOOLSRCS	+=	vc2p.cpp
 endif
 
-$(OPTBINS):CXXFLAGS	+=	-O3
+#$(OPTBINS):CXXFLAGS	+=	-O3
 
 # Need to touch the file as antlr doesn't change the timestamp if the file wasn't changed
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
@@ -58,13 +58,13 @@ $(DFILES):		$(PARSERHDRS)
 
 $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 
-$(VCTOOLSDIR)/libvcsim.so:	vc2pn.o libahirvc.a
+libvcsim.so:	vc2pn.o libahirvc.a
 	$(CXX) -shared $^ $(LDFLAGS) -o $@
 
 cprcheck.out:	cprcheck.o libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
 
-vc2p.out:	vc2p.o $(VCTOOLSDIR)/libvcsim.so libahirvc.a
+vc2p.out:	vc2p.o libvcsim.so libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 ifdef XSBDIR
