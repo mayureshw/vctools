@@ -187,7 +187,7 @@ public:
     Not(unsigned width, string label) : UnaryOperator<Tout, Tin>(width, label)
     {
         if constexpr ( ISWUINT(Tin) ) for(int i=0; i<width; i++) _mask[i] = 1;
-        else _mask = 1 << ( width + 1 ) - 1;
+        else _mask = ( 1 << width ) - 1;
     }
 };
 
