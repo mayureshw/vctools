@@ -67,7 +67,7 @@ sign('Branch', [Bool]             ):-!, bool(Bool).
 sign('Load',   [Any,UInt]         ):-!, any(Any), uint(UInt).
 sign('Store',  [UInt,Any]         ):-!, uint(UInt), any(Any).
 sign('Select', [Any,Bool,Any,Any] ):-!, any(Any), bool(Bool).
-sign('Bitsel', [Bool,NF,NF]       ):-!, bool(Bool), nofloat(NF). % Strangely 2nd arg is of same type
+sign('Bitsel', [Bool,NF1,NF2]     ):-!, bool(Bool), nofloat(NF1), nofloat(NF2). % Strangely 2nd arg is of same type, and strangely mixed types are allowed as well.
 sign('Concat', [NF1,NF2,NF3]      ):-!, nofloat(NF1), nofloat(NF2), nofloat(NF3), nfge(NF1,NF2), nfge(NF1,NF3).
 sign('Slice',  [NF1,NF2]          ):-!, nofloat(NF1), nofloat(NF2), nfge(NF2,NF1).
 sign('Call',   []                 ):-!.
