@@ -20,7 +20,7 @@
 #endif
 
 #define INPVAL(T,I) ((Datum<T>*)_ipv[I])->val
-#define INPWIDTH(I) _ipv[I]->width()
+#define INPWIDTH(I) this->_ipv[I]->width()
 
 // ----------- base classes for various operators --------------
 class Operator
@@ -75,17 +75,14 @@ template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Tern
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin1 p, Tin2 q, Tin3 r, unsigned wp, unsigned wq, unsigned wr) = 0;
+    virtual Tout eval(Tin1 p, Tin2 q, Tin3 r) = 0;
 public:
     void sack()
     {
         auto p = INPVAL(Tin1, 0);
         auto q = INPVAL(Tin2, 1);
         auto r = INPVAL(Tin3, 2);
-        unsigned wp = INPWIDTH(0);
-        unsigned wq = INPWIDTH(1);
-        unsigned wr = INPWIDTH(2);
-        z = eval(p,q,r,wp,wq,wr);
+        z = eval(p,q,r);
     }
     TernOperator(unsigned width, string label) : z(width), op(width), Operator(label)
     {
@@ -99,15 +96,13 @@ template <typename Tout, typename Tin1, typename Tin2> class BinOperator : publi
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy) = 0;
+    virtual Tout eval(Tin1 x, Tin2 y) = 0;
 public:
     void sack()
     {
         auto x = INPVAL(Tin1,0);
         auto y = INPVAL(Tin2,1);
-        unsigned wx = INPWIDTH(0);
-        unsigned wy = INPWIDTH(1);
-        z = eval(x,y,wx,wy);
+        z = eval(x,y);
     }
     BinOperator(unsigned width, string label) : z(width), op(width), Operator(label)
     {
@@ -121,20 +116,19 @@ public:
 using BinOperator<Tout, Tin1, Tin2>::BinOperator; \
 public: \
     string oplabel() { return #CLS; } \
-    Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy) { return EXPR ; } \
+    Tout eval(Tin1 x, Tin2 y) { return EXPR ; } \
 };
 
 template <typename Tout, typename Tin> class UnaryOperator : public Operator
 {
 protected:
     Datum<Tout> z, op;
-    virtual Tout eval(Tin x, unsigned wx) = 0;
+    virtual Tout eval(Tin x) = 0;
 public:
     void sack()
     {
         auto x = INPVAL(Tin,0);
-        unsigned wx = INPWIDTH(0);
-        z = eval(x, wx);
+        z = eval(x);
     }
     UnaryOperator(unsigned width, string label) : z(width), op(width), Operator(label)
     {
@@ -163,14 +157,14 @@ BINOP( Gt,     x > y  )
 BINOP( Ge,     x >= y )
 BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
-BINOP( Concat, ( ((Tout) x) << wy ) | (Tout) y )
+BINOP( Concat, ( ((Tout) x) << INPWIDTH(1) ) | (Tout) y )
 
 template <typename Tout, typename Tin1, typename Tin2> class Bitsel : public BinOperator<Tout, Tin1, Tin2>
 {
 using BinOperator<Tout, Tin1, Tin2>::BinOperator;
 public:
     string oplabel() { return "Bitsel"; }
-    Tout eval(Tin1 x, Tin2 y, unsigned wx, unsigned wy)
+    Tout eval(Tin1 x, Tin2 y)
     {
         if constexpr ( ISWUINT(Tin2) )
             return ( ( x >> y.to_ulong() ) & (Tin1) 1 ) != 0 ? 1 : 0;
@@ -183,7 +177,7 @@ template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Ti
     Tin _mask = 0;
 public:
     string oplabel() { return "Not"; }
-    Tout eval(Tin x, unsigned wx) { return ~x & _mask; }
+    Tout eval(Tin x) { return ~x & _mask; }
     Not(unsigned width, string label) : UnaryOperator<Tout, Tin>(width, label)
     {
         if constexpr ( ISWUINT(Tin) ) for(int i=0; i<width; i++) _mask[i] = 1;
@@ -196,7 +190,7 @@ template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Sele
 using TernOperator<Tout, Tin1, Tin2, Tin3>::TernOperator;
 public:
     string oplabel() { return "Select"; }
-    Tout eval(Tin1 p, Tin2 q, Tin3 r, unsigned pw, unsigned qw, unsigned rw) { return p ? q : r; }
+    Tout eval(Tin1 p, Tin2 q, Tin3 r) { return p ? q : r; }
 };
 
 template <typename Tout, typename Tin> class Slice : public Operator
