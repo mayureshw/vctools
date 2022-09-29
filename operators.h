@@ -35,34 +35,34 @@ public:
     // can't mandate some of these functions on all the operators, some are
     // even unique to a single operator, but have to keep them here to save
     // having to write template arguments where the function pointers are used.
-    virtual void sack()
+    virtual void sack(unsigned long eseqno)
     {
         cout << "operators.h: sack not implemented " << endl;
         exit(1);
     }
-    virtual void select(int i)
+    virtual void select(int i, unsigned long eseqno)
     {
         cout << "operators.h: select not implemented " << endl;
         exit(1);
     }
     // TODO: flowthrough can do minutely better by skipping _resv
-    virtual void flowthrough() { sack(); uack(); }
+    virtual void flowthrough(unsigned long eseqno) { sack(eseqno); uack(eseqno); }
     string inpvstr()
     {
         string retstr;
         for(auto inp:_ipv) retstr += inp->str() + ":";
         return retstr;
     }
-    virtual void ureq()
+    virtual void ureq(unsigned long eseqno)
     {
         cout << "operators.h: ureq not implemented " << endl;
         exit(1);
     }
-    void uack()
+    void uack(unsigned long eseqno)
     {
         for(int i=0; i<_resv.size(); i++)
         {
-            OPLOG("uack" << i << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
+            OPLOG("uack" << i << ":" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
             opv[i]->blindcopy(_resv[i]);
         }
     }
@@ -77,7 +77,7 @@ protected:
     Datum<Tout> z, op;
     virtual Tout eval(Tin1 p, Tin2 q, Tin3 r) = 0;
 public:
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto p = INPVAL(Tin1, 0);
         auto q = INPVAL(Tin2, 1);
@@ -98,7 +98,7 @@ protected:
     Datum<Tout> z, op;
     virtual Tout eval(Tin1 x, Tin2 y) = 0;
 public:
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto x = INPVAL(Tin1,0);
         auto y = INPVAL(Tin2,1);
@@ -125,7 +125,7 @@ protected:
     Datum<Tout> z, op;
     virtual Tout eval(Tin x) = 0;
 public:
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto x = INPVAL(Tin,0);
         z = eval(x);
@@ -217,7 +217,7 @@ template <typename Tout, typename Tin> class Slice : public Operator
     }
 public:
     string oplabel() { return "Slice"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto x = INPVAL(Tin,0);
         if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
@@ -238,7 +238,7 @@ template <typename Tout, typename Tin> class Assign : public Operator
     Datum<Tout> y, op;
 public:
     string oplabel() { return "Assign"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto x = INPVAL(Tin,0);
         if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
@@ -280,7 +280,7 @@ template <typename Tout, typename Tin1, typename Tin2> class Phi : public Operat
     Datum<Tout> y, op;
 public:
     string oplabel() { return "Phi"; }
-    void select(int i) { y = i == 0 ? INPVAL(Tin1,0) : INPVAL(Tin2,1); }
+    void select(int i, unsigned long eseqno) { y = i == 0 ? INPVAL(Tin1,0) : INPVAL(Tin2,1); }
     Phi(unsigned width, string label) : y(width), op(width), Operator(label)
     {
         _resv.push_back(&y);
@@ -294,7 +294,7 @@ template <typename Tout, typename Tin> class Load : public Operator
     Datum<Tout> y, op;
 public:
     string oplabel() { return "Load"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto i = INPVAL(Tin,0);
         y = ((Datum<Tout>*) _stv[i])->val;
@@ -311,13 +311,13 @@ template <typename Tin1, typename Tin2> class Store : public Operator
     vector<DatumBase*>& _stv;
 public:
     string oplabel() { return "Store"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         auto i = INPVAL(Tin1,0);
         auto val = INPVAL(Tin2,1);
         ((Datum<Tin2>*)_stv[i])->val = val;
         // Since Store doesn't have a uack log, we log its sack
-        OPLOG("sack:" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
+        OPLOG("sack:" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
     }
     // width passed due to macro uniformity, ignored
     Store(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), Operator(label) {}
@@ -330,10 +330,10 @@ public:
     string oplabel() { return "Inport"; }
     // AHIR does read operations on update events, unlike other operators
     // Hence we implement uack like operations on ureq and customize flowthrough
-    void flowthrough() { ureq(); uack(); }
-    void ureq()
+    void flowthrough(unsigned long eseqno) { ureq(eseqno); uack(eseqno); }
+    void ureq(unsigned long eseqno)
     {
-        y = ((Datum<Tout>*) _pipe->pop())->val;
+        y = ((Datum<Tout>*) _pipe->pop(eseqno))->val;
     }
     Inport(unsigned width, string label, Pipe *pipe) : IOPort(width,label,pipe), y(width), op(width)
     {
@@ -347,9 +347,9 @@ template <typename Tin> class Outport : public IOPort
 using IOPort::IOPort;
 public:
     string oplabel() { return "Outport"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
-        _pipe->push(_ipv[0]);
+        _pipe->push(_ipv[0],eseqno);
     }
 };
 
@@ -358,7 +358,7 @@ class Call : public Operator
     vector<DatumBase*> _moduleipv;
 public:
     string oplabel() { return "Call"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         for(int i=0; i<_ipv.size(); i++) _moduleipv[i]->blindcopy(_ipv[i]);
     }
@@ -376,7 +376,7 @@ template <typename T> class Generic : public Operator
     Datum<T> op;
 public:
     string oplabel() { return "Generic"; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
         cout << "WARNING: Generic::sack called. This is a stub. Inputs are" << endl;
         for(auto d:_ipv) cout << "\t" << d->str() << endl;

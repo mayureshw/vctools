@@ -79,11 +79,11 @@ public:
     string _label;
     bool empty() { return _nElems == 0; }
     bool full() { return _nElems == _depth; }
-    void push(DatumBase* din)
+    void push(DatumBase* din, unsigned long eseqno)
     {
         if ( full() )
         {
-            PIPELOG("pushfull:" << _label << ":" << din->str())
+            PIPELOG("pushfull:" << eseqno << ":" << _label << ":" << din->str())
             pushOnFull();
         }
         else
@@ -91,22 +91,22 @@ public:
             unsigned i = pushpos();
             _nElems++;
             _store[i]->blindcopy(din);
-            PIPELOG("push:" << _label << ":" << din->str())
+            PIPELOG("push:" << eseqno << ":" << _label << ":" << din->str())
         }
     }
-    DatumBase* pop()
+    DatumBase* pop(unsigned long eseqno)
     {
         if ( empty() )
         {
             auto retval = popOnEmpty();
-            PIPELOG("popempty:" << _label << ":" << retval->str())
+            PIPELOG("popempty:" << eseqno << ":" << _label << ":" << retval->str())
             return retval;
         }
         else
         {
             unsigned i = poppos();
             _nElems--;
-            PIPELOG("pop:" << _label << ":" << _store[i]->str())
+            PIPELOG("pop:" << eseqno << ":" << _label << ":" << _store[i]->str())
             return _store[i];
         }
     }
@@ -286,7 +286,7 @@ protected:
     PNTransition *_sreq, *_sack;
     PNPlace *_triggerPlace;
 public:
-    virtual void sack() = 0;
+    virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN(PNInfo& pni) = 0;
     void buildPN(PNInfo& pni)
     {
@@ -298,7 +298,7 @@ public:
     {
         _sreq = new PNTransition("PipeIf_sreq");
         _sack = new PNTransition("PipeIf_sack");
-        _sack->setEnabledActions(bind(&PipeIf::sack,this));
+        _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
         _triggerPlace = new PNPlace("PipeIf_trigger");
     }
 };
@@ -308,9 +308,9 @@ class PipeFeeder : public PipeIf
     queue<DatumBase*> _payloadq;
 using PipeIf::PipeIf;
     void _buildPN(PNInfo& pni) { _p->buildPNOport(_sreq, _sack, pni); }
-    void sack()
+    void sack(unsigned long eseqno)
     {
-        _p->push( _payloadq.front() );
+        _p->push( _payloadq.front(), eseqno );
         _payloadq.pop();
     }
 public:
@@ -347,9 +347,9 @@ public:
         _triggerPlace->addtokens(sz);
     }
     vector<DatumBase*>& collect() { return _retv; }
-    void sack()
+    void sack(unsigned long eseqno)
     {
-        DatumBase *popped = _p->pop();
+        DatumBase *popped = _p->pop(eseqno);
         DatumBase *dptr = popped->clone();
         dptr->blindcopy(popped);
         _retv.push_back( dptr );

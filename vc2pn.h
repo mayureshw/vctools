@@ -137,13 +137,13 @@ public:
 #           ifdef USECEP
             pni.vctid.add({ rootindex, "req" + to_string(i), req->_nodeid });
 #           endif
-            req->setEnabledActions(bind(&Operator::select,_op,i));
+            req->setEnabledActions(bind(&Operator::select,_op,i,_1));
         }
         PetriNet::createArc(phplace, _acks[0], pni.pnes);
 #       ifdef USECEP
         pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
 #       endif
-        _acks[0]->setEnabledActions(bind(&Operator::uack,_op));
+        _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
     void buildPNBranch(PNInfo& pni)
@@ -255,10 +255,10 @@ public:
         bool isIport = _vctyp == vcInport_;
         bool isOport = _vctyp == vcOutport_;
         if ( isIport ) // In AHIR Inport reads on ureq, not on sreq
-            _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op));
+            _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
         else
-            _acks[0]->setEnabledActions(bind(&Operator::sack,_op));
-        _acks[1]->setEnabledActions(bind(&Operator::uack,_op));
+            _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
+        _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
         sreq2ack(pni);
         PetriNet::createArc(_acks[0], _acks[1], pni.pnes); // Since sreq/ureq can be ||, need this sync
         PetriNet::createArc(_reqs[1], _acks[1], pni.pnes);
@@ -311,7 +311,7 @@ public:
     PNTransition* ftreq(PNInfo& pni)
     {
         PNTransition *ftreq = new PNTransition("DPE:" + _label + "_ftreq");
-        ftreq->setEnabledActions(bind(&Operator::flowthrough,_op));
+        ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
         // if this ftreq relates with a pipe, need to connect with pipe's pnet
         if ( isSignalInport() )
             ((IOPort*)_op)->_pipe->buildPNIport(ftreq, ftreq, pni);
