@@ -45,6 +45,10 @@ opop( 'Ne',     '!=' ).
 opop( 'Eq',     '==' ).
 opop( 'And',    '&'  ).
 opop( 'Or',     '|'  ).
+opop( 'Xor',    '^'  ).
+opop( 'Nand',   '~&' ).
+opop( 'Nor',    '~|' ).
+opop( 'Xnor',   '~^' ).
 opop( 'Not',    '~'  ).
 opop( 'Bitsel', '[]' ).
 opop( 'Concat', '&&' ).
@@ -56,10 +60,14 @@ subtyps( float, [ float, double ] ).
 
 nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
-sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),    !, numeric(Num).
-sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ), !, bool(Bool), numeric(Num).
-sign(O, [NF,NF,NF]       ) :- member( O, ['And','Or'] ),               !, nofloat(NF).
-sign(O, [Any]            ) :- member( O, ['Inport','Outport'] ),       !, any(Any).
+sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),
+    !, numeric(Num).
+sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ),
+    !, bool(Bool), numeric(Num).
+sign(O, [NF,NF,NF]       ) :- member( O, ['And','Or','Xor','Nand','Nor','Xnor'] ),
+    !, nofloat(NF).
+sign(O, [Any]            ) :- member( O, ['Inport','Outport'] ),
+    !, any(Any).
 sign('Not',    [NF,NF]            ):-!, nofloat(NF).
 sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
