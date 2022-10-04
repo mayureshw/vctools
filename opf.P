@@ -39,6 +39,7 @@ opop( 'Plus',   '+'  ).
 opop( 'Minus',  '-'  ).
 opop( 'Mult',   '*'  ).
 opop( 'Lt',     '<'  ).
+opop( 'Le',     '<=' ).
 opop( 'Gt',     '>'  ).
 opop( 'Ge',     '>=' ).
 opop( 'Ne',     '!=' ).
@@ -62,7 +63,7 @@ nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
 sign(O, [Num,Num,Num]    ) :- member( O, ['Plus','Minus','Mult'] ),
     !, numeric(Num).
-sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Gt','Ge','Ne','Eq'] ),
+sign(O, [Bool,Num,Num]   ) :- member( O, ['Lt','Le','Gt','Ge','Ne','Eq'] ),
     !, bool(Bool), numeric(Num).
 sign(O, [NF,NF,NF]       ) :- member( O, ['And','Or','Xor','Nand','Nor','Xnor'] ),
     !, nofloat(NF).
