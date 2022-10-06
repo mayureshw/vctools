@@ -2,6 +2,8 @@
 
 ## HEAD
 
+    - Added operators >> << >o> <o< < ^ ~& ~| ~^
+
     - Added a unique sequence number for each event to help correlate logs
 
     - Wide unsigned integer support (>64 bit) of a compile time configurable

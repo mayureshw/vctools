@@ -117,9 +117,8 @@ class OpFactory
     {
         auto vcslice = (vcSlice*) dpe;
         int width = vcslice->Get_Output_Width();
-        int h = vcslice->Get_High_Index();
         int l = vcslice->Get_Low_Index();
-        return new Opcls(width, dpe->Get_Id(), h, l);
+        return new Opcls(width, dpe->Get_Id(), l);
     }
     template <typename Opcls> Operator* createGeneral(vcDatapathElement *dpe)
     {
