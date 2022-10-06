@@ -29,6 +29,13 @@ protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
     const string _dplabel; // for logging only
+    template<typename T> T getmask(unsigned width)
+    {
+        unsigned lead0s;
+        if constexpr ( ISWUINT(T) ) lead0s = ( WIDEUINTSZ - width );
+        else lead0s =  ( sizeof(T)*8 - width );
+        return ( (T) ~((T)0) ) >> lead0s;
+    }
 public:
     virtual string oplabel()=0;
     vector<DatumBase*> opv;
@@ -72,8 +79,8 @@ public:
 
 template <typename Tout> class OperatorT : public Operator
 {
-    Tout _mask = 0;
 protected:
+    Tout _mask = 0;
     Datum<Tout> z, op;
     Tout mask(Tout val)
     {
@@ -86,8 +93,7 @@ public:
         _resv.push_back(&z);
         opv.push_back(&op);
         if constexpr ( ! is_floating_point<Tout>::value )
-        if constexpr ( ISWUINT(Tout) ) for(int i=0; i<width; i++) _mask[i] = 1;
-        else _mask = ( (Tout) ~((Tout)0) ) >> ( sizeof(Tout)*8 - width );
+            _mask = getmask<Tout>(width);
     }
 };
 
@@ -194,6 +200,43 @@ BINOP( Concat, ( ((Tout) x) << INPWIDTH(1) ) | (Tout) y )
 BINOP2( Bitsel, ( ( x >> yint ) & (Tin1) 1 ) != 0 )
 BINOP2( ShiftL, x << yint )
 BINOP2( ShiftR, x >> yint )
+
+template <typename Tout, typename Tin1, typename Tin2> class Rotate : public BinOperator<Tout, Tin1, Tin2>
+{
+using BinOperator<Tout, Tin1, Tin2>::BinOperator;
+protected:
+    unsigned rotateby(Tin2 y)
+    {
+        unsigned yint;
+        if constexpr ( ISWUINT(Tin2) ) yint = y.to_ulong();
+        else yint = y;
+        return yint % this->op.width();
+    }
+    Tout swap(Tin1 x, unsigned pos)
+    {
+        auto lmask = this->template getmask<Tout>(pos);
+        auto hmask = this->_mask ^ lmask;
+        return ( ( x & lmask ) << ( this->op.width() - pos ) ) |
+            ( ( x & hmask ) >> pos );
+    }
+};
+
+template <typename Tout, typename Tin1, typename Tin2> class RotateL : public Rotate<Tout, Tin1, Tin2>
+{
+using Rotate<Tout, Tin1, Tin2>::Rotate;
+public:
+    string oplabel() { return "RotateL"; }
+    Tout eval(Tin1 x, Tin2 y) { return this->swap(x, this->op.width() - this->rotateby(y)); }
+};
+
+template <typename Tout, typename Tin1, typename Tin2> class RotateR : public Rotate<Tout, Tin1, Tin2>
+{
+using Rotate<Tout, Tin1, Tin2>::Rotate;
+public:
+    string oplabel() { return "RotateR"; }
+    Tout eval(Tin1 x, Tin2 y) { return this->swap(x, this->rotateby(y)); }
+};
+
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {
