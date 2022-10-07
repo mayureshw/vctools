@@ -4,6 +4,7 @@ $module [syspipe]
 $in ()
 $out () $is 
 {
+    // Reads 3 values on pipe p1 and echoes them on pipe p2
     $branchblock [bb]
     {
         $merge $entry loopback
