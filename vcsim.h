@@ -3,6 +3,7 @@
 
 #include <set>
 #include <map>
+#include "datum.h"
 
 static map<string,vector<DatumBase*>> emptymap;
 
