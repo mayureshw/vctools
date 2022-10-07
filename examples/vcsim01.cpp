@@ -21,8 +21,8 @@ int main()
 //      WIDEUINTSZ is set to 128 (is configurable when compiling vctools)
 
 //      Floating points:
-//      Datum<float>     for single precision floats
-//      Datum<double>    for double precision floats
+//      Datum<float>     for single precision floating point numbers
+//      Datum<double>    for double precision floating point numbers
 
 
 //  In addition to type, the exact width of each variable is to be declared by
