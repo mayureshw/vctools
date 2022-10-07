@@ -1,3 +1,7 @@
+ifndef VCTOOLSDIR
+$(error VCTOOLSDIR not set)
+endif
+
 include Makefile.conf
 
 OS	=	$(shell uname -s)
