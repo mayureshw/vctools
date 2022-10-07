@@ -11,7 +11,18 @@
 #   depending on the options you chose in $VCTOOLSDIR/vcsimconf.h. Please refer
 #   to the same file for more details of the logging options and log filenames
 
+# This will process all .aa files in the current directory. If you want to
+# process only certain files, set this to names of the files. Alternatively
+# when invoking make specify suitable target e.g. make test.out where you have
+# test.aa and test.cpp
 AASRCS		=	$(wildcard *.aa)
+
+# # # # # Usually you won't need to change below this # # # # #
+
+ifndef VCTOOLSDIR
+$(error VCTOOLSDIR not set)
+endif
+
 VCFILES		=	$(AASRCS:.aa=.vc)
 TESTSRCS	=	$(AASRCS:.aa=.cpp)
 TESTEXES	=	$(TESTSRCS:.cpp=.out)
