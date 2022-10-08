@@ -16,6 +16,11 @@ envrionment variable preferably in your shell's rc file.
 
     export CXX=<Path to your c++ compiler that supports 2014 standard>
 
+### GNU make
+
+The development environment uses version 4.3. On most systems, the default make
+command should work.
+
 ### Java
 
 Java (JRE) is required for antlr parser generator to run. These instructions
