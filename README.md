@@ -8,7 +8,11 @@ Virtual Circuit simulator and some other tools for the AHIR framework
 (Most recent systems should have a suitable c++ compiler by default.)
 
 gcc 12 was used for development of this component, though it should work with a
-C++ compiler that supports 2014 standard.
+C++ compiler that supports 2017 standard.
+
+(Note for Ubuntu users: On Ubuntu 22, default gcc version is 11.2.0 and is
+known to work. On lower versions of Ubuntu 11.1.0 is available but it's not
+found working.)
 
 If your stock compiler (typically /usr/bin/c++) does not support this and you
 install a newer version at some other location, do set the following
