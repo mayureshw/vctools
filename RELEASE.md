@@ -2,6 +2,8 @@
 
 ## HEAD
 
+    - Docker based installation added
+
 ## 221011
 
     - Added operators >> << >o> <o< < ^ ~& ~| ~^
