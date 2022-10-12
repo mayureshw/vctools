@@ -32,6 +32,8 @@ int main()
 //  Datum instances can be initialized using the = operator
     a = 10; b = 20;
 
+// DatumBase is just a non-template abstraction of Datum,
+// useful for holding diverse Datum objects in a container.
     vector<DatumBase*> inpv = {&a, &b};
 
 //  See vcsim.h for detailed documentation of the interface

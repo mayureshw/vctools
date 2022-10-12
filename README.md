@@ -1,7 +1,11 @@
 # vctools
 Virtual Circuit simulator and some other tools for the AHIR framework
 
-## Installing the required components
+## Installation using docker
+
+Please see docker/Dockerfile for automated installation using docker.
+
+## Manual installation
 
 ### C++ compiler that supports 2014 standard
 
