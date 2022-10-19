@@ -4,8 +4,6 @@
 #include <set>
 #include <map>
 #include <string>
-#include <condition_variable>
-#include <mutex>
 #include "datum.h"
 
 class System;
@@ -59,8 +57,6 @@ void vcsim(
 class VcsimIf
 {
     System *_sys;
-    mutex _readerlock;
-    condition_variable _reader_cvar;
 public:
     void stop();
     void invoke();
