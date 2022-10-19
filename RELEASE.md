@@ -4,6 +4,8 @@
 
     - Docker based installation added
 
+    - Asynchronous use of pipes by test bench added
+
 ## 221011
 
     - Added operators >> << >o> <o< < ^ ~& ~| ~^
