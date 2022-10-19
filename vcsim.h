@@ -3,7 +3,11 @@
 
 #include <set>
 #include <map>
+#include <string>
+#include <mutex>
 #include "datum.h"
+
+class System;
 
 static map<string,vector<DatumBase*>> emptymap;
 
@@ -49,5 +53,20 @@ void vcsim(
     // this parameter.
     map<string,vector<DatumBase*>>& collectopmap = emptymap
     );
+
+// Low level interface to vC simulator, see examples/vcsim04.cpp for usage of this
+class VcsimIf
+{
+    System *_sys;
+    mutex _readerlock;
+    condition_variable _reader_cvar;
+public:
+    void stop();
+    void invoke();
+    void feedPipe(const string pipename, const vector<DatumBase*>& feedv);
+    vector<DatumBase*> readPipe(const string pipename, unsigned cnt);
+    VcsimIf(string vcflnm, const set<string>& daemons);
+    ~VcsimIf();
+};
 
 #endif

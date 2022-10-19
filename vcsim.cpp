@@ -51,3 +51,34 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
 
     sys.invoke(invoke, inpv, feeds, collects, collectopmap);
 }
+
+void VcsimIf::stop() { _sys->stop(); }
+
+vector<DatumBase*> VcsimIf::readPipe(const string pipename, unsigned cnt)
+{
+    return _sys->getReader(pipename)->receive_sync(cnt);
+}
+
+void VcsimIf::feedPipe(const string pipename, const vector<DatumBase*>& feedv)
+{
+    _sys->getFeeder(pipename)->feed(feedv);
+}
+
+void VcsimIf::invoke()
+{
+    _sys->invoke("", {}, {}, {}, emptymap);
+}
+
+VcsimIf::VcsimIf(string vcflnm, const set<string>& daemons)
+{
+    ifstream stream;
+    stream.open(vcflnm);
+    vcSystem::_opt_flag = true;
+    vcSystem vcs("sys");
+    vcs.Parse(vcflnm);
+    for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
+    vcs.Elaborate();
+    _sys = new System(&vcs, daemons);
+}
+
+VcsimIf::~VcsimIf() { delete _sys; }
