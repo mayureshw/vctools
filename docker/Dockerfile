@@ -15,7 +15,7 @@ ENV AHIRDIR=$GITHUBHOME/ahir
 ENV PATH=$PATH:$AHIRDIR/prebuilt_ubuntu_16.04_release/bin
 ENV PATH=$PATH:$VCTOOLSDIR
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VCTOOLSDIR
-RUN apt update && apt install -y g++ make antlr libantlr-dev libboost-dev
+RUN apt update && apt install -y g++ make antlr libantlr-dev libboost-dev vim
 WORKDIR $GITHUBHOME
 RUN git clone --depth 1 https://github.com/mayureshw/vctools
 RUN git clone --depth 1 https://github.com/mayureshw/petrisimu
