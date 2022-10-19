@@ -1066,6 +1066,27 @@ class System : public SystemBase
     }
 public:
     PNInfo _pni;
+    void stop() { _pn->quit(); } // For low level simulator interface
+    PipeFeeder* getFeeder(string pipename)
+    {
+        auto it = _feedermap.find(pipename);
+        if ( it == _feedermap.end() )
+        {
+            cout << "No such pipe : " << pipename << endl;
+            exit(1);
+        }
+        return it->second;
+    }
+    PipeReader* getReader(string pipename)
+    {
+        auto it = _readermap.find(pipename);
+        if ( it == _readermap.end() )
+        {
+            cout << "No such pipe : " << pipename << endl;
+            exit(1);
+        }
+        return it->second;
+    }
     VCtyp vctyp(string Clsname)
     {
         auto it = _vctypmap.find(Clsname);
@@ -1145,29 +1166,15 @@ public:
         }
 
         for(auto f:feeds)
-        {
-            auto it = _feedermap.find(f.first);
-            if ( it == _feedermap.end() )
-            {
-                cout << "No such pipe : " << f.first << endl;
-                exit(1);
-            }
-            it->second->feed(f.second);
-        }
-
+            getFeeder(f.first)->feed(f.second);
         for(auto c:collects)
-        {
-            auto it = _readermap.find(c.first);
-            if ( it == _readermap.end() )
-            {
-                cout << "No such pipe : " << c.first << endl;
-                exit(1);
-            }
-            it->second->receive(c.second, exitAction);
-        }
+            getReader(c.first)->receive_async(c.second, exitAction);
 
-        // Total exit event count is top module exit (if present) + completion of all collects
-        setExitWt( haveModule + collects.size() );
+        // Total exit event count is top module exit (if present) + completion
+        // of all collects
+        unsigned exitWt = haveModule + collects.size();
+        if ( exitWt == 0 ) exitWt = 1; // min exit wt is 1
+        setExitWt( exitWt );
 
         if ( haveModule ) calledModule->invoke(inpv);
         wait();

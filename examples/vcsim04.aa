@@ -1,0 +1,10 @@
+$pipe p1 : $uint<8> $depth 1
+$pipe p2 : $uint<8> $depth 1
+
+// daemon just loops back p1 on p2
+$module [ daemon ]
+$in ( )
+$out ( ) $is
+{
+    p2 := p1
+}

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <condition_variable>
 #include "datum.h"
 #include "pninfo.h"
 
@@ -277,7 +278,6 @@ public:
     }
 };
 
-// Pipe feeder and reader are for test bench use. Are not MT safe.
 class PipeIf
 {
 protected:
@@ -305,23 +305,23 @@ public:
 
 class PipeFeeder : public PipeIf
 {
+    mutex _qlock;
     queue<DatumBase*> _payloadq;
 using PipeIf::PipeIf;
     void _buildPN(PNInfo& pni) { _p->buildPNOport(_sreq, _sack, pni); }
     void sack(unsigned long eseqno)
     {
+        _qlock.lock();
         _p->push( _payloadq.front(), eseqno );
         _payloadq.pop();
+        _qlock.unlock();
     }
 public:
-    void feed(vector<DatumBase*>& payload)
+    void feed(const vector<DatumBase*>& payload)
     {
-        if ( not _payloadq.empty() )
-        {
-            cout << "pipes: queue not empty when feed is invoked" << endl;
-            exit(1);
-        }
+        _qlock.lock();
         for(auto d:payload) _payloadq.push(d);
+        _qlock.unlock();
         _triggerPlace->addtokens(payload.size());
     }
 };
@@ -329,8 +329,11 @@ public:
 class PipeReader : public PipeIf
 {
 using PipeIf::PipeIf;
+    mutex _recd_mutex;
+    condition_variable _recd_cvar;
     vector<DatumBase*> _retv;
     function<void()> _exitActions;
+    bool _syncmode;
     unsigned _sz;
     void _buildPN(PNInfo& pni) { _p->buildPNIport(_sreq, _sack, pni); }
     void clear()
@@ -338,12 +341,31 @@ using PipeIf::PipeIf;
         for(auto d:_retv) delete d;
         _retv.clear();
     }
-public:
-    void receive(unsigned sz, function<void()> exitActions)
+    void receive_common(unsigned sz, bool syncmode, function<void()> exitActions)
     {
+        _syncmode = syncmode;
         clear();
         _sz = sz;
         _exitActions = exitActions;
+    }
+public:
+    // NOTE: Do not use both sync and async receive on the same pipe
+
+    // A blocking call that waits to gather sz no of records, useful only if
+    // there is a dedicated thread for reads.
+    vector<DatumBase*>& receive_sync(unsigned sz)
+    {
+        receive_common(sz, true, [](){});
+        unique_lock<mutex> ulockq(_recd_mutex);
+        _triggerPlace->addtokens(sz);
+        _recd_cvar.wait(ulockq);
+        return _retv;
+    }
+    // A non blocking call that executes exitActions once sz no of records are
+    // gathered, to be collected using collect useful for batch mode usage
+    void receive_async(unsigned sz, function<void()> exitActions)
+    {
+        receive_common(sz, false, exitActions);
         _triggerPlace->addtokens(sz);
     }
     vector<DatumBase*>& collect() { return _retv; }
@@ -353,7 +375,12 @@ public:
         DatumBase *dptr = popped->clone();
         dptr->blindcopy(popped);
         _retv.push_back( dptr );
-        if ( _retv.size() == _sz ) _exitActions();
+        if ( _retv.size() == _sz )
+        {
+            unique_lock<mutex> ulockq(_recd_mutex);
+            if ( _syncmode ) _recd_cvar.notify_one();
+            else _exitActions();
+        }
         // There is no need to reset any attributes as next read cycle can
         // begin only after next receive call which would set fresh attributes
     }
