@@ -28,6 +28,7 @@ TESTSRCS	=	$(AASRCS:.aa=.cpp)
 TESTEXES	=	$(TESTSRCS:.cpp=.out)
 DFILES		=	$(TESTSRCS:.cpp=.d)
 CXXFLAGS	+=	-DWIDEUINTSZ=128
+LDFLAGS		+=	-lpthread
 
 
 %.out:	%.cpp %.vc
