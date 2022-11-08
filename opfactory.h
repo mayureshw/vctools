@@ -30,7 +30,7 @@ class OpFactory
     typedef enum PIFOENUM Pifotyp;
     typedef enum PBLKENUM Pblktyp;
     typedef tuple< Ctyp, Pifotyp, Pblktyp > Pfkey;
-    typedef function< Pipe*(int, int, string) > Pfval;
+    typedef function< Pipe*(int, int, string, VcPetriNet*) > Pfval;
     const map<Pfkey, Pfval> _pfmap = PFMAP;
 
     internmap<vcValue*,DatumBase*> _valueDatum {bind(&OpFactory::vcv2datum,this,_1)};
@@ -146,7 +146,7 @@ public:
         }
         return it->second(dpe);
     }
-    Pipe* vcp2p(vcPipe *vcp)
+    Pipe* vcp2p(vcPipe *vcp, VcPetriNet* pn)
     {
         auto ctyp = width2ctyp( vcp->Get_Width() );
         auto pifo = vcp->Get_Lifo_Mode() ? Lifo_ : Fifo_;
@@ -157,7 +157,7 @@ public:
         {
             cout << "Pipe generator not found for pipe " << vcp->Get_Id() << " signature " << ctyp << " " << pifo << " " << pblk << endl;
         }
-        return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id() );
+        return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id(), pn );
     }
     template < typename T > DatumBase* createDatum(unsigned width)
     {

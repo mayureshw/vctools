@@ -77,7 +77,7 @@ public:
     {
         _m.dump(pfile);
         for(auto mir:_moduleirs) mir->exportIR(pfile);
-        _sys._pni.vctid.dump(pfile);
+        _sys.pn()->vctid.dump(pfile);
     }
     SysIR(vcSystem& vcs, System& sys) : _sys(sys)
     {
