@@ -11,7 +11,12 @@
 // Purpose of this class is to build additional relations used for Prolog
 // export in CEP. It makes no amends to the core PetriNet functionality.
 
+#ifdef USESTPN
+using PetriNetVariant = STPetriNet;
+#else
 using PetriNetVariant = MTPetriNet;
+#endif
+
 class VcPetriNet : public PetriNetVariant
 {
 using PetriNetVariant::PetriNetVariant;
