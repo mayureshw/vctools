@@ -86,6 +86,10 @@ CONFOPTS	=	USECEP USESTPN USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DP
 CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
 CXXFLAGS	+=	-DWIDEUINTSZ=$(WIDEUINTSZ)
 
+ifeq ($(USESTPN),y)
+include $(XSBCPPIFDIR)/Makefile.xsbcppif
+endif
+
 ifeq ($(USECEP),y)
 include $(CEPTOOLDIR)/Makefile.ceptool
 endif
