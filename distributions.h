@@ -16,12 +16,7 @@ template <typename D> class Distribution : public IDistribution
 {
     D _distr;
 public:
-    unsigned long gen()
-    {
-        unsigned long delay = _distr(_rng);
-        cout << "delay=" << delay << endl;
-        return delay;
-    }
+    unsigned long gen() { return _distr(_rng); }
     Distribution(double Avg) : _distr(Avg) {}
     ~Distribution() {}
 };
