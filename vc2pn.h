@@ -312,6 +312,10 @@ public:
     PNTransition* ftreq()
     {
         PNTransition *ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
+#       endif
         ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
         // if this ftreq relates with a pipe, need to connect with pipe's pnet
         if ( isSignalInport() )
