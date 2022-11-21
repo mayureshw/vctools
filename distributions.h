@@ -23,12 +23,7 @@ template <typename D, typename... Targs> class Distribution : public IDistributi
 {
     D _distr;
 public:
-    double gen()
-    {
-        double delay = _distr(_rng);
-        cout << "delay=" << delay << endl;
-        return delay;
-    }
+    double gen() { return _distr(_rng); }
     Distribution(Targs... args) : _distr(args...) {}
     ~Distribution() {}
 };

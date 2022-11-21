@@ -37,49 +37,35 @@ public:
 
 #ifdef USESTPN
 private:
-    const t_predspec p_maxavg = {"maxavg",1}, p_delaymodel = {"delaymodel",3};
+    DistFactory _df;
+    PTerm *_defaultModelTerm;
+    const t_predspec p_defaultmodel = {"defaultmodel",1}, p_delaymodel = {"delaymodel",2};
     PDb _delaydb;
     map<int, IDistribution*> _distmap;
-    double _scalefactor;
-    void setScalefactor()
-    {
-        auto maxavgs = _delaydb.get(p_maxavg);
-        if ( maxavgs.size() != 1 )
-        {
-            cout << "maxavg predicate result size expected to be == 1, found " << maxavgs.size() << endl;
-            exit(1);
-        }
-        auto maxavgterm = maxavgs.front()->args()[0];
-        int maxavg = _delaydb.term2val<int>( maxavgterm );
-        _scalefactor = (((unsigned long)-1)>>1) / maxavg;
-    }
     void setdistmap()
     {
-        list<tuple<int,string,int>> tl;
-        _delaydb.terms2tuples(p_delaymodel, tl);
-        for( auto dt : tl )
+        auto dms = _delaydb.get( p_defaultmodel );
+        if ( dms.size() != 1 )
         {
-            auto tid = get<0>(dt);
-            auto dist = get<1>(dt);
-            auto avg = get<2>(dt);
-            double scaledavg = avg * _scalefactor;
-            IDistribution *idist;
-            if ( dist == "uniform" )
-                idist = new Distribution<uniform_int_distribution<unsigned long>>(scaledavg);
-            else if ( dist == "poisson" )
-                idist = new Distribution<poisson_distribution<unsigned long>>(scaledavg);
-            else
-            {
-                cout << "Unknown distribution: " << dist << endl;
-                exit(1);
-            }
+            cout << "defaultmodel/1 must be specified" << endl;
+            exit(1);
+        }
+        for( auto t : _delaydb.get( p_defaultmodel ) )
+        {
+            _defaultModelTerm = t->args()[0];
+            break;
+        }
+        for( auto t : _delaydb.get( p_delaymodel ) )
+        {
+            auto tid = t->args()[0]->asInt();
+            auto dist = t->args()[1];
+            auto idist = _df.get(dist);
             _distmap.emplace(tid, idist);
         }
     }
     void loadDelayModel()
     {
-        _delaydb.call( "delaymodel" , { p_maxavg, p_delaymodel } );
-        setScalefactor();
+        _delaydb.call( "delaymodel" , { p_defaultmodel, p_delaymodel } );
         setdistmap();
     }
 public:
@@ -88,9 +74,10 @@ public:
         loadDelayModel();
         for(auto t:_transitions)
         {
-            auto it = _distmap.find(t->_nodeid);
-            if ( it != _distmap.end() )
-                t->setDelayFn( bind(&IDistribution::gen,it->second) );
+            auto it = _distmap.find( t->_nodeid );
+            auto idist = it != _distmap.end() ? it->second :
+                _df.get( _defaultModelTerm );
+            t->setDelayFn( bind(&IDistribution::gen,idist) );
         }
     }
 
