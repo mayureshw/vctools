@@ -157,7 +157,10 @@ public:
         {
             cout << "Pipe generator not found for pipe " << vcp->Get_Id() << " signature " << ctyp << " " << pifo << " " << pblk << endl;
         }
-        return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id(), pn );
+        // TODO: For strange reasons, we get depth as 2 from the parser level
+        // For signals AHIR semantics require that the depth be restricted to 1
+        auto depth = pblk == SignalPipe_ ? 1 : vcp->Get_Depth();
+        return it->second( depth, vcp->Get_Width(), vcp->Get_Id(), pn );
     }
     template < typename T > DatumBase* createDatum(unsigned width)
     {
