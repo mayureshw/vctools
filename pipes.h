@@ -72,7 +72,7 @@ protected:
             _store.push_back( datum );
         }
     }
-    virtual void pushOnFull()=0;
+    virtual void pushOnFull(DatumBase*)=0;
     virtual DatumBase* popOnEmpty()=0;
     // pipe sub-type specific petri net is indicated by suffix 1
     virtual void buildPNOport1(PNTransition *sreq, PNTransition *sack)=0;
@@ -87,7 +87,7 @@ public:
         if ( full() )
         {
             PIPELOG("pushfull:" << eseqno << ":" << _label << ":" << din->str())
-            pushOnFull();
+            pushOnFull(din);
         }
         else
         {
@@ -143,7 +143,7 @@ class BlockingPipe : public Pipe
 {
 protected:
     PNPlace *_freePlace, *_filledPlace;
-    void pushOnFull()
+    void pushOnFull(DatumBase*)
     {
         cout << "Attempt to push to full blocking pipe (internal error)" << endl;
         exit(1);
@@ -206,7 +206,12 @@ class SignalPipe : public Pipe
 {
 using Pipe::Pipe;
 protected:
-    void pushOnFull() {}
+    void pushOnFull(DatumBase* din)
+    {
+        // Overwrite, do not increment _nElems
+        unsigned i = pushpos();
+        _store[i]->blindcopy(din);
+    }
     DatumBase* popOnEmpty() { return _store[lastPopPosOnEmpty()]; }
     void buildPNOport1(PNTransition *sreq, PNTransition *sack) {}
     void buildPNIport1(PNTransition *ureq, PNTransition *uack) {}
