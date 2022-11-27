@@ -47,7 +47,7 @@ private:
         auto dms = _delaydb.get( p_defaultmodel );
         if ( dms.size() != 1 )
         {
-            cout << "defaultmodel/1 must be specified" << endl;
+            cout << "Exactly 1 defaultmodel/1 must be specified" << endl;
             exit(1);
         }
         for( auto t : _delaydb.get( p_defaultmodel ) )
