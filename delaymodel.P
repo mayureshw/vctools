@@ -1,44 +1,8 @@
 :-dynamic d/3.
 :-load_dync(vcirdat).
+:-load_dync(delayspec).
 
 delaymodel(TrId, Model):-
     vctid(Vcid, TrTyp, TrId),
     dpe(Vcid, _, OpTyp),
     d(OpTyp, TrTyp, Model).
-
-% Format d(OpTyp, TrTyp, Dist(DistArgs)
-% OpTyp: operator type as per the vc ir (classname)
-% TrTyp: transition type (req0, ack0 etc.)
-% For Dist(DistArgs) refer to distributions.h
-
-%d( vcOutport, _, uniform_real(-9999999,9999999) ).
-%d( vcInport,  _, uniform_real(-9999999,9999999) ).
-
-%d( vcOutport, _, exponential(9999999) ).
-%d( vcInport,  _, exponential(9999999) ).
-
-%d( vcOutport, _, gamma(7,10) ).
-%d( vcInport,  _, gamma(7,10) ).
-
-%d( vcOutport, _, weibull(1,1) ).
-%d( vcInport,  _, weibull(1,1) ).
-
-%d( vcOutport, _, extreme_value(0,1) ).
-%d( vcInport,  _, extreme_value(0,1) ).
-
-%d( vcOutport, _, normal(0,9999999) ).
-%d( vcInport,  _, normal(0,9999999) ).
-
-%d( vcOutport, _, lognormal(0,1) ).
-%d( vcInport,  _, lognormal(0,1) ).
-
-%d( vcOutport, _, cauchy(6,1) ).
-%d( vcInport,  _, cauchy(6,1) ).
-
-%d( vcOutport, _, fisher_f(1,9999999) ).
-%d( vcInport,  _, fisher_f(1,9999999) ).
-
-d( vcOutport, _, student_t(9999999999) ).
-d( vcInport,  _, student_t(9999999999) ).
-
-defaultmodel( normal(0,1) ).
