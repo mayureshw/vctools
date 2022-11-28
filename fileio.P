@@ -16,4 +16,5 @@ validtyp(Typ) :- write(2,'Invalid file type '), write(2,Typ), halt.
 filetyp(vcir).
 filetyp(iprops).
 filetyp(uprops).
+filetyp(props).
 filetyp(cep).
