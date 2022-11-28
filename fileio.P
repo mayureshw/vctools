@@ -1,0 +1,19 @@
+:-export load/2, store/3.
+
+:-import str_cat/3 from string.
+
+load(Typ,Vc):- filename(Typ,Vc,Flnm), load_dyn(Flnm).
+
+store(Typ,Vc,CallTerm):- filename(Typ,Vc,Flnm), tell(Flnm),
+    CallTerm, writeq(CallTerm), writeln('.'), fail.
+store(_,_,_):- told.
+
+filename(Typ,Vc,Flnm) :- validtyp(Typ), str_cat(Vc,'.',Flnm1), str_cat(Flnm1,Typ,Flnm).
+
+validtyp(Typ) :- filetyp(Typ),  !.
+validtyp(Typ) :- write(2,'Invalid file type '), write(2,Typ), halt.
+
+filetyp(vcir).
+filetyp(iprops).
+filetyp(uprops).
+filetyp(cep).
