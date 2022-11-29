@@ -5,8 +5,6 @@ using namespace std;
 #include "vc2pn.h"
 #include "vcsim.h"
 
-PETRINET_STATICS
-
 // TODO: To be extended for multiple files, exit module, top module etc.
 // Currently accepts only single vc filename and invokation modulename
 // besides input vector
