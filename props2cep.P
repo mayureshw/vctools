@@ -1,14 +1,14 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic cep/2, dep/1.
+:-dynamic scep/2, dep/1.
 
 :-index(dpe/3,[2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 
-icep((SN,EN),CN) :- cep((S,E),C), numerize(S,SN), numerize(E,EN), numerize(C,CN).
-icep(I,C) :- dep(D), numerize(D,DN), dep2cep(DN,I,C).
+cep((SN,EN),CN) :- scep((S,E),C), numerize(S,SN), numerize(E,EN), numerize(C,CN).
+cep(I,C) :- dep(D), numerize(D,DN), dep2cep(DN,I,C).
 
 idep(ID) :- dep(D), numerize(D,ID).
 
@@ -28,4 +28,4 @@ event(ack0).
 event(ack1).
 event(ftreq).
 
-props2cep(Vc) :- load(vcir,Vc), load(props,Vc), store(cep,Vc,icep(_,_)).
+props2cep(Vc) :- load(vcir,Vc), load(props,Vc), store(cep,Vc,cep(_,_)).
