@@ -1,0 +1,31 @@
+:-import load/2, store/3 from fileio.
+:-import dep2cep/3 from dep2cep.
+
+:-dynamic cep/2, dep/1.
+
+:-index(dpe/3,[2]).
+:-op(500,xfx,^).
+:-op(700,xfx,->).
+
+icep((SN,EN),CN) :- cep((S,E),C), numerize(S,SN), numerize(E,EN), numerize(C,CN).
+icep(I,C) :- dep(D), numerize(D,DN), dep2cep(DN,I,C).
+
+idep(ID) :- dep(D), numerize(D,ID).
+
+numerize(D,D) :- kwd(D), !.
+numerize((Ident,Event),Tid) :- event(Event), !, dpe(Objid,Ident,_), vctid(Objid,Event,Tid).
+numerize(D,DN) :- D=..[F,A1,A2], binop(F), !, numerize(A1,A1N), numerize(A2,A2N), DN=..[F,A1N,A2N].
+numerize(D,DN) :- D=..[F,A], uop(F), !, numerize(A,AN), DN=..[F,AN].
+
+binop(->).
+binop(==).
+binop(^).
+uop(#).
+kwd('START').
+event(req0).
+event(req1).
+event(ack0).
+event(ack1).
+event(ftreq).
+
+props2cep(Vc) :- load(vcir,Vc), load(props,Vc), store(cep,Vc,icep(_,_)).
