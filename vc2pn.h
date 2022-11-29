@@ -1175,6 +1175,9 @@ public:
     }
     System(vcSystem* vcs, const set<string>& daemons) : _vcs(vcs)
     {
+        string basename = vcs->Get_Id();
+        Pipe::setLogfile(basename+".pipes.log");
+        Operator::setLogfile(basename+".ops.log");
 #       ifdef USECEP
         _intervalManager = new IntervalManager(CEPDAT);
         _pn = new VcPetriNet ( [this](unsigned e){ this->_intervalManager->route(e); } );

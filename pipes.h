@@ -9,8 +9,6 @@
 #include "vcpetrinet.h"
 
 #ifdef PIPEDBG
-    static ofstream plog("pipes.log");
-    static mutex plogmutex;
 #   define PIPELOG(ARGS) \
         plogmutex.lock(); \
         plog << ARGS << endl; \
@@ -78,6 +76,16 @@ protected:
     virtual void buildPNOport1(PNTransition *sreq, PNTransition *sack)=0;
     virtual void buildPNIport1(PNTransition *ureq, PNTransition *uack)=0;
 public:
+#ifdef PIPEDBG
+    inline static ofstream plog;
+    inline static mutex plogmutex;
+#endif
+    static void setLogfile(string logfile)
+    {
+#ifdef PIPEDBG
+        plog.open(logfile);
+#endif
+    }
     VcPetriNet* pn() { return _pn; }
     string _label;
     bool empty() { return _nElems == 0; }

@@ -9,8 +9,6 @@
 #include "opf.h"
 
 #ifdef OPDBG
-    static ofstream oplog("ops.log");
-    static mutex oplogmutex;
 #   define OPLOG(ARGS) \
         oplogmutex.lock(); \
         oplog << ARGS << endl; \
@@ -37,6 +35,16 @@ protected:
         return ( (T) ~((T)0) ) >> lead0s;
     }
 public:
+#ifdef OPDBG
+    inline static ofstream oplog;
+    inline static mutex oplogmutex;
+#endif
+    static void setLogfile(string logfile)
+    {
+#ifdef OPDBG
+        oplog.open(logfile);
+#endif
+    }
     virtual string oplabel()=0;
     vector<DatumBase*> opv;
     // can't mandate some of these functions on all the operators, some are
