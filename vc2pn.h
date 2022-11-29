@@ -20,8 +20,6 @@
 
 using namespace std::placeholders;
 
-const string CEPDAT = "cepdat"; // Want to parameterize this file?
-
 // Bridge classes between vc IR and Petri net simulator
 // Can use inheritance as long as we don't need extra attribs, else use
 // containment
@@ -1176,14 +1174,14 @@ public:
     System(vcSystem* vcs, const set<string>& daemons) : _vcs(vcs)
     {
         string basename = vcs->Get_Id();
+#       ifdef USECEP
+        _intervalManager = new IntervalManager(basename+".cep", basename+".cep.log");
+        _pn = new VcPetriNet ( basename+".petri.log", [this](unsigned e){ this->_intervalManager->route(e); } );
+#       else
+        _pn = new VcPetriNet ( basename+".petri.log" );
+#       endif
         Pipe::setLogfile(basename+".pipes.log");
         Operator::setLogfile(basename+".ops.log");
-#       ifdef USECEP
-        _intervalManager = new IntervalManager(CEPDAT);
-        _pn = new VcPetriNet ( [this](unsigned e){ this->_intervalManager->route(e); } );
-#       else
-        _pn = new VcPetriNet ();
-#       endif
         for(auto m:_vcs->Get_Ordered_Modules())
         {
             string modulename = m->Get_Id();
