@@ -39,34 +39,31 @@ public:
 private:
     DistFactory _df;
     PTerm *_defaultModelTerm;
-    const t_predspec p_defaultmodel = {"defaultmodel",1}, p_delaymodel = {"delaymodel",2};
     PDb _delaydb;
     map<int, IDistribution*> _distmap;
-    void setdistmap()
+    void loadDelayModel()
     {
-        auto dms = _delaydb.get( p_defaultmodel );
+        string q_delaymodel = "delaymodel('" + _netname + "',X,Y).";
+        string q_defaultmodel = "defaultmodel(X).";
+        _delaydb.callStr( "delaymodel" , { q_delaymodel, q_defaultmodel } );
+        auto dms = _delaydb.get( q_defaultmodel );
         if ( dms.size() != 1 )
         {
             cout << "Exactly 1 defaultmodel/1 must be specified" << endl;
             exit(1);
         }
-        for( auto t : _delaydb.get( p_defaultmodel ) )
+        for( auto t : _delaydb.get( q_defaultmodel ) )
         {
             _defaultModelTerm = t->args()[0];
             break;
         }
-        for( auto t : _delaydb.get( p_delaymodel ) )
+        for( auto t : _delaydb.get( q_delaymodel ) )
         {
             auto tid = t->args()[0]->asInt();
             auto dist = t->args()[1];
             auto idist = _df.get(dist);
             _distmap.emplace(tid, idist);
         }
-    }
-    void loadDelayModel()
-    {
-        _delaydb.call( "delaymodel" , { p_defaultmodel, p_delaymodel } );
-        setdistmap();
     }
 public:
     void setDelayModels()
@@ -80,7 +77,6 @@ public:
             t->setDelayFn( bind(&IDistribution::gen,idist) );
         }
     }
-
     ~VcPetriNet()
     {
         for(auto dt:_distmap) delete dt.second;
