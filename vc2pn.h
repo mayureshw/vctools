@@ -1176,9 +1176,9 @@ public:
         string basename = vcs->Get_Id();
 #       ifdef USECEP
         _intervalManager = new IntervalManager(basename+".cep", basename+".cep.log");
-        _pn = new VcPetriNet ( basename+".petri.log", [this](unsigned e){ this->_intervalManager->route(e); } );
+        _pn = new VcPetriNet ( basename, [this](unsigned e){ this->_intervalManager->route(e); } );
 #       else
-        _pn = new VcPetriNet ( basename+".petri.log" );
+        _pn = new VcPetriNet ( basename );
 #       endif
         Pipe::setLogfile(basename+".pipes.log");
         Operator::setLogfile(basename+".ops.log");
