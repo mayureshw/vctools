@@ -6,6 +6,7 @@
 :-index(dpe/3,[2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
+:-op(400,fx,*).
 
 cep((SN,EN),CN) :- scep((S,E),C), numerize(S,SN), numerize(E,EN), numerize(C,CN).
 cep(I,C) :- dep(D), numerize(D,DN), dep2cep(DN,I,C).
@@ -13,9 +14,12 @@ cep(I,C) :- dep(D), numerize(D,DN), dep2cep(DN,I,C).
 idep(ID) :- dep(D), numerize(D,ID).
 
 numerize(D,D) :- kwd(D), !.
+numerize(*(Reg),DN) :- atom(Reg), !, numerize(*(Reg,0),DN).
+numerize(*(Reg,Pos),*(Dpeid,Pos)) :- atom(Reg), integer(Pos), !, dpe(Dpeid,Reg,_).
 numerize((Ident,Event),Tid) :- event(Event), !, dpe(Objid,Ident,_), vctid(Objid,Event,Tid).
 numerize(D,DN) :- D=..[F,A1,A2], binop(F), !, numerize(A1,A1N), numerize(A2,A2N), DN=..[F,A1N,A2N].
 numerize(D,DN) :- D=..[F,A], uop(F), !, numerize(A,AN), DN=..[F,AN].
+numerize(D,_) :- writeln(2,'Conversion to numeric CEP form failed for term'(D)), fail.
 
 binop(->).
 binop(==).
