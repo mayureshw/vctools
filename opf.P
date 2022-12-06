@@ -61,7 +61,7 @@ opop( 'RotateR','>o>').
 subtyps( bool,    [ uint8_t ] ).
 subtyps( uint,    [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
 subtyps( 'WUINT', [ 'WUINT' ] ).
-subtyps( float, [ float, double ] ).
+subtyps( float,   [ float, double ] ).
 
 nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
