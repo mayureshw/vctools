@@ -5,12 +5,19 @@
 #include <string>
 #include <bitset>
 #include "opf.h"
+#ifdef USECEP
+#include "exprf.h"
+#endif
 
 class DatumBase
 {
 protected:
     const unsigned _width;
 public:
+#ifdef USECEP
+virtual Etyp etyp()=0;
+virtual void* elemPtr()=0;
+#endif
     virtual DatumBase* clone() = 0;
     virtual string str() = 0;
     virtual void operator = (string&) = 0;
@@ -24,12 +31,30 @@ public:
     virtual ~DatumBase() {}
 };
 
+#define TYP2ETYP(TYP) if constexpr ( is_same<T,TYP>::value ) return TYP##__
 template <typename T> class Datum : public DatumBase
 {
 using DatumBase::DatumBase;
 public:
     T val;
     // See comments in DatumBase
+#ifdef USECEP
+    Etyp etyp()
+    {
+        TYP2ETYP(string);
+        TYP2ETYP(int);
+        TYP2ETYP(float);
+        TYP2ETYP(double);
+        TYP2ETYP(bool);
+        TYP2ETYP(uint8_t);
+        TYP2ETYP(uint16_t);
+        TYP2ETYP(uint32_t);
+        TYP2ETYP(uint64_t);
+        cout << "Unknown expression type for: " << str() << endl;
+        exit(1);
+    }
+    T* elemPtr() { return &val; }
+#endif
     void blindcopy(DatumBase *other)
     {
 #       ifdef DATUMDBG

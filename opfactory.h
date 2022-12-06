@@ -28,6 +28,32 @@ class OpFactory : public CEPStateIf
 class OpFactory
 #endif
 {
+#ifdef USECEP
+    map<int,Operator*> _opidmap;
+    DatumBase* stateidv2datum(vector<int>& idv)
+    {
+        if ( idv.size() != 2 )
+        {
+            cout << "State index vector size !=2 not supported" << endl;
+            exit(1);
+        }
+        auto dpeid = idv[0];
+        auto opidx = idv[1];
+        auto it = _opidmap.find(dpeid);
+        if ( it == _opidmap.end() )
+        {
+            cout << "No operator for DPEId " << dpeid << endl;
+            exit(1);
+        }
+        auto opv = it->second->opv;
+        if ( opv.size() < opidx + 1 )
+        {
+            cout << "Operator output arity=" << opv.size() << " Sought index=" << opidx << endl;
+            exit(1);
+        }
+        return opv[ opidx ];
+    }
+#endif
     SystemBase *_sys;
     typedef enum CTYPENUM Ctyp ;
     typedef pair< string, vector<Ctyp> > Opfkey;
@@ -132,6 +158,10 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
+#ifdef USECEP
+    void* getStatePtr(vector<int>& idv) { return stateidv2datum(idv)->elemPtr(); }
+    Etyp getStateTyp(vector<int>& idv) { return stateidv2datum(idv)->etyp(); }
+#endif
     Operator* dpe2op(vcDatapathElement *dpe)
     {
         string kind = dpe->Kind();
@@ -151,7 +181,11 @@ public:
             cout << endl;
             exit(1);
         }
-        return it->second(dpe);
+        auto op = it->second(dpe);
+#ifdef USECEP
+        _opidmap.emplace( dpe->Get_Root_Index(), op );
+#endif
+        return op;
     }
     Pipe* vcp2p(vcPipe *vcp, VcPetriNet* pn)
     {
