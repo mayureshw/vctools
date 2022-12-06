@@ -3,6 +3,9 @@
 
 #include <tuple>
 #include "opf.h"
+#ifdef USECEP
+#include "stateif.h"
+#endif
 
 #define CTYPSWITCH( CTYP, FN, ... ) \
     switch ( CTYP ) \
@@ -19,7 +22,11 @@
             exit(1); \
     }
 
+#ifdef USECEP
+class OpFactory : public CEPStateIf
+#else
 class OpFactory
+#endif
 {
     SystemBase *_sys;
     typedef enum CTYPENUM Ctyp ;

@@ -1175,7 +1175,7 @@ public:
     {
         string basename = vcs->Get_Id();
 #       ifdef USECEP
-        _intervalManager = new IntervalManager(basename);
+        _intervalManager = new IntervalManager(basename, &_opfactory);
         _pn = new VcPetriNet ( basename, [this](unsigned e){ this->_intervalManager->route(e); } );
 #       else
         _pn = new VcPetriNet ( basename );
