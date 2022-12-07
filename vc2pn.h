@@ -1175,7 +1175,7 @@ public:
     {
         string basename = vcs->Get_Id();
 #       ifdef USECEP
-        _pn = new VcPetriNet ( basename, [this](unsigned e){ this->_intervalManager->route(e); } );
+        _pn = new VcPetriNet ( basename, [this](unsigned e, unsigned long eseqno){ this->_intervalManager->route(e, eseqno); } );
 #       else
         _pn = new VcPetriNet ( basename );
 #       endif
