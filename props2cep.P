@@ -8,7 +8,7 @@
 :-op(700,xfx,->).
 :-op(400,fx,*).
 
-cep((SN,EN),CN,[],[]) :- scep((S,E),C), numerize(S,SN), numerize(E,EN), numerize(C,CN).
+cep((SN,EN),CN,TA,FA) :- scep((S,E),C,TA,FA), numerize(S,SN), numerize(E,EN), numerize(C,CN).
 cep(I,C,[],[log(Msg)]) :- dep(D,Msg), numerize(D,DN), dep2cep(DN,I,C).
 
 numerize(D,D) :- kwd(D), !.
