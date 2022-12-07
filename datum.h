@@ -6,7 +6,7 @@
 #include <bitset>
 #include "opf.h"
 #ifdef USECEP
-#include "exprf.h"
+#include "expr.h"
 #endif
 
 class DatumBase
@@ -39,20 +39,7 @@ public:
     T val;
     // See comments in DatumBase
 #ifdef USECEP
-    Etyp etyp()
-    {
-        TYP2ETYP(string);
-        TYP2ETYP(int);
-        TYP2ETYP(float);
-        TYP2ETYP(double);
-        TYP2ETYP(bool);
-        TYP2ETYP(uint8_t);
-        TYP2ETYP(uint16_t);
-        TYP2ETYP(uint32_t);
-        TYP2ETYP(uint64_t);
-        cout << "Unknown expression type for: " << str() << endl;
-        exit(1);
-    }
+    Etyp etyp() { TYPES2ETYP }
     T* elemPtr() { return &val; }
 #endif
     void blindcopy(DatumBase *other)
