@@ -1,24 +1,24 @@
 :-import load/2, store/3 from fileio.
 
-:-index(dpe/3,[3]).
+:-index(dpe/3,[1,3]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 
-dep( (N,req0) ^ (N,req1) -> (N,ack0) ) :- dpe(_,N,'vcPhiPipelined').
+dep( (N,req0) ^ (N,req1) -> (N,ack0), 'Phi req0^req1 -> ack0'    ) :- dpe(_,N,'vcPhiPipelined').
 
-dep( (N,req0) -> (N,ack0) ^ (N,ack1) ) :- dpe(_,N,'vcBranch').
+dep( (N,req0) -> (N,ack0) ^ (N,ack1), 'Branch req0 -> ack0^ack1' ) :- dpe(_,N,'vcBranch').
 
-dep( Dep ) :- dpe(_,N,'vcBinarySplitOperator'),
+dep( Dep, Msg ) :- dpe(_,N,'vcBinarySplitOperator'),
     (
-      Dep = ( (N,req0) -> (N,ack0) );
-      Dep = ( (N,req0) -> (N,ack1) );
-      Dep = ( (N,req1) -> (N,ack1) ) 
+      ( Dep = ( (N,req0) -> (N,ack0) ), Msg = 'SplitOp req0 -> ack0' );
+      ( Dep = ( (N,req0) -> (N,ack1) ), Msg = 'SplitOp req0 -> ack1' );
+      ( Dep = ( (N,req1) -> (N,ack1) ), Msg = 'SplitOp req1 -> ack1' )
     ).
 
-dep( Dep ) :- dpdep(U,_,D),
+dep( Dep, Msg ) :- dpdep(UID,_,DID), dpe(UID,U,_), dpe(DID,D,_),
     (
-      Dep = ( (D,ack1) -> (U,req0) );
-      Dep = ( (D,req1) -> (U,ack0) )
+      ( Dep = ( (D,ack1) -> (U,req0) ), Msg = 'Dep ack1 -> req0');
+      ( Dep = ( (D,req1) -> (U,ack0) ), Msg = 'Dep req1 -> ack0')
     ).
 
-depgen(Vc):- load(vcir,Vc), store(iprops,Vc,dep(D)).
+depgen(Vc):- load(vcir,Vc), store(iprops,Vc,dep(_,_)).
