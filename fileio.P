@@ -29,3 +29,4 @@ filetyp(iprops,[]).
 filetyp(uprops,[]).
 filetyp(props,[]).
 filetyp(cep,[can]).
+filetyp(eventmap,[]).

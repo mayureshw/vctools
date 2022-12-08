@@ -1,16 +1,21 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/2, dep/1.
+:-dynamic scep/2, dep/1, eventmap/2.
 
 :-index(dpe/3,[2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 :-op(400,fx,*).
 
-cep((SN,EN),CN,TA,FA) :- scep((S,E),C,TA,FA), numerize(S,SN), numerize(E,EN), numerize(C,CN).
+cep((SN,EN),CN,TAN,FAN) :- scep((S,E),C,TA,FA), numerize(S,SN), numerize(E,EN), numerize(C,CN),
+    numerize(TA,TAN), numerize(FA,FAN).
 cep(I,C,[],[log(Msg)]) :- dep(D,Msg), numerize(D,DN), dep2cep(DN,I,C).
 
+numerize([],[]) :- !.
+numerize([E|Rest],[EN|RestN]) :- !, numerize(E,EN), numerize(Rest,RestN).
+numerize(log(Msg), log(Msg)) :- !.
+numerize(event(E), event(EN)) :- !, numerizeEvent(E,EN).
 numerize(D,D) :- kwd(D), !.
 numerize(*(Reg),DN) :- atom(Reg), !, numerize(*(Reg,0),DN).
 numerize(*(Reg,Pos),*(Dpeid,Pos)) :- atom(Reg), integer(Pos), !, dpe(Dpeid,Reg,_).
@@ -18,6 +23,13 @@ numerize((Ident,Event),Tid) :- event(Event), !, dpe(Objid,Ident,_), vctid(Objid,
 numerize(D,DN) :- D=..[F,A1,A2], binop(F), !, numerize(A1,A1N), numerize(A2,A2N), DN=..[F,A1N,A2N].
 numerize(D,DN) :- D=..[F,A], uop(F), !, numerize(A,AN), DN=..[F,AN].
 numerize(D,_) :- writeln(2,'Conversion to numeric CEP form failed for term'(D)), fail.
+
+numerizeEvent(E,EN) :- eventmap(E,EN), !.
+numerizeEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).
+
+lastEventNo(MaxN) :- eventmap(_,MaxN), !.
+lastEventNo(MaxN) :- setof(N, negTid(N), [NegMax|_]), MaxN is NegMax * -1.
+negTid(N) :- vctid(_,_,N1), N is N1 * -1.
 
 binop(->).
 binop(==).
@@ -30,4 +42,5 @@ event(ack0).
 event(ack1).
 event(ftreq).
 
-props2cep(Vc) :- load(vcir,Vc), load(props,Vc), store(cep,Vc,cep(_,_,_,_)).
+props2cep(Vc) :- load(vcir,Vc), load(props,Vc),
+    store(cep,Vc,cep(_,_,_,_)), store(eventmap,Vc,eventmap(_,_)).
