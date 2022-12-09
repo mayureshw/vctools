@@ -217,9 +217,8 @@ public:
         pn()->createArc(popNonEmpty, _freePlace);
         pn()->createArc(popEmpty, _mutexPlace);
         pn()->createArc(popNonEmpty, _mutexPlace);
-
-        auto popEmptyFreeArc = new PNTPArc(popEmpty, _freePlace, _depth);
-        auto freePopEmptyArc = new PNPTArc(_freePlace, popEmpty, _depth);
+        pn()->createArc(popEmpty, _freePlace, "", _depth);
+        pn()->createArc(_freePlace, popEmpty, "", _depth);
     }
     NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn) : BlockingPipe(depth,label,pn)
     {

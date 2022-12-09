@@ -700,11 +700,8 @@ public:
         pn()->createArc(depthPlace, contOut);
 
         // Weighted arcs between depthPlace and exitOut
-        auto depthExitArc = new PNPTArc(depthPlace, exitOut);
-        depthExitArc->_wt = _depth;
-        auto exitDepthArc = new PNTPArc(exitOut, depthPlace);
-        exitDepthArc->_wt = _depth - 1;
-        // Since we do not use createArc (because we want access to arc wt) have to insert them all
+        pn()->createArc(depthPlace, exitOut, "", _depth);
+        pn()->createArc(exitOut, depthPlace, "", _depth - 1);
 
         // from architecture Behave of loop_terminator
         // Connections between our transitions and outer elements
@@ -1039,7 +1036,8 @@ class System : public SystemBase
 
         auto pre2exitTransition = pn()->createTransition("sysPreToExit");
 
-        _sysExitArc = new PNPTArc(_sysPreExitPlace, pre2exitTransition);
+        pn()->createArc(_sysPreExitPlace, pre2exitTransition);
+        _sysExitArc = (PNPTArc*) _sysPreExitPlace->_oarcs[0];
 
         auto sysExitPlace = pn()->createQuitPlace("sysExit");
         pn()->createArc(pre2exitTransition, sysExitPlace);
