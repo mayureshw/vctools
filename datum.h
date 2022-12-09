@@ -6,7 +6,7 @@
 #include <bitset>
 #include "opf.h"
 #ifdef USECEP
-#include "expr.h"
+#include "stateif.h"
 #endif
 
 class DatumBase
