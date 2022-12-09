@@ -1,7 +1,7 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/2, dep/1, eventmap/2.
+:-dynamic scep/4, dep/1, eventmap/2.
 
 :-index(dpe/3,[2]).
 :-op(500,xfx,^).
