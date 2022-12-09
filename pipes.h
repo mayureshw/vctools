@@ -50,12 +50,20 @@ protected:
     virtual unsigned poppos()=0;
     virtual unsigned lastPopPosOnEmpty()=0;
     PNPlace *_mutexPlace;
-    void buildPNMutexDep(PNTransition *req, PNTransition *ack)
+    void buildPNMutexDepCommon(PNTransition *req, PNTransition *ack)
     {
         // for i or o, req should seek token from mutexplace
         pn()->createArc(_mutexPlace, req);
         // for i or o, ack should release token to mutexplace
         pn()->createArc(ack, _mutexPlace);
+    }
+    virtual void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
+    {
+        buildPNMutexDepCommon(req,ack);
+    }
+    virtual void buildPNMutexDepOport(PNTransition *req, PNTransition *ack)
+    {
+        buildPNMutexDepCommon(req,ack);
     }
     template <typename T> void initStore(unsigned depth, unsigned width)
     {
@@ -128,12 +136,12 @@ public:
     virtual void buildPN() {}
     void buildPNIport(PNTransition *ureq, PNTransition *uack)
     {
-        buildPNMutexDep(ureq, uack);
+        buildPNMutexDepIport(ureq, uack);
         buildPNIport1(ureq, uack);
     }
     void buildPNOport(PNTransition *sreq, PNTransition *sack)
     {
-        buildPNMutexDep(sreq, sack);
+        buildPNMutexDepOport(sreq, sack);
         buildPNOport1(sreq, sack);
     }
     Pipe(unsigned depth, string label, VcPetriNet* pn) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn)
@@ -187,6 +195,13 @@ class NonBlockingPipe : public BlockingPipe
     PNPlace *_popPlace;
 protected:
     DatumBase* popOnEmpty() { return _zero; }
+    void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
+    {
+        // for i or o, req should seek token from mutexplace
+        pn()->createArc(_mutexPlace, req);
+        // For NonBlockingPipe return of mutex token happens via common net
+        // built in buildPNIport1
+    }
     void buildPNIport1(PNTransition *ureq, PNTransition *uack)
     {
         pn()->createArc(ureq, _popPlace);
@@ -200,6 +215,8 @@ public:
         pn()->createArc(_popPlace, popNonEmpty);
         pn()->createArc(_filledPlace, popNonEmpty);
         pn()->createArc(popNonEmpty, _freePlace);
+        pn()->createArc(popEmpty, _mutexPlace);
+        pn()->createArc(popNonEmpty, _mutexPlace);
 
         auto popEmptyFreeArc = new PNTPArc(popEmpty, _freePlace, _depth);
         auto freePopEmptyArc = new PNPTArc(_freePlace, popEmpty, _depth);
