@@ -26,7 +26,6 @@ class Operator
 protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
-    const string _dplabel; // for logging only
     template<typename T> T getmask(unsigned width)
     {
         unsigned lead0s;
@@ -35,6 +34,7 @@ protected:
         return ( (T) ~((T)0) ) >> lead0s;
     }
 public:
+    const string _dplabel; // for logging only
 #ifdef OPDBG
     inline static ofstream oplog;
     inline static mutex oplogmutex;

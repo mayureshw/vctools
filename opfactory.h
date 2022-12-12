@@ -48,7 +48,7 @@ class OpFactory
         auto opv = it->second->opv;
         if ( opv.size() < opidx + 1 )
         {
-            cout << "Operator output arity=" << opv.size() << " Sought index=" << opidx << endl;
+            cout << "Operator " << it->second->_dplabel << " output arity=" << opv.size() << " Sought index=" << opidx << endl;
             exit(1);
         }
         return opv[ opidx ];
