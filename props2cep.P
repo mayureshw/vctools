@@ -1,46 +1,57 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/4, dep/1, eventmap/2.
+:-dynamic scep/4, sdep/2, eventmap/2.
 
 :-index(dpe/3,[2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 :-op(400,fx,*).
 
-cep((SN,EN),CN,TAN,FAN) :- scep((S,E),C,TA,FA), numerize(S,SN), numerize(E,EN), numerize(C,CN),
-    numerize(TA,TAN), numerize(FA,FAN).
-cep(I,C,[],[log(Msg)]) :- dep(D,Msg), numerize(D,DN), dep2cep(DN,I,C).
+cep(I,C,[],[log(Msg)]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
+cep(IN,CN,TAN,FAN) :- scep(I,C,TA,FA), numerizeInterval(I,IN), numerizeExpr(C,CN), numerizeActions(TA,TAN), numerizeActions(FA,FAN).
 
-numerize([],[]) :- !.
-numerize([E|Rest],[EN|RestN]) :- !, numerize(E,EN), numerize(Rest,RestN).
-numerize(log(Msg), log(Msg)) :- !.
-numerize(event(E), event(EN)) :- !, numerizeEvent(E,EN).
-numerize(D,D) :- kwd(D), !.
-numerize(*(Reg),DN) :- atom(Reg), !, numerize(*(Reg,0),DN).
-numerize(*(Reg,Pos),*(Dpeid,Pos)) :- atom(Reg), integer(Pos), !, dpe(Dpeid,Reg,_).
-numerize((Ident,Event),Tid) :- event(Event), !, dpe(Objid,Ident,_), vctid(Objid,Event,Tid).
-numerize(D,DN) :- D=..[F,A1,A2], binop(F), !, numerize(A1,A1N), numerize(A2,A2N), DN=..[F,A1N,A2N].
-numerize(D,DN) :- D=..[F,A], uop(F), !, numerize(A,AN), DN=..[F,AN].
-numerize(D,_) :- writeln(2,'Conversion to numeric CEP form failed for term'(D)), fail.
+numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
+numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
+numerizeExpr(*(Reg,Pos), *(Dpeid,Pos)) :- !, dpe(Dpeid, Reg, _).
+numerizeExpr(E,EN) :- E=..[F,A,B], exprbinop(F), !, numerizeExpr(A,AN), numerizeExpr(B,BN), EN=..[F,AN,BN].
+numerizeExpr(E,E) :- atomic(E), !.
 
-numerizeEvent(E,EN) :- eventmap(E,EN), !.
-numerizeEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).
+exprbinop(==).
+
+numerizeActions([],[]):-!.
+numerizeActions([A|Rest],[AN|RestN]):- numerizeAction(A,AN), numerizeActions(Rest,RestN).
+
+numerizeAction(log(Msg),log(Msg)) :- !.
+numerizeAction(event(E),event(EN)) :- !, numerizeAbstractEvent(E,EN).
+
+numerizeInterval(itill(E), itill(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iself(E), iself(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iab(E1,E2), iab(E1N,E2N)) :- !, numerizeEvent(E1,E1N), numerizeEvent(E2,E2N).
+
+numerizeDep(A->B, AN->BN) :- !, numerizeDepLeg(A,AN), numerizeDepLeg(B,BN).
+
+numerizeDepLeg(E,EN) :- E=..[F,A,B], depbinop(F), !, numerizeDepLeg(A,AN), numerizeDepLeg(B,BN), EN=..[F,AN,BN].
+numerizeDepLeg(E,EN) :- numerizeEvent(E,EN).
+
+depbinop(^):-!.
+
+numerizeEvent( de(Ident,EventTyp), Tid ) :- !, eventTyp(EventTyp), dpe(Objid,Ident,_), vctid(Objid,EventTyp,Tid).
+numerizeEvent( ae(EventName), EN ) :- !, numerizeAbstractEvent(EventName,EN).
+
+eventTyp(req0).
+eventTyp(req1).
+eventTyp(ack0).
+eventTyp(ack1).
+eventTyp(ftreq).
+
+numerizeAbstractEvent(E,EN) :- eventmap(E,EN), !.
+numerizeAbstractEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).
 
 lastEventNo(MaxN) :- eventmap(_,MaxN), !.
 lastEventNo(MaxN) :- setof(N, negTid(N), [NegMax|_]), MaxN is NegMax * -1.
 negTid(N) :- vctid(_,_,N1), N is N1 * -1.
 
-binop(->).
-binop(==).
-binop(^).
-uop(#).
-kwd('START').
-event(req0).
-event(req1).
-event(ack0).
-event(ack1).
-event(ftreq).
 
 props2cep(Vc) :- load(vcir,Vc), load(props,Vc),
     store(cep,Vc,cep(_,_,_,_)), store(eventmap,Vc,eventmap(_,_)).
