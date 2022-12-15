@@ -8,8 +8,23 @@
 :-op(700,xfx,->).
 :-op(400,fx,*).
 
+%%% Rewrite scep rules to convert high level interval types to basic ones,
+%%% before numerizing.
+rwscep(IR,CR,TAR,FAR) :- scep(I,C,TA,FA), rewritescep((I,C,TA,FA),(IR,CR,TAR,FAR)).
+
+rewritescep( (watch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
+rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
+
+uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi), vctid(Vid,ack0,_), !.
+uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
+
+statevar(*(V),V) :- !.
+statevar(E,V) :- E=..[F,A,B], exprbinop(F), !, ( statevar(A,V) ; statevar(B,V) ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 cep(I,C,[],[log(Msg)]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
-cep(IN,CN,TAN,FAN) :- scep(I,C,TA,FA), numerizeInterval(I,IN), numerizeExpr(C,CN), numerizeActions(TA,TAN), numerizeActions(FA,FAN).
+cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA), numerizeInterval(I,IN), numerizeExpr(C,CN), numerizeActions(TA,TAN), numerizeActions(FA,FAN).
 
 numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
 numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
