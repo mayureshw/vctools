@@ -27,6 +27,7 @@ numerizeAction(event(E),event(EN)) :- !, numerizeAbstractEvent(E,EN).
 
 numerizeInterval(itill(E), itill(EN)) :- !, numerizeEvent(E,EN).
 numerizeInterval(iself(E), iself(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iev(E), iev(EN)) :- !, numerizeEvent(E,EN).
 numerizeInterval(iab(E1,E2), iab(E1N,E2N)) :- !, numerizeEvent(E1,E1N), numerizeEvent(E2,E2N).
 
 numerizeDep(A->B, AN->BN) :- !, numerizeDepLeg(A,AN), numerizeDepLeg(B,BN).
