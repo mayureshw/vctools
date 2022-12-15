@@ -37,7 +37,7 @@ numerizeDepLeg(E,EN) :- numerizeEvent(E,EN).
 depbinop(^):-!.
 
 numerizeEvent( de(Ident,EventTyp), Tid ) :- !, eventTyp(EventTyp), dpe(Objid,Ident,_), vctid(Objid,EventTyp,Tid).
-numerizeEvent( ae(EventName), EN ) :- !, numerizeAbstractEvent(EventName,EN).
+numerizeEvent( ce(EventName), EN ) :- !, numerizeAbstractEvent(EventName,EN).
 
 eventTyp(req0).
 eventTyp(req1).
