@@ -13,7 +13,7 @@ class ModuleIR
     Rel<long,string,string> _dpe = {"dpe"};
     Rel<long,long> _cpeg = {"cpeg"};
     Rel<long,long,long> _dpdep = {"dpdep"};
-    Rel<string,long> _dppipe = {"dppipe"};
+    Rel<long,string> _dppipe = {"dppipe"};
     void processCPE()
     {
         auto cp = _vcm->Get_Control_Path();
@@ -46,7 +46,7 @@ class ModuleIR
         if ( dpe->Kind() == "vcInport" or dpe->Kind() == "vcOutport" )
         {
             auto pipename = ((vcIOport*) dpe)->Get_Pipe()->Get_Id();
-            _dppipe.add({ pipename, dpe->Get_Root_Index() });
+            _dppipe.add({ dpe->Get_Root_Index(), pipename });
         }
     }
     void processDPE()
