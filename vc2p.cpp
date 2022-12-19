@@ -13,6 +13,7 @@ class ModuleIR
     Rel<long,string,string> _dpe = {"dpe"};
     Rel<long,long> _cpeg = {"cpeg"};
     Rel<long,long,long> _dpdep = {"dpdep"};
+    Rel<string,long> _dppipe = {"dppipe"};
     void processCPE()
     {
         auto cp = _vcm->Get_Control_Path();
@@ -40,6 +41,14 @@ class ModuleIR
                     iws[i]->Get_Driver()->Get_Root_Index(),
                     });
     }
+    void processDPPipe(vcDatapathElement* dpe)
+    {
+        if ( dpe->Kind() == "vcInport" or dpe->Kind() == "vcOutport" )
+        {
+            auto pipename = ((vcIOport*) dpe)->Get_Pipe()->Get_Id();
+            _dppipe.add({ pipename, dpe->Get_Root_Index() });
+        }
+    }
     void processDPE()
     {
         for(auto dpet:_vcm->Get_Data_Path()->Get_DPE_Map())
@@ -49,6 +58,7 @@ class ModuleIR
                 dpet.first,
                 dpet.second->Kind()
                 });
+            processDPPipe(dpet.second);
             processDPED(dpet.second);
         }
     }
@@ -59,6 +69,7 @@ public:
         _cpe.dump(pfile);
         _dpe.dump(pfile);
         _dpdep.dump(pfile);
+        _dppipe.dump(pfile);
     }
     ModuleIR(vcModule* vcm) : _vcm(vcm)
     {
