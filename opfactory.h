@@ -161,6 +161,7 @@ public:
 #ifdef USECEP
     void* getStatePtr(vector<int>& idv) { return stateidv2datum(idv)->elemPtr(); }
     Etyp getStateTyp(vector<int>& idv) { return stateidv2datum(idv)->etyp(); }
+    void quit() { _sys->stop(); }
 #endif
     Operator* dpe2op(vcDatapathElement *dpe)
     {
