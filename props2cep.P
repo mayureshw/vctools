@@ -1,7 +1,7 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/4, sdep/2, eventmap/2, patomic/2, dppipe/2.
+:-dynamic scep/4, sdep/2, eventmap/2, patomic/3, dppipe/2.
 
 :-index(dpe/3,[2]).
 :-index(dppipe/2,[1,2]).
@@ -30,8 +30,8 @@ statevar(E,V) :- E=..[F,A,B], exprbinop(F), !, ( statevar(A,V) ; statevar(B,V) )
 cep(I,C,[],[log(Msg)]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
 
 % Generated ceps from higher level patterns (other than dep)
-gencep(iab(P1E,P2E),#(CheckEvent)==0,[],[log('patomic check violation')]) :-
-    patomic(P1,P2), pipeInstEvent(P1,P1E), pipeInstEvent(P2,P2E),
+gencep(iab(P1E,P2E),#(CheckEvent)==0,[],FA) :-
+    patomic(P1,P2,FA), pipeInstEvent(P1,P1E), pipeInstEvent(P2,P2E),
     inst2pipe(P1,P), inst2pipe(P2,P), pipeEvent(P,CheckEvent), CheckEvent \== P2E.
 
 cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
@@ -59,8 +59,8 @@ exprbinop(==).
 numerizeActions([],[]):-!.
 numerizeActions([A|Rest],[AN|RestN]):- numerizeAction(A,AN), numerizeActions(Rest,RestN).
 
-numerizeAction(log(Msg),log(Msg)) :- !.
 numerizeAction(event(E),event(EN)) :- !, numerizeAbstractEvent(E,EN).
+numerizeAction(A,A).
 
 numerizeInterval(itill(E), itill(EN)) :- !, numerizeEvent(E,EN).
 numerizeInterval(iself(E), iself(EN)) :- !, numerizeEvent(E,EN).
