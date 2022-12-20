@@ -1,16 +1,19 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/4, sdep/2, eventmap/2.
+:-dynamic scep/4, sdep/2, eventmap/2, patomic/2, dppipe/2.
 
 :-index(dpe/3,[2]).
+:-index(dppipe/2,[1,2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 :-op(400,fx,*).
 
 %%% Rewrite scep rules to convert high level interval types to basic ones,
 %%% before numerizing.
-rwscep(IR,CR,TAR,FAR) :- scep(I,C,TA,FA), rewritescep((I,C,TA,FA),(IR,CR,TAR,FAR)).
+rwscep(IR,CR,TAR,FAR) :-
+    ( scep(I,C,TA,FA); gencep(I,C,TA,FA) ),
+    rewritescep((I,C,TA,FA),(IR,CR,TAR,FAR)).
 
 rewritescep( (watch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
 rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
@@ -23,8 +26,27 @@ statevar(E,V) :- E=..[F,A,B], exprbinop(F), !, ( statevar(A,V) ; statevar(B,V) )
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% dep to numerized cep (TODO: consider making a part of gencep for uniformity)
 cep(I,C,[],[log(Msg)]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
-cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA), numerizeInterval(I,IN), numerizeExpr(C,CN), numerizeActions(TA,TAN), numerizeActions(FA,FAN).
+
+% Generated ceps from higher level patterns (other than dep)
+gencep(iab(P1E,P2E),#(CheckEvent)==0,[],[log('patomic check violation')]) :-
+    patomic(P1,P2), pipeInstEvent(P1,P1E), pipeInstEvent(P2,P2E),
+    inst2pipe(P1,P), inst2pipe(P2,P), pipeEvent(P,CheckEvent), CheckEvent \== P2E.
+
+cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
+    numerizeInterval(I,IN), numerizeExpr(C,CN),
+    numerizeActions(TA,TAN), numerizeActions(FA,FAN).
+
+pipeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp), pipeOpEvent(OpTyp,Etyp).
+
+pipeEvent(Pipe,de(Inst,Etyp)) :-
+    dppipe(Id,Pipe), dpe(Id,Inst,OpTyp), pipeOpEvent(OpTyp,Etyp).
+
+pipeOpEvent(vcInport,ftreq).
+pipeOpEvent(vcOutport,req1).
+
+inst2pipe(Inst,Pipe) :- dpe(Id,Inst,_), dppipe(Id,Pipe).
 
 numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
 numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
