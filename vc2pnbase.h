@@ -15,6 +15,7 @@ public:
     virtual Operator* createOperator(vcDatapathElement*) = 0;
     virtual VCtyp vctyp(string) = 0;
     virtual DatumBase* vct2datum(vcType*) = 0;
+    virtual vcStorageObject* getStorageObj(vcLoadStore*) = 0;
     virtual void stop() = 0;
 };
 
