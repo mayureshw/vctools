@@ -3,7 +3,7 @@
 
 :-dynamic scep/4, sdep/2, eventmap/2, patomic/3, dppipe/2.
 
-:-index(dpe/3,[2]).
+:-index(dpe/4,[2]).
 :-index(dppipe/2,[1,2]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
@@ -18,8 +18,8 @@ rwscep(IR,CR,TAR,FAR) :-
 rewritescep( (watch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
 rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
 
-uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi), vctid(Vid,ack0,_), !.
-uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
+uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
+uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
 
 statevar(*(V),V) :- !.
 statevar(E,V) :- E=..[F,A,B], exprbinop(F), !, ( statevar(A,V) ; statevar(B,V) ).
@@ -38,19 +38,19 @@ cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
     numerizeInterval(I,IN), numerizeExpr(C,CN),
     numerizeActions(TA,TAN), numerizeActions(FA,FAN).
 
-pipeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp), pipeOpEvent(OpTyp,Etyp).
+pipeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
 
 pipeEvent(Pipe,de(Inst,Etyp)) :-
-    dppipe(Id,Pipe), dpe(Id,Inst,OpTyp), pipeOpEvent(OpTyp,Etyp).
+    dppipe(Id,Pipe), dpe(Id,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
 
 pipeOpEvent(vcInport,ftreq).
 pipeOpEvent(vcOutport,req1).
 
-inst2pipe(Inst,Pipe) :- dpe(Id,Inst,_), dppipe(Id,Pipe).
+inst2pipe(Inst,Pipe) :- dpe(Id,Inst,_,_), dppipe(Id,Pipe).
 
 numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
 numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
-numerizeExpr(*(Reg,Pos), *(Dpeid,Pos)) :- !, dpe(Dpeid, Reg, _).
+numerizeExpr(*(Reg,Pos), *(Dpeid,Pos)) :- !, dpe(Dpeid, Reg, _,_).
 numerizeExpr(E,EN) :- E=..[F,A,B], exprbinop(F), !, numerizeExpr(A,AN), numerizeExpr(B,BN), EN=..[F,AN,BN].
 numerizeExpr(E,E) :- atomic(E), !.
 
@@ -74,7 +74,7 @@ numerizeDepLeg(E,EN) :- numerizeEvent(E,EN).
 
 depbinop(^):-!.
 
-numerizeEvent( de(Ident,EventTyp), Tid ) :- !, eventTyp(EventTyp), dpe(Objid,Ident,_), vctid(Objid,EventTyp,Tid).
+numerizeEvent( de(Ident,EventTyp), Tid ) :- !, eventTyp(EventTyp), dpe(Objid,Ident,_,_), vctid(Objid,EventTyp,Tid).
 numerizeEvent( ce(EventName), EN ) :- !, numerizeAbstractEvent(EventName,EN).
 
 eventTyp(req0).

@@ -5,5 +5,5 @@
 delaymodel(Vc, TrId, Model):-
     load(vcir, Vc),!,
     vctid(Vcid, TrTyp, TrId),
-    dpe(Vcid, _, OpTyp),
+    dpe(Vcid, _, OpTyp, _),
     d(OpTyp, TrTyp, Model).

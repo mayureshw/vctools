@@ -10,7 +10,7 @@ class ModuleIR
 {
     vcModule* _vcm;
     Rel<long,string> _cpe = {"cpe"};
-    Rel<long,string,string> _dpe = {"dpe"};
+    Rel<long,string,string,long> _dpe = {"dpe"};
     Rel<long,long> _cpeg = {"cpeg"};
     Rel<long,long,long> _dpdep = {"dpdep"};
     Rel<long,string> _dppipe = {"dppipe"};
@@ -56,7 +56,8 @@ class ModuleIR
             _dpe.add({
                 dpet.second->Get_Root_Index(),
                 dpet.first,
-                dpet.second->Kind()
+                dpet.second->Kind(),
+                _vcm->Get_Root_Index()
                 });
             processDPPipe(dpet.second);
             processDPED(dpet.second);
