@@ -1,4 +1,4 @@
-:-import load/2, store/3 from fileio.
+:-import load/2 from fileio.
 
 :-dynamic dpe/4, dppipe/2, m/2.
 
