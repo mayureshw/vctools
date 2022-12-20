@@ -100,14 +100,7 @@ class OpFactory
     }
     vector<DatumBase*>& getStoragev(vcDatapathElement *dpe)
     {
-        auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
-        if ( objmap.size() != 1 )
-        {
-            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl;
-            exit(1);
-        }
-        vcStorageObject *sto;
-        for(auto nsto:objmap) sto = nsto.second;
+        auto sto = getStorageObj(dpe);
         auto it = _storageDatums.find(sto);
         if ( it == _storageDatums.end() )
         {
@@ -158,6 +151,18 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
+    vcStorageObject* getStorageObj(vcDatapathElement* dpe)
+    {
+        auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
+        if ( objmap.size() != 1 )
+        {
+            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl;
+            exit(1);
+        }
+        vcStorageObject *sto;
+        for(auto nsto:objmap) sto = nsto.second;
+        return sto;
+    }
 #ifdef USECEP
     void* getStatePtr(vector<int>& idv) { return stateidv2datum(idv)->elemPtr(); }
     Etyp getStateTyp(vector<int>& idv) { return stateidv2datum(idv)->etyp(); }
