@@ -1,0 +1,14 @@
+:-import load/2, store/3 from fileio.
+
+:-dynamic dpe/4, dppipe/2, m/2.
+
+pusage(P,M,Dname) :-
+    dpe(Did,Dname,_,Mid), dppipe(Did,P), m(Mid,M).
+
+printList([E]) :- !, writeln(E).
+printList([E|Rest]) :- write(E), write(' '), printList(Rest).
+
+printusage :- pusage(A,B,C), printList([A,B,C]), fail.
+printusage.
+
+pipeusage(Vc) :- load(vcir,Vc), printusage.
