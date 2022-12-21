@@ -1,5 +1,7 @@
 :-import load/2, store/3 from fileio.
 
+:-dynamic dpdep/3, dpe/4.
+
 :-index(dpe/4,[1,3]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
