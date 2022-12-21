@@ -10,20 +10,22 @@ sdep( de(N,req0) ^ de(N,req1) -> de(N,ack0), 'Phi req0^req1 -> ack0'    ) :- dpe
 
 sdep( de(N,req0) -> de(N,ack0) ^ de(N,ack1), 'Branch req0 -> ack0^ack1' ) :- dpe(_,N,'vcBranch',_).
 
-sdep( Dep, Msg ) :- splitop(SO), \+ isFlowThrough(SO), dpe(SO,N,_,_),
+sdep( Dep, Msg ) :- dpe(SO,N,_,_), isSplitOp(SO),
     (
       ( Dep = ( de(N,req0) -> de(N,ack0) ), Msg = 'SplitOp req0 -> ack0' );
       ( Dep = ( de(N,req0) -> de(N,ack1) ), Msg = 'SplitOp req0 -> ack1' );
       ( Dep = ( de(N,req1) -> de(N,ack1) ), Msg = 'SplitOp req1 -> ack1' )
     ).
 
-sdep( Dep, Msg ) :- splitop(UID), \+ isFlowThrough(SO), dpdep(UID,_,DID), splitop(DID), dpe(UID,U,_,_), dpe(DID,D,_,_),
+sdep( Dep, Msg ) :- dpdep(UID,_,DID), isSplitOp(UID), isSplitOp(DID),
+    dpe(UID,U,_,_), dpe(DID,D,_,_),
     (
       ( Dep = ( de(D,ack1) -> de(U,req0) ), Msg = 'Use-Def Def-ack1 -> Use-req0');
       ( Dep = ( de(D,req1) -> de(U,ack0) ), Msg = 'Use-Def Def-req1 -> Use-ack0')
     ).
 
-splitop(O) :- dpe(O,_,'vcBinarySplitOperator',_).
+:-table isSplitOp/1.
+isSplitOp(Did) :- vctid(Did,req0,_), vctid(Did,req1,_), vctid(Did,ack0,_), vctid(Did,ack1,_).
 
 :-table isFlowThrough/1.
 isFlowThrough(Did) :- vctid(Did,ftreq,_).
