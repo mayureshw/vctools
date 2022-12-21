@@ -13,7 +13,6 @@ sdep( de(N,req0) -> de(N,ack0) ^ de(N,ack1), 'Branch req0 -> ack0^ack1' ) :- dpe
 sdep( Dep, Msg ) :- dpe(SO,N,_,_), isSplitOp(SO),
     (
       ( Dep = ( de(N,req0) -> de(N,ack0) ), Msg = 'SplitOp req0 -> ack0' );
-      ( Dep = ( de(N,req0) -> de(N,ack1) ), Msg = 'SplitOp req0 -> ack1' );
       ( Dep = ( de(N,req1) -> de(N,ack1) ), Msg = 'SplitOp req1 -> ack1' )
     ).
 
