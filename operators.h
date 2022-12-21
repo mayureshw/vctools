@@ -349,7 +349,7 @@ public:
         auto val = INPVAL(Tin2,1);
         ((Datum<Tin2>*)_stv[i])->val = val;
         // Since Store doesn't have a uack log, we log its sack
-        OPLOG("sack:" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
+        OPLOG("sack:" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << _ipv[1]->str())
     }
     // width passed due to macro uniformity, ignored
     Store(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), Operator(label) {}
