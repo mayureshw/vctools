@@ -23,6 +23,12 @@ sdep( Dep, Msg ) :- dpdep(UID,_,DID), isSplitOp(UID), isSplitOp(DID),
       ( Dep = ( de(D,req1) -> de(U,ack0) ), Msg = 'Use-Def Def-req1 -> Use-ack0')
     ).
 
+% Flow through transition is inserted between sreq-sack of each consumer of a
+% flow through There isn't much value add in verifying this. Also the context
+% of each flow through event is not available in the vcir, since these are
+% created in the Petri net building process itself. Getting it from there will
+% make the check further trivial.
+
 :-table isSplitOp/1.
 isSplitOp(Did) :- vctid(Did,req0,_), vctid(Did,req1,_), vctid(Did,ack0,_), vctid(Did,ack1,_).
 
