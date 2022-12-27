@@ -6,9 +6,11 @@
 :-index(dpe/4,[2]).
 :-index(dppipe/2,[1,2]).
 :-index(dpstore/2,[1,2]).
+:-op(300,fx,*).
+:-op(400,xfx,and).
+:-op(500,xfx,or).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
-:-op(400,fx,*).
 
 %%% Rewrite scep rules to convert high level interval types to basic ones,
 %%% before numerizing.
@@ -22,8 +24,10 @@ rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
 uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
 uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
 
+:-table statevar/2.
 statevar(*(V),V) :- !.
-statevar(E,V) :- E=..[F,A,B], exprbinop(F), !, ( statevar(A,V) ; statevar(B,V) ).
+statevar(E,V) :- E=..[F,A,B], binop(F), !,
+    ( statevar(A,V) ; statevar(B,V) ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -64,10 +68,13 @@ inst2store(Inst,Store) :- dpe(Id,Inst,_,_), dpstore(Id,Store).
 numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
 numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
 numerizeExpr(*(Reg,Pos), *(Dpeid,Pos)) :- !, dpe(Dpeid, Reg, _,_).
-numerizeExpr(E,EN) :- E=..[F,A,B], exprbinop(F), !, numerizeExpr(A,AN), numerizeExpr(B,BN), EN=..[F,AN,BN].
+numerizeExpr(E,EN) :- E=..[F,A,B], binop(F), !, numerizeExpr(A,AN), numerizeExpr(B,BN), EN=..[F,AN,BN].
 numerizeExpr(E,E) :- atomic(E), !.
 
+binop(O) :- exprbinop(O) ; logbinop(O).
 exprbinop(==).
+logbinop(and).
+logbinop(or).
 
 numerizeActions([],[]):-!.
 numerizeActions([A|Rest],[AN|RestN]):- numerizeAction(A,AN), numerizeActions(Rest,RestN).
