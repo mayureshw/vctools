@@ -18,7 +18,7 @@ rwscep(IR,CR,TAR,FAR) :-
     ( scep(I,C,TA,FA); gencep(I,C,TA,FA) ),
     rewritescep((I,C,TA,FA),(IR,CR,TAR,FAR)).
 
-rewritescep( (watch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
+rewritescep( (iwatch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
 rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
 
 uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
