@@ -6,6 +6,7 @@
 :-index(dpe/4,[2]).
 :-index(dppipe/2,[1,2]).
 :-index(dpstore/2,[1,2]).
+:-op(300,fx,#).
 :-op(300,fx,*).
 :-op(400,xfx,and).
 :-op(500,xfx,or).
