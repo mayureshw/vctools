@@ -57,6 +57,7 @@ pipeEvent(Pipe,de(Inst,Etyp)) :-
 storeWrEvent(S,de(Inst,Etyp)) :-
     dpstore(Id,S), dpe(Id,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
 
+pipeOpEvent(vcInport,ack1).
 pipeOpEvent(vcInport,ftreq).
 pipeOpEvent(vcOutport,req1).
 % Notes: storeOpEvent as suitable for 'reaches'
