@@ -115,13 +115,17 @@ public:
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc < 3)
     {
-        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile>" << endl;
+        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile> [daemons...]" << endl;
         exit(1);
     }
-    vcSystem::_opt_flag = true;
 
+
+    set<string> daemons;
+    for(int i=3; i<argc; i++) daemons.insert(argv[i]);
+
+    vcSystem::_opt_flag = true;
     vcSystem vcs("sys");
     vcs.Parse(argv[1]);
     // Setting all modules as top. Will have to borrow one or more CLI args of
@@ -129,7 +133,7 @@ int main(int argc, char* argv[])
     // doesn't affect much to the simulator.
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
-    System sys(&vcs, {});
+    System sys(&vcs, daemons);
 
     SysIR sysir(vcs,sys);
 
