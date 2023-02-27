@@ -36,7 +36,7 @@ AHIRGRAMDIR	=	$(AHIRDIR)/v2/libAhirV2/grammar
 VCGRAMMAR	=	$(AHIRGRAMDIR)/vc.g
 AHIRSRCS	=	$(wildcard $(AHIRSRCDIR)/*.cpp)
 PARSERSRCS	=	vcParser.cpp vcLexer.cpp
-VCTOOLSRCS	=	vcsim.cpp cprcheck.cpp
+VCTOOLSRCS	=	vcsim.cpp
 PARSERHDRS	=	$(PARSERSRCS:.cpp=.hpp) vcParserTokenTypes.hpp
 MISCFILES	=	vcParserTokenTypes.txt
 AHIROBJS	=	$(notdir $(AHIRSRCS:.cpp=.o))
@@ -48,13 +48,18 @@ CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-fPIC -g
 VPATH		+=	$(AHIRSRCDIR)
 
-BINS		=	libahirvc.a libvcsim.so cprcheck.out
+BINS		=	libahirvc.a libvcsim.so
 EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
 ifeq ($(USECEP),y)
 BINS		+=	vc2p.out
 VCTOOLSRCS	+=	vc2p.cpp
+endif
+
+ifeq ($(BUILD_CPR_CHECK),y)
+BINS		+=	cprcheck.out
+VCTOOLSRCS	+=	cprcheck.cpp
 endif
 
 vc2p.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
@@ -82,8 +87,10 @@ $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 libvcsim.so:	vcsim.o libahirvc.a
 	$(CXX) -shared $^ $(LDFLAGS) -o $@
 
+ifeq ($(BUILD_CPR_CHECK),y)
 cprcheck.out:	cprcheck.o libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
+endif
 
 vc2p.out:	vc2p.o libvcsim.so libahirvc.a
 	$(CXX) $< $(LDFLAGS) -o $@
