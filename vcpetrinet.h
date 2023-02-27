@@ -8,6 +8,14 @@
 
 #include "petrinet.h"
 
+// Note: USECEP is also asserted by the Makefile when any of the randomized
+// simulation modes is active.
+#ifdef USECEP
+    using PetriNetVariant = STPetriNet;
+#else
+    using PetriNetVariant = MTPetriNet;
+#endif
+
 // Class VcPetriNet does the following:
 //
 // With USECEP: It provides a place to hold vctid relation to build the Prolog
@@ -20,9 +28,6 @@
 #include <random>
 #include "xsb2cpp.h"
 #include "distributions.h"
-using PetriNetVariant = STPetriNet;
-#else
-using PetriNetVariant = MTPetriNet;
 #endif
 
 using namespace std;
