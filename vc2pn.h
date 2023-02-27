@@ -1051,7 +1051,9 @@ class System : public SystemBase
         for(auto p:_feedermap) { p.second->buildPN(); }
         for(auto p:_readermap) { p.second->buildPN(); }
         buildSysExitPN();
+#       ifdef SIMU_MODE_STPN
         pn()->setDelayModels();
+#       endif
     }
 public:
     void stop() { pn()->quit(); } // For low level simulator interface

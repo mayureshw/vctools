@@ -13,10 +13,10 @@
 // With USECEP: It provides a place to hold vctid relation to build the Prolog
 // export of data required for the CEP functionality.
 //
-// With USESTPN: It provides a function to set the delay model in transitions
-// using the specs in delaymodel.P
+// With SIMU_MODE_STPN: It provides a function to set the delay model in
+// transitions using the specs in delaymodel.P
 
-#ifdef USESTPN
+#ifdef SIMU_MODE_STPN
 #include <random>
 #include "xsb2cpp.h"
 #include "distributions.h"
@@ -35,7 +35,7 @@ public:
     Rel<unsigned,string,unsigned> vctid = {"vctid"};
 #endif
 
-#ifdef USESTPN
+#ifdef SIMU_MODE_STPN
 private:
     DistFactory _df;
     PTerm *_defaultModelTerm;
