@@ -1,0 +1,44 @@
+$storage store : $uint<8>
+$pipe doread: $uint<8> $depth 1
+$pipe outpipe: $uint<8> $depth 1 $signal
+
+// There are two daemons - writer writes to the store and the reader reads from it
+// The writer writes to pipe `doread' to indicate to the reader that the data is
+// available on the store. The reader waits on pipe `doread' and once it gets
+// something it reads and processes the value written to the store
+//
+// However this synchronization is not enough as it is a one-way synchronization.
+// The writer is not having any mechanism to wait till the reader confirms that
+// it has read the storage, before the writer overwrites it.
+//
+// We could use the `reaches' property to check if the value written by writer is
+// not overwritten before it is read by the reader. However this does not check
+// that the reader always gets a fresh value. So, instead of reaches, we use
+// property 'sdep' which ensures alternating occurrence of the write and read.
+// See vcsim06.uprops to see how the property is stated.
+// After compling and running vcsim06.out, see vcsim06.cep.log for the
+// violation reported
+
+
+$module [reader] $in () $out () $is
+{
+    $branchblock[loop] {
+        $merge $entry loopback $endmerge
+            x := doread      // wait till we get a 'go'
+            $barrier         // impose a dep as there is no data dep
+            outpipe := store // read store and do something
+        $place [loopback]
+    }
+}
+$module [writer] $in () $out () $is
+{
+    $branchblock[loop] {
+        $merge $entry loopback
+            $phi i := $zero<8> $on $entry (i + 1) $on loopback
+        $endmerge
+            store := i  // write something to store
+            $barrier    // impose a dep as there is no data dep
+            doread := 1 // wait till last 'go' is read, issue 'go'
+        $place [loopback]
+    }
+}

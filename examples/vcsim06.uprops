@@ -1,0 +1,3 @@
+% Stronger than `reaches'
+sdep( de( 'STORE_store_28_store_0', ack1 ) -> de( 'LOAD_store_12_load_0', req0 ),
+    'Store -> Load dep violated').
