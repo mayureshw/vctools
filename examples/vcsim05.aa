@@ -1,0 +1,31 @@
+$pipe signal: $uint<8> $depth 1 $signal
+
+// Both daemons incr_1_daemon and incr_2_daemon have identical code
+// Daemons are incrementing a signal variable without any locking
+// The read and write involved in an increment is not atomic
+// Randomized simulation catches this lack of atomicity
+// See vcsim05.uprops for how the property for this is stated
+
+$module [incr_1_daemon] $in () $out () $is
+{
+	$branchblock[loop] {
+		$merge $entry loopback $endmerge
+
+			x := signal
+			signal := (x + 1)
+
+		$place [loopback]
+	}
+}
+
+$module [incr_2_daemon] $in () $out () $is
+{
+	$branchblock[loop] {
+		$merge $entry loopback $endmerge
+			
+			x := signal
+			signal := (x + 1)
+
+		$place [loopback]
+	}
+}
