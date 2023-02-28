@@ -33,7 +33,7 @@ statevar(E,V) :- E=..[F,A,B], binop(F), !,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % dep to numerized cep (TODO: consider making a part of gencep for uniformity)
-cep(I,C,[],[log(Msg)]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
+cep(I,C,[],[log(Msg),quit]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
 
 % Generated ceps from higher level patterns (other than dep)
 gencep(iab(P1E,P2E),#(CheckEvent)==0,[],FA) :-
