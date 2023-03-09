@@ -1,0 +1,380 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[T1]{fontenc} % babel-tikz don't go together w/o this; toc doesn't work w/o babel
+\usepackage[english]{babel}
+\usepackage{pslatex}
+\usepackage{listings}
+\input{lst.tex}
+\usepackage{syntax}
+\setlength{\grammarindent}{3.3cm}
+\renewcommand{\syntleft}{\itshape}
+\renewcommand{\syntright}{}
+\renewcommand{\litleft}{\bfseries}
+\renewcommand{\litright}{}
+\renewcommand{\arraystretch}{2}
+\usepackage{float}
+\counterwithin{figure}{section}
+\counterwithin{table}{section}
+\parindent 0pt
+\parskip 5pt
+\usepackage{tikz}
+\usetikzlibrary{shapes,calc,backgrounds,petri,positioning}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, pdfstartview=FitV, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+\renewcommand\maketitle{
+\begin{titlepage}
+\centering
+
+\topskip0pt
+\vspace*{\fill}
+
+{\bfseries\Large{AHIR Virtual Circuit Simulator}}
+
+\Large{\bfseries User Manual\par}
+
+\vspace{0.5cm}
+
+\today
+
+\vspace*{\fill}
+
+\end{titlepage}
+}
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{AHIR HLS pipeline and virtual circuits}
+
+This document assumes that the reader is familiar with the \href{https://github.com/madhavPdesai/ahir}{AHIR HLS Framework} and in particular the virtual circuit layer in the framework. Below is a very short description of AHIR and its virtual circuit representation.
+
+In AHIR HLS framework, the design entry is made in a specification languages called Aa. Also, the framework provides tools to automatically generate Aa specification from C/C++ programs using LLVM SSA representation. The Aa specification is converted to a Virtual Circuit representation (vC), which is in turn converted into a hardware description in VHDL form. AHIR has its own VHDL library that provides the necessary components that are instantiated in the generated VHDL code.
+
+As a design moves from Aa to vC and vC to VHDL, the level of detail in the specification increases in each step. The Aa language is meant for writing algorithms, than to describe hardware. The vC layer describes the hardware in terms of data path, control path, their interconnection and storage. The vC representation is asynchronous as it does not have a clock signal. When vC is converted to VHDL, it becomes a synchronous circuit description with clock signal's involvement. A number of VHDL library components come into picture in the VHDL layer.
+
+The AHIR framework has simulator for Aa and ways of running a VHDL simulator. Aa simulation is suitable for quick behavioral verification. VHDL simulation is suitable for an implementation level verification. However, VHDL represents a particular instance of implementation of the design expressed in vC. If one wants to verify the design in general, vC simulation is a good option. Besides, with the level of detail that VHDL simulations have to deal with, vC provides a faster option for verification by simulation.
+
+The vC simulator described in this note is developed to leverage the vC representation for design verification purpose.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Simulation modes}
+
+Before we talk about the installation and usage of the simulator it is important to state the modes in which the simulator operates. The mode is to be chosen at the time of compiling the vC simulator into a library.
+
+Primarily there are two modes of the simulator:
+
+\begin{enumerate}
+\item \textbf{High Performance Behavioral Mode:} This mode uses Multi-Threaded simulation that leverages multi-core CPUs to provide better performance. However, this mode provides no control over the sequence of firing of events, that we will just describe in the mode below. This mode is, hence, suitable for quick behavioral simulations.
+
+\item \textbf{Randomized Simulation Mode:} Randomized modes are meant for property verification by simulation. By randomizing the order in which events fire, these modes try to produce a counter-example to the stated properties. We are going to describe stating of properties and viewing of counter-examples in Sec \ref{Sec:Usage}.
+
+\end{enumerate}
+
+The file \texttt{Makefile.conf} in the source code, describes the settings for the simulation mode. The framework supports multiple randomization strategies, which are described in the same file. As a quick summary, use the \texttt{FAST} mode for high performance behavioral simulation and \texttt{RANDOMPRIO} for property verification by randomized simulation. Remaining modes described in the file are experimental.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Installation}
+
+vC simulator can be installed by either using Docker image or can be compiled on your system. Following subsections describe both the methods.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Creating a docker image}
+
+Please use the docker specification file \texttt{docker/Dockerfile} in the source code. A docker image can be created using this file.
+
+\textbf{TODO:} The docker specification was written for high performance mode only. We will be adding a choice for simulation mode and updating the docker specification in due course.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Compiling the simulator on your system}
+
+\begin{enumerate}
+
+\item \textbf{Environment variables}
+
+These instructions assume the reader knows how to set your environment variables. It is preferable to keep all variables you set in a file and source this file from your shell's rc file (such as \texttt{.profile} or \texttt{.bashrc}) so that you do not have to worry about setting these variables in each new session.
+
+We will describe the required environment variables for each component in the steps below. For convenience, we will summarize all the environment variables once in the end.
+
+\item \textbf{C++-2017 Compiler}:
+
+Please check the compiler version available on your system. This is important. The development environment of vC simulator used gcc-12. gcc-11.2.0 is known to work, gcc-11.1.0 is known to not work.
+
+If you do not have a suitable version, try upgrading or building the compiler.
+
+If you need to use a compiler at a location other than the system default you must set the following environment variable.
+
+\begin{lstlisting}[language=bash,style=snippet]
+export CXX=/path/to/your/c++-compiler
+\end{lstlisting}
+
+\item \textbf{GNU Make}
+
+The development environment uses GNU Make version 4.3. On most systems, the default make command should work.
+
+\item \textbf{Java}
+
+Java (JRE) is required for antlr parser generator to run. These instructions have been tested with OpenJDK-17, though any recent Java implementation should work.
+
+\item \textbf{Antlr}
+
+Install the antlr tool as well as its run time libraries. On Ubuntu, the packages are named the following (Note: Package names may vary across distros.)
+
+\begin{enumerate}
+\item \texttt{antlr}
+\item \texttt{libantlr-dev}
+\end{enumerate}
+
+To cross check your installation:
+
+\begin{enumerate}
+\item Run the antlr tool and make sure that it works. On Ubuntu the command to run antlr is \texttt{runantlr}. On some other systems the command is \texttt{antlr}. If, on your system, the command is not \texttt{runantlr}, define the \texttt{ANTLR} variable in the \texttt{Makefile} in the source code with the command to run antlr.
+
+\item Ensure that the directory \texttt{/usr/include/antlr} and the library file \texttt{/usr/lib/libantlr-pic.a} (or at respective standard path as per your system) exist.
+\end{enumerate}
+
+\item \textbf{boost}
+
+AHIR compilation requires the boost library. The package on Ubuntu is \texttt{libboost-dev}.
+
+To cross check the installation: Ensure that the directory \texttt{/usr/include/boost} exists.
+
+\item \textbf{Set a directory to check out the sources from github}
+
+The build process requires a designated path for all dependencies checked out from github. For convenience, designate a directory to check out the sources and define the following environment variable. All github components should be checked out in this directory.
+
+\begin{lstlisting}[language=bash,style=snippet]
+export GITHUBHOME=/path/to/your-checkout-directory
+\end{lstlisting}
+
+\item \textbf{vctools}
+
+Check out the vC simulator code. You also need to set environment variable \texttt{VCTOOLSDIR} and source the \texttt{vctoolsrc} file from it, which will set the required environment variables.
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $GITHUBHOME
+git clone --depth 1 https://github.com/mayureshw/vctools
+export VCTOOLSDIR=$GITHUBHOME/vctools
+. $VCTOOLSDIR/vctoolsrc
+\end{lstlisting}
+
+\item \textbf{AHIR fork}
+
+The vC simulator requires some minor changes to the \href{https://github.com/madhavPdesai/ahir}{main AHIR repository}, mostly in the form of some Get functions in vC IR classes. Check out this AHIR fork.
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $GITHUBHOME
+git clone --depth 1 https://github.com/mayureshw/ahir
+\end{lstlisting}
+
+At this stage you may cross check the following things:
+
+\begin{enumerate}
+\item This command should show the source code of the AHIR fork you just checked out:
+
+\begin{lstlisting}[language=bash,style=snippet]
+ls $AHIRDIR
+\end{lstlisting}
+
+\item AHIR supplies pre-compiled binaries for Ubuntu. If you are using a compatible distribution, the following command should show a usage message.
+
+\begin{lstlisting}[language=bash,style=snippet]
+Aa2VC
+\end{lstlisting}
+
+\end{enumerate}
+
+\item \textbf{petrisimu : Petri net simulator}
+
+Check out the Petri net simulator.
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $GITHUBHOME
+git clone --depth 1 https://github.com/mayureshw/petrisimu
+\end{lstlisting}
+
+To cross check: This command should show the source code you just checked out.
+
+\begin{lstlisting}[language=bash,style=snippet]
+ls $PETRISIMUDIR
+\end{lstlisting}
+
+%### Optional components
+%
+%If you want to use the CEP (Complex Event Processing) tool for verification
+%checks on event sequences you need to install the following additional
+%components.
+%
+%    1. XSB Prolog
+%
+%    See http://xsb.sourceforge.net for installation instructions.
+%
+%    In the environment settings mentioned above set the XSB installation
+%    directory.
+%
+%        export XSBDIR=<Directory where you have installed XSB Prolog>
+%
+%    Ensure that you have sourced the new settings so that vctoolsrc derives
+%    additional variables from XSBDIR.
+%
+%    To cross check type "xsb" and see if it launches Prolog interpreter. Use
+%    Ctrl-D to exit the interpreter.
+%
+%    2. XSB C++ interface
+%
+%        cd $GITHUBHOME
+%        git clone --depth 1 https://github.com/mayureshw/xsbcppif
+%
+%    Cross check: This command should show the source code of the component:
+%
+%        ls $XSBCPPIFDIR
+%
+%    Copy $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+%
+%        cp $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+%
+%    3. CEP tool
+%
+%        cd $GITHUBHOME
+%        git clone --depth 1 https://github.com/mayureshw/ceptool/
+%
+%    Cross check: This command should show the source code of the component:
+%
+%        ls $CEPTOOLDIR
+%
+%### Environment settings
+%
+%Paste these lines in your shell's rc file, such as ~/.bashrc or ~/.profile.
+%
+%    # Choose and create a directory to checkout all github components and set
+%    # the following variable. (Replace $HOME/programs with whatever directory
+%    # you have chosen and created.)
+%    export GITHUBHOME=$HOME/programs
+%
+%    # See instructions under `Optional components'. If you install XSB Prolog
+%    # as per those instructions then uncomment and set this variable.
+%    # export XSBDIR=/usr/local/xsb
+%
+%    # Set the path of vctools component and source vctoolsrc from it, which
+%    # will set the required variables for all the dependencies
+%    export VCTOOLSDIR=$GITHUBHOME/vctools
+%    . $VCTOOLSDIR/vctoolsrc
+%
+%
+%Make sure that these settings reflect in your environment (Typically open a new
+%terminal or just source the rc file)
+%
+%## Setting up vctools
+%
+%Environment settings should have defined variable $VCTOOLSDIR in previous setps
+%
+%    cd $VCTOOLSDIR
+%
+%Before running make you may want to check and alter some configurable options
+%in Makefile.conf. They are documented in the same file.
+%
+%In particular, the CEP event sequence validation capabilities have some
+%additional dependencies. If you do not wish to use them set:
+%
+%    USECEP  =   n
+%
+%Once configured, run make. Use -j = number of CPU cores you have to speed up
+%compilation.
+%
+%    make -j4
+
+
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Using the simulator} \label{Sec:Usage}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Writing a test bench program}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Writing properties to check}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Compiling the test bench executable}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Ways to terminate the simulation}
+
+There are following ways to terminate the simulation:
+
+\begin{enumerate}
+\item \textbf{When a pre-determined number of reads happen over system pipes:}
+\item \textbf{By use of $quit$ action in property checks:}
+\item \textbf{By killing the test bench process:}
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Understanding the logs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
+\section{Property specification syntax and semantics}\label{Sec:Props}
+
+\begin{figure}
+\begin{grammar}
+<SymProps>      $\rightarrow$ <SymProp>*
+
+<SymProp>       $\rightarrow$ <DEP>
+                \alt          <PAtomic>
+                \alt          <Reaches>
+                \alt          <SymCEP>
+
+<DEP>           $\rightarrow$ `sdep(' <EventCond> `->' <Event> `,' <FalseActions> `).'
+                \alt          `sdep(' <Event> `->' <EventCond> `,' <FalseActions> `).'
+
+<PAtomic>       $\rightarrow$ `patomic(' <PipeOpIdent> `,' <PipeOpIdent> `,' <FalseActions> `).'
+
+<Reaches>       $\rightarrow$ `reaches(' <StoreOpIdent> `,' <LoadOpIdent> `,' <FalseActions> `).'
+
+<SymCEP>        $\rightarrow$ `scep(' <Interval> `,' <CondExpr> `,' <TrueActions> `,' <FalseActions>`).'
+
+<Interval>      $\rightarrow$ `iab(' <Event> `,' <Event> `)'
+                \alt          `itill(' <Event> `)'
+                \alt          `iself(' <Event> `)'
+                \alt          `iwatch'
+
+<EventCond>     $\rightarrow$ <Event>
+                \alt          <Event> <EventCondOp> <Event>
+
+<EventCondOp>   $\rightarrow$ `^'
+
+<Event>         $\rightarrow$ <DataPathEvent>
+                \alt          <ComplexEvent>
+
+<DataPathEvent> $\rightarrow$ `de(' <OpIdent> `,' <EventTyp> `)'
+
+<ComplexEvent>  $\rightarrow$ `ce(' <SingleQuotedLiteral> `)'
+
+<EventTyp>      $\rightarrow$ `req0'
+                \alt          `req1'
+                \alt          `ack0'
+                \alt          `ack1'
+                \alt          `ftreq'
+
+\end{grammar}
+\end{figure}
+Grammar of the `Symbolic Properties' for the AHIR system.
+
+Non terminals with names ending in $Ident$ represent the vC identifiers that identify an instance of the corresponding operator; namely: $PipeOp$ represents read or writes from a pipe, $Load$ and $Store$ represent corresponding operations on a storage object; $Op$ represents any arbitrary AHIR operator instance.
+
+$EventTyp$ is event type as per AHIR split protocol. $req0, req1$ represent sample and update request respectively and $ack0, ack1$ represent resspective acknowledgments. $ftreq$ represents a flow through request, which is an extra event type introduced by the simulator to trigger what is modeled as a combinational logic in AHIR based system.
+
+\end{document}
