@@ -6,6 +6,11 @@
 
     - Asynchronous use of pipes by test bench added
 
+    - Randomized simulation modes with CEP technique to detect violation to
+      properties added. (A major change.)
+
+    - README.md replaced with manual.pdf due to increase in contents
+
 ## 221011
 
     - Added operators >> << >o> <o< < ^ ~& ~| ~^
