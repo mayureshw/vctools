@@ -157,6 +157,28 @@ The build process requires a designated path for all dependencies checked out fr
 export GITHUBHOME=/path/to/your-checkout-directory
 \end{lstlisting}
 
+\item \textbf{XSB Prolog}
+
+This component is needed only if you want to use property verification functionality of the vC simulator.
+
+Unfortunately on most platforms a binary package of XSB Prolog is not available and it needs to be compiled from the sources.
+
+See \href{http://xsb.sourceforge.net}{XSB Prolog home page} for download and installation instructions.
+
+\textbf{TODO:} We may add most typical build instructions here.
+
+Make the following environment setting to let our build process know the location where you have installed XSB Prolog.
+
+\begin{lstlisting}[language=bash,style=snippet]
+export XSBDIR=<Directory where you have installed XSB Prolog>
+\end{lstlisting}
+
+To cross check: Run the following command. It should launch the XSB Prolog interpreter. You may exit it by hitting Ctrl-D.
+
+\begin{lstlisting}[language=bash,style=snippet]
+$XSBDIR/bin/xsb
+\end{lstlisting}
+
 \item \textbf{vctools}
 
 Check out the vC simulator code. You also need to set environment variable \texttt{VCTOOLSDIR} and source the \texttt{vctoolsrc} file from it, which will set the required environment variables.
@@ -209,49 +231,35 @@ To cross check: This command should show the source code you just checked out.
 ls $PETRISIMUDIR
 \end{lstlisting}
 
-%### Optional components
-%
-%If you want to use the CEP (Complex Event Processing) tool for verification
-%checks on event sequences you need to install the following additional
-%components.
-%
-%    1. XSB Prolog
-%
-%    See http://xsb.sourceforge.net for installation instructions.
-%
-%    In the environment settings mentioned above set the XSB installation
-%    directory.
-%
-%        export XSBDIR=<Directory where you have installed XSB Prolog>
-%
-%    Ensure that you have sourced the new settings so that vctoolsrc derives
-%    additional variables from XSBDIR.
-%
-%    To cross check type "xsb" and see if it launches Prolog interpreter. Use
-%    Ctrl-D to exit the interpreter.
-%
-%    2. XSB C++ interface
-%
-%        cd $GITHUBHOME
-%        git clone --depth 1 https://github.com/mayureshw/xsbcppif
-%
-%    Cross check: This command should show the source code of the component:
-%
-%        ls $XSBCPPIFDIR
-%
-%    Copy $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
-%
-%        cp $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
-%
-%    3. CEP tool
-%
-%        cd $GITHUBHOME
-%        git clone --depth 1 https://github.com/mayureshw/ceptool/
-%
-%    Cross check: This command should show the source code of the component:
-%
-%        ls $CEPTOOLDIR
-%
+\item \textbf{XSB C++ interface}
+
+Copy $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $GITHUBHOME
+git clone --depth 1 https://github.com/mayureshw/xsbcppif
+cp $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+\end{lstlisting}
+
+Cross check: This command should show the source code of the component:
+
+\begin{lstlisting}[language=bash,style=snippet]
+ls $XSBCPPIFDIR
+\end{lstlisting}
+
+\item \textbf{CEP tool}
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $GITHUBHOME
+git clone --depth 1 https://github.com/mayureshw/ceptool/
+\end{lstlisting}
+
+Cross check: This command should show the source code of the component:
+
+\begin{lstlisting}[language=bash,style=snippet]
+ls $CEPTOOLDIR
+\end{lstlisting}
+
 %### Environment settings
 %
 %Paste these lines in your shell's rc file, such as ~/.bashrc or ~/.profile.
