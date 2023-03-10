@@ -7,7 +7,7 @@ Please see docker/Dockerfile for automated installation using docker.
 
 ## Manual installation
 
-### C++ compiler that supports 2014 standard
+### C++ compiler that supports 2017 standard
 
 (Most recent systems should have a suitable c++ compiler by default.)
 
@@ -22,7 +22,7 @@ If your stock compiler (typically /usr/bin/c++) does not support this and you
 install a newer version at some other location, do set the following
 envrionment variable preferably in your shell's rc file.
 
-    export CXX=<Path to your c++ compiler that supports 2014 standard>
+    export CXX=<Path to your c++ compiler that supports 2017 standard>
 
 ### GNU make
 
@@ -202,6 +202,8 @@ compilation.
        unsigned.
 
 #### Simulator performance tuning
+
+This note applies only when you are using the simulator for fast behavioral simulations (you have built simulator with the  SIMU_MODE=FAST in Makefile.conf). This does not apply to other modes of the simulator that are meant for property checking by simulation.
 
 To get better simulator performance:
 
