@@ -157,20 +157,37 @@ The build process requires a designated path for all dependencies checked out fr
 export GITHUBHOME=/path/to/your-checkout-directory
 \end{lstlisting}
 
+\item \textbf{pcre}
+
+This component is needed only if you want to use property verification functionality of the vC simulator.
+
+As a dependency of XSB Prolog, install pcre library and its headers. On Ubuntu the packages is \texttt{libpcre3-dev}.
+
 \item \textbf{XSB Prolog}
 
 This component is needed only if you want to use property verification functionality of the vC simulator.
 
-Unfortunately on most platforms a binary package of XSB Prolog is not available and it needs to be compiled from the sources.
+On most platforms XSB Prolog needs to be compiled from the sources.
 
-See \href{http://xsb.sourceforge.net}{XSB Prolog home page} for download and installation instructions.
+Preferably choose a system-wide installation directory for XSB and carry out the installation as root. But if you prefer so, you can build XSB in your login as well.
 
-\textbf{TODO:} We may add most typical build instructions here.
+\begin{lstlisting}[language=bash,style=snippet]
+# Go to the directory you have chosen for XSB installation
+# Use root login if it is a system directory like /usr/local
+cd /usr/local
+# Note that the URL is a continuous string without newline
+wget --content-disposition https://sourceforge.net/projects/xsb/files/xsb/5.0%20%28Green%20Tea%29/XSB-5.0.tar.gz/download
+tar xvfz XSB-5.0.tar.gz
+cd XSB/build
+./configure
+./makexsb fast package
+\end{lstlisting}
 
 Make the following environment setting to let our build process know the location where you have installed XSB Prolog.
 
 \begin{lstlisting}[language=bash,style=snippet]
-export XSBDIR=<Directory where you have installed XSB Prolog>
+# Use your installation path if different
+export XSBDIR=/usr/local/XSB
 \end{lstlisting}
 
 To cross check: Run the following command. It should launch the XSB Prolog interpreter. You may exit it by hitting Ctrl-D.
@@ -233,7 +250,7 @@ ls $PETRISIMUDIR
 
 \item \textbf{XSB C++ interface}
 
-Copy $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
+Besides checking out the repository, you need to copy a file from the checked out code to the directory as shown below.
 
 \begin{lstlisting}[language=bash,style=snippet]
 cd $GITHUBHOME
@@ -241,7 +258,7 @@ git clone --depth 1 https://github.com/mayureshw/xsbcppif
 cp $XSBCPPIFDIR/xsbrc.P $HOME/.xsb
 \end{lstlisting}
 
-Cross check: This command should show the source code of the component:
+Cross check: This command should show the source code of the component you just checked out.
 
 \begin{lstlisting}[language=bash,style=snippet]
 ls $XSBCPPIFDIR
@@ -260,48 +277,54 @@ Cross check: This command should show the source code of the component:
 ls $CEPTOOLDIR
 \end{lstlisting}
 
-%### Environment settings
-%
-%Paste these lines in your shell's rc file, such as ~/.bashrc or ~/.profile.
-%
-%    # Choose and create a directory to checkout all github components and set
-%    # the following variable. (Replace $HOME/programs with whatever directory
-%    # you have chosen and created.)
-%    export GITHUBHOME=$HOME/programs
-%
-%    # See instructions under `Optional components'. If you install XSB Prolog
-%    # as per those instructions then uncomment and set this variable.
-%    # export XSBDIR=/usr/local/xsb
-%
-%    # Set the path of vctools component and source vctoolsrc from it, which
-%    # will set the required variables for all the dependencies
-%    export VCTOOLSDIR=$GITHUBHOME/vctools
-%    . $VCTOOLSDIR/vctoolsrc
-%
-%
-%Make sure that these settings reflect in your environment (Typically open a new
-%terminal or just source the rc file)
-%
-%## Setting up vctools
-%
-%Environment settings should have defined variable $VCTOOLSDIR in previous setps
-%
-%    cd $VCTOOLSDIR
-%
-%Before running make you may want to check and alter some configurable options
-%in Makefile.conf. They are documented in the same file.
-%
-%In particular, the CEP event sequence validation capabilities have some
-%additional dependencies. If you do not wish to use them set:
-%
-%    USECEP  =   n
-%
-%Once configured, run make. Use -j = number of CPU cores you have to speed up
-%compilation.
-%
-%    make -j4
+\item \textbf{Summary of all environment variables}
+
+In steps so far, we declared many environment variables. It will help to set them all in one file and source such file from your shell's rc file (such as \texttt{.profile} or \texttt{.bashrc}) as these are needed even during the usage of the simulator. Following is a template file of these settings. You may want to alter various paths suitably depending on your system.
+
+\begin{lstlisting}[language=bash,style=snippet]
+# Choose and create a directory to checkout all github
+# components and set the following variable. (Replace
+# $HOME/programs with a directory of your choice.)
+export GITHUBHOME=$HOME/programs
+
+# If you are using the simulator for property verification
+# you need to install XSB Prolog and set its path
+export XSBDIR=/usr/local/XSB
+
+# Set the path of vctools component and source vctoolsrc
+# from it, which will make all other environment settings.
+export VCTOOLSDIR=$GITHUBHOME/vctools
+. $VCTOOLSDIR/vctoolsrc
+\end{lstlisting}
+
+\item \textbf{Configuring and building the vC simulator}
+
+Make sure that all environment settings listed above are effective.
+
+Take a look at \texttt{Makefile.conf} carefully and configure the simulator for your usage. All configurable options are documented in this file. The default settings are for usage for property verification. Run \texttt{make} after saving your setting changes, if any.
+
+\begin{lstlisting}[language=bash,style=snippet]
+cd $VCTOOLSDIR
+# Read the notes alter the settings if needed
+vi Makefile.conf
+# Compile -j<n> helps speed up make using n parallel jobs
+make -j4
+\end{lstlisting}
+
+To cross check: Check if the \texttt{libvcsim.so} library has got created.
+\begin{lstlisting}[language=bash,style=snippet]
+ls -l libvcsim.so
+\end{lstlisting}
+
+\item \textbf{Check if all the examples run fine}
 
 
+\begin{lstlisting}[language=bash,style=snippet]
+cd $VCTOOLSDIR/examples
+make -j4
+\end{lstlisting}
+
+You may go through each example's source code (.aa and .cpp file) to understand the example and run the executable (.out) for that example and examine the results.
 
 \end{enumerate}
 
