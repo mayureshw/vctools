@@ -91,9 +91,8 @@ vC simulator can be installed by either using Docker image or can be compiled on
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Creating a docker image}
 
-Please use the docker specification file \texttt{docker/Dockerfile} in the source code. A docker image can be created using this file.
+Please use the docker specification file \texttt{docker/Dockerfile} in the source code. Instructions to create a docker image are included in the same file.
 
-\textbf{TODO:} The docker specification was written for high performance mode only. We will be adding a choice for simulation mode and updating the docker specification in due course.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Compiling the simulator on your system}
@@ -353,7 +352,56 @@ There are following ways to terminate the simulation:
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Understanding the logs}
+\subsection{Various file extensions and their meaning}
+
+To view examples of various files, use the examples provided in the \texttt{examples} directory. Run the executable example that shows property verification (such as \texttt{vcsim05.out}). It will produce the files of various types explained below.
+
+\begin{enumerate}
+\item \textbf{Source files of a test bench}
+
+\begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
+\hline
+.aa     & Your Aa program\\\hline
+.cpp    & Your test bench\\\hline
+.uprops & (Optional). User supplied properties to be checked by randomized simulation.\\\hline
+\end{tabular}
+
+\item \textbf{Important files that are built by the compilation process.} Test bench compilation process is shown in \texttt{examples/Makefile}
+
+\begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
+\hline
+.vc     & Aa2VC conversion translates the aa file to vc. You may need to refer to it to be able to write the properties to check in the uprops file\\\hline
+.out    & Test bench executable to be used to run the simulation\\\hline
+\end{tabular}
+
+\item \textbf{Some transient intermediate files you may not see as they get deleted}
+\begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
+\hline
+.iprops & Internally generated properties that follow the same notation as uprops file mentioned above.\\\hline
+.props  & A concatenation of iprops and uprops files to produced a combined specification of internal and user supplied properties. This gets converted into the cep file.\\\hline
+\end{tabular}
+
+\item \textbf{More intermediate files generated during compilation, that are retained}
+
+\begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
+\hline
+.cep        & The props file gets converted to cep file, which is reead during simulation. The props file is in the high level symbolic notation while the cep file is in low level CEP notation\\\hline
+.eventmap   & If you use complex event using the 'event' action in the CEP rules, each such complex event is given a unique integer number and a map between the event name and number is retained in this file\\\hline
+.vcir       & Contains intermediate representation of the vc file\\\hline
+.d          & A make file fragment that is generated automatically and included in the main Makefile to track and build dependencies.\\\hline
+\end{tabular}
+
+\item \textbf{Log files that are generated when the simulation runs}. Formats of logs other than the .cep.log are explained in \texttt{Makefile.conf}, where generation of these files can be enabled or disabled.
+
+\begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
+\hline
+.cep.log    & CEP log produced as per the log action in the properties specified (iprops and uprops)\\\hline
+.ops.log    & Operator log\\\hline
+.petri.log  & Petri net log\\\hline
+.pipes.log  & Pipes log\\\hline
+\end{tabular}
+
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
@@ -401,10 +449,11 @@ There are following ways to terminate the simulation:
                 \alt          `ftreq'
 
 \end{grammar}
+\caption{Grammar to specify the properties}
+\label{Fig:PropGrammar}
 \end{figure}
-Grammar of the `Symbolic Properties' for the AHIR system.
 
-Non terminals with names ending in $Ident$ represent the vC identifiers that identify an instance of the corresponding operator; namely: $PipeOp$ represents read or writes from a pipe, $Load$ and $Store$ represent corresponding operations on a storage object; $Op$ represents any arbitrary AHIR operator instance.
+Fig \ref{Fig:PropGrammar} shows the grammar to specify symbolic properties to be checked by randomized simulation using vC simulator. Non terminals with names ending in $Ident$ represent the vC identifiers that identify an instance of the corresponding operator; namely: $PipeOp$ represents read or writes from a pipe, $Load$ and $Store$ represent corresponding operations on a storage object; $Op$ represents any arbitrary AHIR operator instance.
 
 $EventTyp$ is event type as per AHIR split protocol. $req0, req1$ represent sample and update request respectively and $ack0, ack1$ represent resspective acknowledgments. $ftreq$ represents a flow through request, which is an extra event type introduced by the simulator to trigger what is modeled as a combinational logic in AHIR based system.
 
