@@ -156,15 +156,17 @@ The build process requires a designated path for all dependencies checked out fr
 export GITHUBHOME=/path/to/your-checkout-directory
 \end{lstlisting}
 
+\newcommand{\verifonly}{This component is needed only if you want to use property verification functionality of the vC simulator.}
+
 \item \textbf{pcre}
 
-This component is needed only if you want to use property verification functionality of the vC simulator.
+\verifonly
 
 As a dependency of XSB Prolog, install pcre library and its headers. On Ubuntu the packages is \texttt{libpcre3-dev}.
 
 \item \textbf{XSB Prolog}
 
-This component is needed only if you want to use property verification functionality of the vC simulator.
+\verifonly
 
 On most platforms XSB Prolog needs to be compiled from the sources.
 
@@ -249,6 +251,8 @@ ls $PETRISIMUDIR
 
 \item \textbf{XSB C++ interface}
 
+\verifonly
+
 Besides checking out the repository, you need to copy a file from the checked out code to the directory as shown below.
 
 \begin{lstlisting}[language=bash,style=snippet]
@@ -264,6 +268,8 @@ ls $XSBCPPIFDIR
 \end{lstlisting}
 
 \item \textbf{CEP tool}
+
+\verifonly
 
 \begin{lstlisting}[language=bash,style=snippet]
 cd $GITHUBHOME
@@ -334,25 +340,24 @@ It will help to go through each example's source code (.aa and .cpp file) to und
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Writing a test bench program}
 
+There are two interfaces to the simulator. Both the interfaces are documented in header \texttt{vcsim.h}, besides several examples of using them are provided in the \texttt{examples} directory.
+
+\begin{enumerate}
+\item \textbf{A high level interface:} This interface is in the form of a single API call, in which you can specify the input data vectors and collect the output data vectors. This interface is useful when there is a definite end point to a simulation.
+\item \textbf{A low level interface:} This interface is for simulations more in the form of a reactive system, where you have separate threads to feed data to the input pipes and read data from the output pipes of the system. The termination of such simulation is to be either decided by the test bench logic, or you may have to kill the simulation process manually.
+\end{enumerate}
+
+Note that in both the modes, the simulation may terminate if any of the properties being checked fails. We will look at the properties that can be specified in Sec \ref{Sec:Props}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Writing properties to check}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Compiling the test bench executable}
+The property checking functionality is optional. The kinds of properties that can be checked and how to express them is described in Sec \ref{Sec:Props} and examples are provided in the \texttt{examples} directory. The properties need to be specified in a file with extension \texttt{.uprops}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Ways to terminate the simulation}
+\subsection{Compiling the test bench and running the simulation}
 
-There are following ways to terminate the simulation:
-
-\begin{enumerate}
-\item \textbf{When a pre-determined number of reads happen over system pipes:}
-\item \textbf{By use of $quit$ action in property checks:}
-\item \textbf{By killing the test bench process:}
-\end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Various file extensions and their meaning}
+A detailed specification of steps to compile a test bench is available in \texttt{examples/Makefile}. We describe various file types involved in the compilation and execution process below:
 
 To view examples of various files, use the examples provided in the \texttt{examples} directory. Run the executable example that shows property verification (such as \texttt{vcsim05.out}). It will produce the files of various types explained below.
 
