@@ -40,8 +40,8 @@ gencep(iab(P1E,P2E),#(CheckEvent)==0,[],FA) :-
     patomic(P1,P2,FA), pipeInstEvent(P1,P1E), pipeInstEvent(P2,P2E),
     inst2pipe(P1,P), inst2pipe(P2,P), pipeEvent(P,CheckEvent), CheckEvent \== P2E.
 
-gencep(iab(StE,LdE),#(CheckEvent)==0,[],FA) :-
-    reaches(St,Ld,FA), storeInstEvent(St,StE), loadInstEvent(Ld,LdE),
+gencep(iab(StE,LdE),#(CheckEvent)==0,[],[log(Msg),quit]) :-
+    reaches(St,Ld,Msg), storeInstEvent(St,StE), loadInstEvent(Ld,LdE),
     inst2store(St,S), inst2store(St,S), storeWrEvent(S,CheckEvent).
 
 cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
