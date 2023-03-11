@@ -76,11 +76,11 @@ Primarily there are two modes of the simulator:
 \begin{enumerate}
 \item \textbf{High Performance Behavioral Mode:} This mode uses Multi-Threaded simulation that leverages multi-core CPUs to provide better performance. However, this mode provides no control over the sequence of firing of events, that we will just describe in the mode below. This mode is, hence, suitable for quick behavioral simulations.
 
-\item \textbf{Randomized Simulation Mode:} Randomized modes are meant for property verification by simulation. By randomizing the order in which events fire, these modes try to produce a counter-example to the stated properties. We are going to describe stating of properties and viewing of counter-examples in Sec \ref{Sec:Usage}.
+\item \textbf{Randomized Simulation Mode:} Randomized modes are meant for property verification by simulation. By randomizing the order in which events fire, these modes try to produce a counter-example to the stated properties. We are going to describe stating of properties and viewing of counter-examples in Sec \ref{Sec:Usage} and Sec \ref{Sec:Props}.
 
 \end{enumerate}
 
-The file \texttt{Makefile.conf} in the source code, describes the settings for the simulation mode. The framework supports multiple randomization strategies, which are described in the same file. As a quick summary, use the \texttt{FAST} mode for high performance behavioral simulation and \texttt{RANDOMPRIO} for property verification by randomized simulation. Remaining modes described in the file are experimental.
+The file \texttt{Makefile.conf} in the source code, describes the settings for the simulation mode. (See the documentation of the variable \texttt{SIMU_MODE}). The framework supports multiple randomization strategies, which are described in the same file. As a quick summary, use the \texttt{FAST} mode for high performance behavioral simulation and \texttt{RANDOMPRIO} for property verification by randomized simulation. Remaining modes described in the file are experimental.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
@@ -103,11 +103,11 @@ Please use the docker specification file \texttt{docker/Dockerfile} in the sourc
 
 These instructions assume the reader knows how to set your environment variables. It is preferable to keep all variables you set in a file and source this file from your shell's rc file (such as \texttt{.profile} or \texttt{.bashrc}) so that you do not have to worry about setting these variables in each new session.
 
-We will describe the required environment variables for each component in the steps below. For convenience, we will summarize all the environment variables once in the end.
+We will describe the required environment variables for components where it is necessary, in the steps below. For convenience, we will summarize all the environment variables once in the end.
 
 \item \textbf{C++-2017 Compiler}:
 
-Please check the compiler version available on your system. This is important. The development environment of vC simulator used gcc-12. gcc-11.2.0 is known to work, gcc-11.1.0 is known to not work.
+Please check the compiler version available on your system. This is important. The development environment of vC simulator used gcc-12. gcc-11.2.0 is known to work, gcc-11.1.0 is known to \textbf{not} work.
 
 If you do not have a suitable version, try upgrading or building the compiler.
 
@@ -144,7 +144,7 @@ To cross check your installation:
 
 \item \textbf{boost}
 
-AHIR compilation requires the boost library. The package on Ubuntu is \texttt{libboost-dev}.
+AHIR compilation requires the boost library. The package for this on Ubuntu is \texttt{libboost-dev}.
 
 To cross check the installation: Ensure that the directory \texttt{/usr/include/boost} exists.
 
@@ -170,7 +170,7 @@ As a dependency of XSB Prolog, install pcre library and its headers. On Ubuntu t
 
 On most platforms XSB Prolog needs to be compiled from the sources.
 
-Preferably choose a system-wide installation directory for XSB and carry out the installation as root. But if you prefer so, you can build XSB in your login as well.
+Preferably choose a system-wide installation directory for XSB and carry out the installation as root. But if you prefer so, you can build XSB in a directory inside your home directory as well.
 
 \begin{lstlisting}[language=bash,style=snippet]
 # Go to the directory you have chosen for XSB installation
@@ -287,6 +287,11 @@ ls $CEPTOOLDIR
 In steps so far, we declared many environment variables. It will help to set them all in one file and source such file from your shell's rc file (such as \texttt{.profile} or \texttt{.bashrc}) as these are needed even during the usage of the simulator. Following is a template file of these settings. You may want to alter various paths suitably depending on your system.
 
 \begin{lstlisting}[language=bash,style=snippet]
+# Only if you install a C++ compiler at a non-default
+# location, you need to set its path as CXX variable
+# (Replace the path as appropriate on your system.)
+#export CXX=/usr/local/bin/c++
+
 # Choose and create a directory to checkout all github
 # components and set the following variable. (Replace
 # $HOME/programs with a directory of your choice.)
@@ -337,19 +342,21 @@ It will help to go through each example's source code (.aa and .cpp file) to und
 \clearpage
 \section{Using the simulator} \label{Sec:Usage}
 
+We summarize a few points regarding the usage of the simulator here. But the test bench interface defined and documented in the header file \texttt{vcsim.h} and the examples in the \texttt{examples} directory are the most important sources to learn the simulator usage.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Writing a test bench program}
 
 There are two interfaces to the simulator. Both the interfaces are documented in header \texttt{vcsim.h}, besides several examples of using them are provided in the \texttt{examples} directory.
 
 \begin{enumerate}
-\item \textbf{A high level interface:} This interface is in the form of a single API call, in which you can specify the input data vectors and collect the output data vectors. This interface is useful when there is a definite end point to a simulation.
+\item \textbf{A high level interface:} This interface is in the form of a single API call, in which you can specify the input data vectors and collect the output data vectors. This interface is useful when there is a definite end point to a simulation and the input test vectors are knwon up front.
 \item \textbf{A low level interface:} This interface is for simulations more in the form of a reactive system, where you have separate threads to feed data to the input pipes and read data from the output pipes of the system. The termination of such simulation is to be either decided by the test bench logic, or you may have to kill the simulation process manually.
 \end{enumerate}
 
 Note that in both the modes, the simulation may terminate if any of the properties being checked fails. We will look at the properties that can be specified in Sec \ref{Sec:Props}.
 
-Documentation in the \texttt{vcsim.h} and examples in the \texttt{examples} directory are extremely important to look at to understand how to use the simulator. One important aspect to note from the examples is the mapping between Aa data types and the templatate argument passed to Datum. You should use nearest C type for the given with matching choice of signed / unsigned as shown in the examples.
+One important aspect to note from the examples is the mapping between Aa data types and the templatate argument passed to Datum. You must use nearest C type for the given with matching choice of signed / unsigned as shown in the examples. The results are undefined if you err in choosing the right data type.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Writing properties to check}
@@ -392,13 +399,13 @@ To view examples of various files, use the examples provided in the \texttt{exam
 
 \begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
 \hline
-.cep        & The props file gets converted to cep file, which is reead during simulation. The props file is in the high level symbolic notation while the cep file is in low level CEP notation\\\hline
+.cep        & The props file gets converted to cep file, which is read during simulation. The props file is in the high level symbolic notation while the cep file is in low level CEP notation\\\hline
 .eventmap   & If you use complex event using the 'event' action in the CEP rules, each such complex event is given a unique integer number and a map between the event name and number is retained in this file\\\hline
-.vcir       & Contains intermediate representation of the vc file\\\hline
+.vcir       & Contains intermediate representation of the vc file. This file may have to be referred to interpret the CEP logs. We will describe this aspect in Sec \ref{Sec:SimuResults}\\\hline
 .d          & A make file fragment that is generated automatically and included in the main Makefile to track and build dependencies.\\\hline
 \end{tabular}
 
-\item \textbf{Log files that are generated when the simulation runs}. Formats of logs other than the .cep.log are explained in \texttt{Makefile.conf}, where generation of these files can be enabled or disabled.
+\item \textbf{Log files that are generated when the simulation runs}. Formats of logs other than the .cep.log are explained in \texttt{Makefile.conf}, where generation of these files can be enabled or disabled. We will describe the .cep.log file in Sec \ref{Sec:SimuResults}.
 
 \begin{tabular}{p{.15\textwidth}p{.85\linewidth}}
 \hline
@@ -411,7 +418,7 @@ To view examples of various files, use the examples provided in the \texttt{exam
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Examining the simulation results}
+\subsection{Examining the simulation results} \label{Sec:SimuResults}
 
 Various kinds of outputs that constitute the simulation results are as follows:
 
