@@ -9,8 +9,6 @@
 #include "opf.h"
 
 #ifdef OPDBG
-    static ofstream oplog("ops.log");
-    static mutex oplogmutex;
 #   define OPLOG(ARGS) \
         oplogmutex.lock(); \
         oplog << ARGS << endl; \
@@ -28,7 +26,6 @@ class Operator
 protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
-    const string _dplabel; // for logging only
     template<typename T> T getmask(unsigned width)
     {
         unsigned lead0s;
@@ -37,6 +34,17 @@ protected:
         return ( (T) ~((T)0) ) >> lead0s;
     }
 public:
+    const string _dplabel; // for logging only
+#ifdef OPDBG
+    inline static ofstream oplog;
+    inline static mutex oplogmutex;
+#endif
+    static void setLogfile(string logfile)
+    {
+#ifdef OPDBG
+        oplog.open(logfile);
+#endif
+    }
     virtual string oplabel()=0;
     vector<DatumBase*> opv;
     // can't mandate some of these functions on all the operators, some are
@@ -341,7 +349,7 @@ public:
         auto val = INPVAL(Tin2,1);
         ((Datum<Tin2>*)_stv[i])->val = val;
         // Since Store doesn't have a uack log, we log its sack
-        OPLOG("sack:" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << val)
+        OPLOG("sack:" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << to_string(i) << ":" << _ipv[1]->str())
     }
     // width passed due to macro uniformity, ignored
     Store(unsigned width, string label, vector<DatumBase*>& stv) : _stv(stv), Operator(label) {}

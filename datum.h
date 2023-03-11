@@ -5,12 +5,19 @@
 #include <string>
 #include <bitset>
 #include "opf.h"
+#ifdef USECEP
+#include "stateif.h"
+#endif
 
 class DatumBase
 {
 protected:
     const unsigned _width;
 public:
+#ifdef USECEP
+virtual Etyp etyp()=0;
+virtual void* elemPtr()=0;
+#endif
     virtual DatumBase* clone() = 0;
     virtual string str() = 0;
     virtual void operator = (string&) = 0;
@@ -24,12 +31,17 @@ public:
     virtual ~DatumBase() {}
 };
 
+#define TYP2ETYP(TYP) if constexpr ( is_same<T,TYP>::value ) return TYP##__
 template <typename T> class Datum : public DatumBase
 {
 using DatumBase::DatumBase;
 public:
     T val;
     // See comments in DatumBase
+#ifdef USECEP
+    Etyp etyp() { TYPES2ETYP }
+    T* elemPtr() { return &val; }
+#endif
     void blindcopy(DatumBase *other)
     {
 #       ifdef DATUMDBG

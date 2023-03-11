@@ -3,6 +3,9 @@
 
 #include <tuple>
 #include "opf.h"
+#ifdef USECEP
+#include "stateif.h"
+#endif
 
 #define CTYPSWITCH( CTYP, FN, ... ) \
     switch ( CTYP ) \
@@ -19,8 +22,38 @@
             exit(1); \
     }
 
+#ifdef USECEP
+class OpFactory : public CEPStateIf
+#else
 class OpFactory
+#endif
 {
+#ifdef USECEP
+    map<int,Operator*> _opidmap;
+    DatumBase* stateidv2datum(vector<int>& idv)
+    {
+        if ( idv.size() != 2 )
+        {
+            cout << "State index vector size !=2 not supported" << endl;
+            exit(1);
+        }
+        auto dpeid = idv[0];
+        auto opidx = idv[1];
+        auto it = _opidmap.find(dpeid);
+        if ( it == _opidmap.end() )
+        {
+            cout << "No operator for DPEId " << dpeid << endl;
+            exit(1);
+        }
+        auto opv = it->second->opv;
+        if ( opv.size() < opidx + 1 )
+        {
+            cout << "Operator " << it->second->_dplabel << " output arity=" << opv.size() << " Sought index=" << opidx << endl;
+            exit(1);
+        }
+        return opv[ opidx ];
+    }
+#endif
     SystemBase *_sys;
     typedef enum CTYPENUM Ctyp ;
     typedef pair< string, vector<Ctyp> > Opfkey;
@@ -30,7 +63,7 @@ class OpFactory
     typedef enum PIFOENUM Pifotyp;
     typedef enum PBLKENUM Pblktyp;
     typedef tuple< Ctyp, Pifotyp, Pblktyp > Pfkey;
-    typedef function< Pipe*(int, int, string) > Pfval;
+    typedef function< Pipe*(int, int, string, VcPetriNet*) > Pfval;
     const map<Pfkey, Pfval> _pfmap = PFMAP;
 
     internmap<vcValue*,DatumBase*> _valueDatum {bind(&OpFactory::vcv2datum,this,_1)};
@@ -67,14 +100,7 @@ class OpFactory
     }
     vector<DatumBase*>& getStoragev(vcDatapathElement *dpe)
     {
-        auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
-        if ( objmap.size() != 1 )
-        {
-            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl;
-            exit(1);
-        }
-        vcStorageObject *sto;
-        for(auto nsto:objmap) sto = nsto.second;
+        auto sto = getStorageObj(dpe);
         auto it = _storageDatums.find(sto);
         if ( it == _storageDatums.end() )
         {
@@ -125,6 +151,23 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
 public:
+    vcStorageObject* getStorageObj(vcDatapathElement* dpe)
+    {
+        auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();
+        if ( objmap.size() != 1 )
+        {
+            cout << "vcLoadStore-memory_space-object_map size other than 1 not handled" << endl;
+            exit(1);
+        }
+        vcStorageObject *sto;
+        for(auto nsto:objmap) sto = nsto.second;
+        return sto;
+    }
+#ifdef USECEP
+    void* getStatePtr(vector<int>& idv) { return stateidv2datum(idv)->elemPtr(); }
+    Etyp getStateTyp(vector<int>& idv) { return stateidv2datum(idv)->etyp(); }
+    void quit() { _sys->stop(); }
+#endif
     Operator* dpe2op(vcDatapathElement *dpe)
     {
         string kind = dpe->Kind();
@@ -144,9 +187,13 @@ public:
             cout << endl;
             exit(1);
         }
-        return it->second(dpe);
+        auto op = it->second(dpe);
+#ifdef USECEP
+        _opidmap.emplace( dpe->Get_Root_Index(), op );
+#endif
+        return op;
     }
-    Pipe* vcp2p(vcPipe *vcp)
+    Pipe* vcp2p(vcPipe *vcp, VcPetriNet* pn)
     {
         auto ctyp = width2ctyp( vcp->Get_Width() );
         auto pifo = vcp->Get_Lifo_Mode() ? Lifo_ : Fifo_;
@@ -157,7 +204,10 @@ public:
         {
             cout << "Pipe generator not found for pipe " << vcp->Get_Id() << " signature " << ctyp << " " << pifo << " " << pblk << endl;
         }
-        return it->second( vcp->Get_Depth(), vcp->Get_Width(), vcp->Get_Id() );
+        // TODO: For strange reasons, we get depth as 2 from the parser level
+        // For signals AHIR semantics require that the depth be restricted to 1
+        auto depth = pblk == SignalPipe_ ? 1 : vcp->Get_Depth();
+        return it->second( depth, vcp->Get_Width(), vcp->Get_Id(), pn );
     }
     template < typename T > DatumBase* createDatum(unsigned width)
     {

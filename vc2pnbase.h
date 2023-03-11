@@ -8,13 +8,15 @@ class ModuleBase;
 class SystemBase
 {
 public:
-    virtual PetriNet* pn() = 0;
+    virtual VcPetriNet* pn() = 0;
     virtual DatumBase* valueDatum(vcValue*) = 0;
     virtual Pipe* pipeMap(vcPipe*) = 0;
     virtual ModuleBase* getModule(vcModule*) = 0;
     virtual Operator* createOperator(vcDatapathElement*) = 0;
     virtual VCtyp vctyp(string) = 0;
     virtual DatumBase* vct2datum(vcType*) = 0;
+    virtual vcStorageObject* getStorageObj(vcLoadStore*) = 0;
+    virtual void stop() = 0;
 };
 
 class ModuleBase
@@ -22,6 +24,7 @@ class ModuleBase
 public:
     virtual string name() = 0;
     virtual SystemBase* sys() = 0;
+    virtual VcPetriNet* pn() = 0;
     virtual DatumBase* inparamDatum(string) = 0;
     virtual CPElement* getCPE(vcCPElement*) = 0;
     virtual CPElement* getCPE(vcCPElementGroup*) = 0;

@@ -1,0 +1,22 @@
+% Format d(OpTyp, TrTyp, Dist(DistArgs)
+% OpTyp: operator type as per the vc ir (classname, e.g. vcOutport)
+% TrTyp: transition type (e.g. req0, ack0)
+% See vcirdat (the output of vc2p.out) to see various OpTyp and TrTyp values
+% For Dist(DistArgs) refer to distributions.h
+
+% A template to use various distributions. _ is wildcard.
+
+%d( _, _, uniform_real(-100,100) ).
+%d( _, _, exponential(100) ).
+%d( _, _, gamma(7,10) ).
+%d( _, _, weibull(1,1) ).
+%d( _, _, extreme_value(0,1) ).
+%d( _, _, normal(10,100) ).
+%d( _, _, lognormal(0,1) ).
+%d( _, _, cauchy(6,1) ).
+%d( _, _, fisher_f(1,100) ).
+%d( _, _, student_t(100) ).
+
+% Mandatory to specify defaultmodel that applies to all transitions for which
+% above spec is absent
+defaultmodel( normal(1,1) ).

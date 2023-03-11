@@ -9,10 +9,13 @@ using namespace std;
 class ModuleIR
 {
     vcModule* _vcm;
+    System& _sys;
     Rel<long,string> _cpe = {"cpe"};
-    Rel<long,string,string> _dpe = {"dpe"};
+    Rel<long,string,string,long> _dpe = {"dpe"};
     Rel<long,long> _cpeg = {"cpeg"};
     Rel<long,long,long> _dpdep = {"dpdep"};
+    Rel<long,string> _dppipe = {"dppipe"};
+    Rel<long,string> _dpstore = {"dpstore"};
     void processCPE()
     {
         auto cp = _vcm->Get_Control_Path();
@@ -40,6 +43,19 @@ class ModuleIR
                     iws[i]->Get_Driver()->Get_Root_Index(),
                     });
     }
+    void processDPPipeStores(vcDatapathElement* dpe)
+    {
+        if ( dpe->Kind() == "vcInport" or dpe->Kind() == "vcOutport" )
+        {
+            auto pipename = ((vcIOport*) dpe)->Get_Pipe()->Get_Id();
+            _dppipe.add({ dpe->Get_Root_Index(), pipename });
+        }
+        else if ( dpe->Kind() == "vcLoad" or dpe->Kind() == "vcStore" )
+        {
+            auto storename = _sys.getStorageObj((vcLoadStore*)dpe)->Get_Id();
+            _dpstore.add({ dpe->Get_Root_Index(), storename });
+        }
+    }
     void processDPE()
     {
         for(auto dpet:_vcm->Get_Data_Path()->Get_DPE_Map())
@@ -47,8 +63,10 @@ class ModuleIR
             _dpe.add({
                 dpet.second->Get_Root_Index(),
                 dpet.first,
-                dpet.second->Kind()
+                dpet.second->Kind(),
+                _vcm->Get_Root_Index()
                 });
+            processDPPipeStores(dpet.second);
             processDPED(dpet.second);
         }
     }
@@ -59,8 +77,10 @@ public:
         _cpe.dump(pfile);
         _dpe.dump(pfile);
         _dpdep.dump(pfile);
+        _dppipe.dump(pfile);
+        _dpstore.dump(pfile);
     }
-    ModuleIR(vcModule* vcm) : _vcm(vcm)
+    ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)
     {
         // processCPE(); // Disabled till needed
         processDPE();
@@ -77,13 +97,13 @@ public:
     {
         _m.dump(pfile);
         for(auto mir:_moduleirs) mir->exportIR(pfile);
-        _sys._pni.vctid.dump(pfile);
+        _sys.pn()->vctid.dump(pfile);
     }
     SysIR(vcSystem& vcs, System& sys) : _sys(sys)
     {
         for(auto m:vcs.Get_Ordered_Modules())
         {
-            _moduleirs.push_back(new ModuleIR(m));
+            _moduleirs.push_back(new ModuleIR(m,_sys));
             _m.add({ m->Get_Root_Index(), m->Get_Id() });
         }
     }
@@ -95,13 +115,17 @@ public:
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc < 3)
     {
-        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile>" << endl;
+        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile> [daemons...]" << endl;
         exit(1);
     }
-    vcSystem::_opt_flag = true;
 
+
+    set<string> daemons;
+    for(int i=3; i<argc; i++) daemons.insert(argv[i]);
+
+    vcSystem::_opt_flag = true;
     vcSystem vcs("sys");
     vcs.Parse(argv[1]);
     // Setting all modules as top. Will have to borrow one or more CLI args of
@@ -109,7 +133,7 @@ int main(int argc, char* argv[])
     // doesn't affect much to the simulator.
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
-    System sys(&vcs, {});
+    System sys(&vcs, daemons);
 
     SysIR sysir(vcs,sys);
 

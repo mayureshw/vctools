@@ -1,10 +1,9 @@
 using namespace std;
 
 #include <iostream>
+#include <filesystem>
 #include "vc2pn.h"
 #include "vcsim.h"
-
-PETRINET_STATICS
 
 // TODO: To be extended for multiple files, exit module, top module etc.
 // Currently accepts only single vc filename and invokation modulename
@@ -20,7 +19,9 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
     stream.open(vcflnm);
     vcSystem::_opt_flag = true;
 
-    vcSystem vcs("sys");
+    filesystem::path vcpath(vcflnm);
+    string basename = vcpath.stem();
+    vcSystem vcs(basename);
     vcs.Parse(vcflnm);
     // Setting all modules as top. Will have to borrow one or more CLI args of
     // vc2vhdl. It's mainly for vc IR to clean up unreachable modules, so
@@ -72,9 +73,11 @@ void VcsimIf::invoke()
 VcsimIf::VcsimIf(string vcflnm, const set<string>& daemons)
 {
     ifstream stream;
+    filesystem::path vcpath(vcflnm);
+    string basename = vcpath.stem();
     stream.open(vcflnm);
     vcSystem::_opt_flag = true;
-    vcSystem vcs("sys");
+    vcSystem vcs(basename);
     vcs.Parse(vcflnm);
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();

@@ -1,0 +1,9 @@
+:-dynamic d/3.
+:-import load/2 from fileio.
+:-load_dync(delayspec).
+
+delaymodel(Vc, TrId, Model):-
+    load(vcir, Vc),!,
+    vctid(Vcid, TrTyp, TrId),
+    dpe(Vcid, _, OpTyp, _),
+    d(OpTyp, TrTyp, Model).

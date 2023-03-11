@@ -27,7 +27,11 @@ VCFILES		=	$(AASRCS:.aa=.vc)
 TESTSRCS	=	$(AASRCS:.aa=.cpp)
 TESTEXES	=	$(TESTSRCS:.cpp=.out)
 DFILES		=	$(TESTSRCS:.cpp=.d)
-CXXFLAGS	+=	-DWIDEUINTSZ=128
+CEPFILES	=	$(VCFILES:.vc=.cep)
+VCIRFILES	=	$(VCFILES:.vc=.vcir)
+PROPFILES	=	$(VCFILES:.vc=.props)
+IPROPFILES	=	$(VCFILES:.vc=.iprops)
+CXXFLAGS	+=	-DWIDEUINTSZ=128 -DUSECEP # Must be consistent with make of vctools
 LDFLAGS		+=	-lpthread
 
 
@@ -38,12 +42,12 @@ LDFLAGS		+=	-lpthread
 	Aa2VC -O $< | vcFormat > $@
 	if [ ! -s $@ ]; then rm -f $@; false; fi
 
-all:	$(TESTEXES)
+all:	$(TESTEXES) $(CEPFILES)
 
 clean:
-	rm -f $(TESTEXES) $(VCFILES)
+	rm -f $(TESTEXES) $(VCFILES) $(CEPFILES) $(VCIRFILES) $(PROPFILES) $(IPROPFILES)
 
-.PRECIOUS:	$(VCFILES)
+.PRECIOUS:	$(VCFILES) $(VCIRFILES)
 
 %.d:	%.cpp
 	set -e; $(CXX) -M $(CXXFLAGS) $< \
@@ -51,4 +55,6 @@ clean:
 		[ -s $@ ] || rm -f $@
 
 include $(VCTOOLSDIR)/Makefile.vctools
+include $(VCTOOLSDIR)/Makefile.cepspec
+include $(CEPTOOLDIR)/Makefile.ceptool
 include $(DFILES)

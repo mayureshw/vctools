@@ -6,11 +6,9 @@
 #include <queue>
 #include <condition_variable>
 #include "datum.h"
-#include "pninfo.h"
+#include "vcpetrinet.h"
 
 #ifdef PIPEDBG
-    static ofstream plog("pipes.log");
-    static mutex plogmutex;
 #   define PIPELOG(ARGS) \
         plogmutex.lock(); \
         plog << ARGS << endl; \
@@ -41,6 +39,7 @@ public:
 
 class Pipe
 {
+    VcPetriNet *_pn;
 protected:
     unsigned _depth;
     unsigned _nElems = 0;
@@ -51,12 +50,20 @@ protected:
     virtual unsigned poppos()=0;
     virtual unsigned lastPopPosOnEmpty()=0;
     PNPlace *_mutexPlace;
-    void buildPNMutexDep(PNTransition *req, PNTransition *ack, PNInfo& pni)
+    void buildPNMutexDepCommon(PNTransition *req, PNTransition *ack)
     {
         // for i or o, req should seek token from mutexplace
-        PetriNet::createArc(_mutexPlace, req, pni.pnes);
+        pn()->createArc(_mutexPlace, req);
         // for i or o, ack should release token to mutexplace
-        PetriNet::createArc(ack, _mutexPlace, pni.pnes);
+        pn()->createArc(ack, _mutexPlace);
+    }
+    virtual void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
+    {
+        buildPNMutexDepCommon(req,ack);
+    }
+    virtual void buildPNMutexDepOport(PNTransition *req, PNTransition *ack)
+    {
+        buildPNMutexDepCommon(req,ack);
     }
     template <typename T> void initStore(unsigned depth, unsigned width)
     {
@@ -71,12 +78,23 @@ protected:
             _store.push_back( datum );
         }
     }
-    virtual void pushOnFull()=0;
+    virtual void pushOnFull(DatumBase*)=0;
     virtual DatumBase* popOnEmpty()=0;
     // pipe sub-type specific petri net is indicated by suffix 1
-    virtual void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni)=0;
-    virtual void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)=0;
+    virtual void buildPNOport1(PNTransition *sreq, PNTransition *sack)=0;
+    virtual void buildPNIport1(PNTransition *ureq, PNTransition *uack)=0;
 public:
+#ifdef PIPEDBG
+    inline static ofstream plog;
+    inline static mutex plogmutex;
+#endif
+    static void setLogfile(string logfile)
+    {
+#ifdef PIPEDBG
+        plog.open(logfile);
+#endif
+    }
+    VcPetriNet* pn() { return _pn; }
     string _label;
     bool empty() { return _nElems == 0; }
     bool full() { return _nElems == _depth; }
@@ -85,7 +103,7 @@ public:
         if ( full() )
         {
             PIPELOG("pushfull:" << eseqno << ":" << _label << ":" << din->str())
-            pushOnFull();
+            pushOnFull(din);
         }
         else
         {
@@ -115,20 +133,20 @@ public:
     // are for its connections with pipe's users requests and acks
     // So buildPN is called once per pipe and buildPN[IO]port once per usage
     // instance of that pipe
-    virtual void buildPN(PNInfo& pni) {}
-    void buildPNIport(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
+    virtual void buildPN() {}
+    void buildPNIport(PNTransition *ureq, PNTransition *uack)
     {
-        buildPNMutexDep(ureq, uack, pni);
-        buildPNIport1(ureq, uack, pni);
+        buildPNMutexDepIport(ureq, uack);
+        buildPNIport1(ureq, uack);
     }
-    void buildPNOport(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
+    void buildPNOport(PNTransition *sreq, PNTransition *sack)
     {
-        buildPNMutexDep(sreq, sack, pni);
-        buildPNOport1(sreq, sack, pni);
+        buildPNMutexDepOport(sreq, sack);
+        buildPNOport1(sreq, sack);
     }
-    Pipe(unsigned depth, string label) : _depth(depth), _wpos(ModCntr(depth)), _label(label)
+    Pipe(unsigned depth, string label, VcPetriNet* pn) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn)
     {
-        _mutexPlace = new PNPlace("MARKP:"+_label+".Mutex",1);
+        _mutexPlace = _pn->createPlace("MARKP:"+_label+".Mutex",1);
     }
     ~Pipe()
     {
@@ -141,7 +159,7 @@ class BlockingPipe : public Pipe
 {
 protected:
     PNPlace *_freePlace, *_filledPlace;
-    void pushOnFull()
+    void pushOnFull(DatumBase*)
     {
         cout << "Attempt to push to full blocking pipe (internal error)" << endl;
         exit(1);
@@ -151,24 +169,24 @@ protected:
         cout << "Attempt to pop from empty blocking pipe (internal error)" << endl;
         exit(1);
     }
-    void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni)
+    void buildPNOport1(PNTransition *sreq, PNTransition *sack)
     {
         // out port sreq should seek token from freePlace
-        PetriNet::createArc(_freePlace, sreq, pni.pnes);
+        pn()->createArc(_freePlace, sreq);
         // out port sack should release a token to filledPlace
-        PetriNet::createArc(sreq, _filledPlace, pni.pnes);
+        pn()->createArc(sreq, _filledPlace);
     }
-    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack)
     {
         // in port ureq should need a token in filledPlace
-        PetriNet::createArc(_filledPlace, ureq, pni.pnes);
+        pn()->createArc(_filledPlace, ureq);
         // in port should release a token to freePlace on uack
-        PetriNet::createArc(uack, _freePlace, pni.pnes);
+        pn()->createArc(uack, _freePlace);
     }
-    BlockingPipe(unsigned depth, string label) : Pipe(depth,label)
+    BlockingPipe(unsigned depth, string label, VcPetriNet *pn) : Pipe(depth,label,pn)
     {
-        _freePlace = new PNPlace("MARKP:"+_label+".Depth",depth);
-        _filledPlace = new PNPlace(_label+".Filled");
+        _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth);
+        _filledPlace = pn->createPlace(_label+".Filled");
     }
 };
 
@@ -177,28 +195,34 @@ class NonBlockingPipe : public BlockingPipe
     PNPlace *_popPlace;
 protected:
     DatumBase* popOnEmpty() { return _zero; }
-    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni)
+    void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
     {
-        PetriNet::createArc(ureq, _popPlace, pni.pnes);
+        // for i or o, req should seek token from mutexplace
+        pn()->createArc(_mutexPlace, req);
+        // For NonBlockingPipe return of mutex token happens via common net
+        // built in buildPNIport1
+    }
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack)
+    {
+        pn()->createArc(ureq, _popPlace);
     }
 public:
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
-        auto popEmpty = new PNTransition(_label+".popEmpty");
-        auto popNonEmpty = new PNTransition(_label+".popNonEmpty");
-        PetriNet::createArc(_popPlace, popEmpty, pni.pnes);
-        PetriNet::createArc(_popPlace, popNonEmpty, pni.pnes);
-        PetriNet::createArc(_filledPlace, popNonEmpty, pni.pnes);
-        PetriNet::createArc(popNonEmpty, _freePlace, pni.pnes);
-
-        auto popEmptyFreeArc = new PNTPArc(popEmpty, _freePlace, _depth);
-        auto freePopEmptyArc = new PNPTArc(_freePlace, popEmpty, _depth);
-        pni.pnes.insert(popEmptyFreeArc);
-        pni.pnes.insert(freePopEmptyArc);
+        auto popEmpty = pn()->createTransition(_label+".popEmpty");
+        auto popNonEmpty = pn()->createTransition(_label+".popNonEmpty");
+        pn()->createArc(_popPlace, popEmpty);
+        pn()->createArc(_popPlace, popNonEmpty);
+        pn()->createArc(_filledPlace, popNonEmpty);
+        pn()->createArc(popNonEmpty, _freePlace);
+        pn()->createArc(popEmpty, _mutexPlace);
+        pn()->createArc(popNonEmpty, _mutexPlace);
+        pn()->createArc(popEmpty, _freePlace, "", _depth);
+        pn()->createArc(_freePlace, popEmpty, "", _depth);
     }
-    NonBlockingPipe(unsigned depth, string label) : BlockingPipe(depth,label)
+    NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn) : BlockingPipe(depth,label,pn)
     {
-        _popPlace = new PNPlace(_label+".pop");
+        _popPlace = pn->createPlace(_label+".pop");
     }
 };
 
@@ -206,50 +230,16 @@ class SignalPipe : public Pipe
 {
 using Pipe::Pipe;
 protected:
-    void pushOnFull() {}
+    void pushOnFull(DatumBase* din)
+    {
+        // Overwrite, do not increment _nElems
+        unsigned i = pushpos();
+        _store[i]->blindcopy(din);
+    }
     DatumBase* popOnEmpty() { return _store[lastPopPosOnEmpty()]; }
-    void buildPNOport1(PNTransition *sreq, PNTransition *sack, PNInfo& pni) {}
-    void buildPNIport1(PNTransition *ureq, PNTransition *uack, PNInfo& pni) {}
+    void buildPNOport1(PNTransition *sreq, PNTransition *sack) {}
+    void buildPNIport1(PNTransition *ureq, PNTransition *uack) {}
 };
-
-// There was a remark in Aa LRM that signal would block
-// till first push happens. This behavior was later
-// changed to returning 0. Implementation is retained for
-// reference.
-// class SignalPipe_Old : public Pipe
-// {
-//     PNPlace *_havePushPlace, *_awaitingPushPlace, *_donePushPlace;
-//     PNTransition *_doFirstPush;
-// protected:
-//     void pushOnFull() {}
-//     DatumBase* popOnEmpty() { return _store[lastPopPosOnEmpty()]; }
-//     void initPN1() { _awaitingPushPlace->addtokens(_depth); }
-//     void buildPNOport1(PNTransition *sreq, PNTransition *sack, Elements& pnes)
-//     {
-//         // out port sack should release a token to _havePushPlace
-//         PetriNet::createArc(sreq, _havePushPlace, pnes);
-//     }
-//     void buildPNIport1(PNTransition *ureq, PNTransition *uack, Elements& pnes)
-//     {
-//         // in port should require token at _donePushPlace
-//         PetriNet::createArc(_donePushPlace, sreq, pnes);
-//         // in port should release a token to _donePushPlace
-//         PetriNet::createArc(sack, _donePushPlace, pnes);
-//     }
-//     void buildPN(Elements& pnes)
-//     {
-//         PetriNet::createArc(_havePushPlace, _doFirstPush, pnes);
-//         PetriNet::createArc(_awaitingPushPlace, _doFirstPush, pnes);
-//         PetriNet::createArc(_doFirstPush, _donePushPlace, pnes);
-//     }
-//     SignalPipe_Old(unsigned depth, string label) : Pipe(depth,label)
-//     {
-//         _havePushPlace = new PNPlace(_label+".HavePush");
-//         _awaitingPushPlace = new PNPlace("MARKP:"+_label+".AwaitingPush");
-//         _donePushPlace = new PNPlace(_label+".DonePush");
-//         _doFirstPush = new PNTransition(_label+".DoFirstPush");
-//     }
-// };
 
 // Unfortunately constructor can't be templatized, so it has to be provided
 template <typename T, typename Base> class Fifo : public Base
@@ -259,7 +249,7 @@ protected:
     unsigned poppos() { return _rpos++; }
     unsigned lastPopPosOnEmpty() { return _rpos.prev(); }
 public:
-    Fifo(unsigned depth, unsigned width, string label) : _rpos(ModCntr(depth)), Base(depth,label)
+    Fifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : _rpos(ModCntr(depth)), Base(depth,label,pn)
     {
         Pipe::initStore<T>(depth, width);
     }
@@ -272,7 +262,7 @@ protected:
     unsigned poppos() { return --(this->_wpos); }
     unsigned lastPopPosOnEmpty() { return 0; }
 public:
-    Lifo(unsigned depth, unsigned width, string label) : Base(depth,label)
+    Lifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : Base(depth,label,pn)
     {
         Pipe::initStore<T>(depth, width);
     }
@@ -285,21 +275,22 @@ protected:
     // Could do with single transition here, but just keeping it uniform with the rest
     PNTransition *_sreq, *_sack;
     PNPlace *_triggerPlace;
+    VcPetriNet* pn() { return _p->pn(); }
 public:
     virtual void sack(unsigned long eseqno) = 0;
-    virtual void _buildPN(PNInfo& pni) = 0;
-    void buildPN(PNInfo& pni)
+    virtual void _buildPN() = 0;
+    void buildPN()
     {
-        PetriNet::createArc(_triggerPlace, _sreq, pni.pnes);
-        PetriNet::createArc(_sreq, _sack, pni.pnes);
-        _buildPN(pni);
+        pn()->createArc(_triggerPlace, _sreq);
+        pn()->createArc(_sreq, _sack);
+        _buildPN();
     }
     PipeIf(Pipe *p) : _p(p)
     {
-        _sreq = new PNTransition("PipeIf_sreq");
-        _sack = new PNTransition("PipeIf_sack");
+        _sreq = pn()->createTransition("PipeIf_sreq");
+        _sack = pn()->createTransition("PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
-        _triggerPlace = new PNPlace("PipeIf_trigger");
+        _triggerPlace = pn()->createPlace("PipeIf_trigger");
     }
 };
 
@@ -308,7 +299,7 @@ class PipeFeeder : public PipeIf
     mutex _qlock;
     queue<DatumBase*> _payloadq;
 using PipeIf::PipeIf;
-    void _buildPN(PNInfo& pni) { _p->buildPNOport(_sreq, _sack, pni); }
+    void _buildPN() { _p->buildPNOport(_sreq, _sack); }
     void sack(unsigned long eseqno)
     {
         _qlock.lock();
@@ -322,7 +313,7 @@ public:
         _qlock.lock();
         for(auto d:payload) _payloadq.push(d);
         _qlock.unlock();
-        _triggerPlace->addtokens(payload.size());
+        pn()->addtokens(_triggerPlace, payload.size());
     }
 };
 
@@ -335,7 +326,7 @@ using PipeIf::PipeIf;
     function<void()> _exitActions;
     bool _syncmode;
     unsigned _sz;
-    void _buildPN(PNInfo& pni) { _p->buildPNIport(_sreq, _sack, pni); }
+    void _buildPN() { _p->buildPNIport(_sreq, _sack); }
     void clear()
     {
         for(auto d:_retv) delete d;
@@ -357,7 +348,7 @@ public:
     {
         receive_common(sz, true, [](){});
         unique_lock<mutex> ulockq(_recd_mutex);
-        _triggerPlace->addtokens(sz);
+        pn()->addtokens(_triggerPlace, sz);
         _recd_cvar.wait(ulockq);
         return _retv;
     }
@@ -366,7 +357,7 @@ public:
     void receive_async(unsigned sz, function<void()> exitActions)
     {
         receive_common(sz, false, exitActions);
-        _triggerPlace->addtokens(sz);
+        pn()->addtokens(_triggerPlace, sz);
     }
     vector<DatumBase*>& collect() { return _retv; }
     void sack(unsigned long eseqno)

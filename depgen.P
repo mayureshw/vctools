@@ -1,24 +1,38 @@
-:-index(dpe/3,[3]).
-:-load_dync('vcirdat').
+:-import load/2, store/3 from fileio.
+
+:-dynamic dpdep/3, dpe/4.
+
+:-index(dpe/4,[1,3]).
 :-op(500,xfx,^).
 :-op(700,xfx,->).
 
-phinode(N):-dpe(N,_,'vcPhiPipelined').
-branchnode(N):-dpe(N,_,'vcBranch').
-splitopnode(N):-dpe(N,_,'vcBinarySplitOperator').
+sdep( de(N,req0) ^ de(N,req1) -> de(N,ack0), 'Phi req0^req1 -> ack0'    ) :- dpe(_,N,'vcPhiPipelined',_).
 
-dep( Req0 ^ Req1 -> Ack0 ) :- phinode(N),
-    vctid(N,'req0',Req0), vctid(N,'req1',Req1), vctid(N,'ack0',Ack0).
+sdep( de(N,req0) -> de(N,ack0) ^ de(N,ack1), 'Branch req0 -> ack0^ack1' ) :- dpe(_,N,'vcBranch',_).
 
-dep( Req0 -> Ack0 ^ Ack1 ) :- branchnode(N),
-    vctid(N,'req0',Req0), vctid(N,'ack0',Ack0), vctid(N,'ack1',Ack1).
+sdep( Dep, Msg ) :- dpe(SO,N,_,_), isSplitOp(SO),
+    (
+      ( Dep = ( de(N,req0) -> de(N,ack0) ), Msg = 'SplitOp req0 -> ack0' );
+      ( Dep = ( de(N,req1) -> de(N,ack1) ), Msg = 'SplitOp req1 -> ack1' )
+    ).
 
-dep( Dep ) :- splitopnode(N),
-    vctid(N,'req0',Req0), vctid(N,'req1',Req1), vctid(N,'ack0',Ack0), vctid(N,'ack1',Ack1),
-    ( Dep = ( Req0 -> Ack0 ) ; Dep = ( Req0 -> Ack1 ) ; Dep = ( Req1 -> Ack1 ) ).
+sdep( Dep, Msg ) :- dpdep(UID,_,DID), isSplitOp(UID), isSplitOp(DID),
+    dpe(UID,U,_,_), dpe(DID,D,_,_),
+    (
+      ( Dep = ( de(D,ack1) -> de(U,req0) ), Msg = 'Use-Def Def-ack1 -> Use-req0');
+      ( Dep = ( de(D,req1) -> de(U,ack0) ), Msg = 'Use-Def Def-req1 -> Use-ack0')
+    ).
 
-dep( Dep ) :- dpdep(U,_,D),
-    vctid(D,'req1',DReq1), vctid(D,'ack1',DAck1), vctid(U,'req0',UReq0), vctid(U,'ack0',UAck0),
-    ( Dep = ( DAck1 -> UReq0 ) ; Dep = ( DReq1 -> UAck0 ) ).
+% Flow through transition is inserted between sreq-sack of each consumer of a
+% flow through There isn't much value add in verifying this. Also the context
+% of each flow through event is not available in the vcir, since these are
+% created in the Petri net building process itself. Getting it from there will
+% make the check further trivial.
 
-:-dep(D), write_canonical(dep(D)), writeln('.'), fail.
+:-table isSplitOp/1.
+isSplitOp(Did) :- vctid(Did,req0,_), vctid(Did,req1,_), vctid(Did,ack0,_), vctid(Did,ack1,_).
+
+:-table isFlowThrough/1.
+isFlowThrough(Did) :- vctid(Did,ftreq,_).
+
+depgen(Vc):- load(vcir,Vc), store(iprops,Vc,sdep(_,_)).

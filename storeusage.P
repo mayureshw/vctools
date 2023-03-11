@@ -1,0 +1,14 @@
+:-import load/2 from fileio.
+
+:-dynamic dpe/4, dpstore/2, m/2.
+
+susage(P,M,Dname) :-
+    dpe(Did,Dname,_,Mid), dpstore(Did,P), m(Mid,M).
+
+printList([E]) :- !, writeln(E).
+printList([E|Rest]) :- write(E), write(' '), printList(Rest).
+
+storeusage :- susage(A,B,C), printList([A,B,C]), fail.
+storeusage.
+
+storeusage(Vc) :- load(vcir,Vc), storeusage.

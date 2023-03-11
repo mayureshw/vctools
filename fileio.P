@@ -1,0 +1,32 @@
+:-export load/2, store/3.
+
+:-import str_cat/3 from string.
+:-import member/2 from lists.
+
+doload(Typ,Flnm):- canonical(Typ), !, load_dync(Flnm).
+doload(_,Flnm):- load_dyn(Flnm).
+
+load(Typ,Vc):- filename(Typ,Vc,Flnm), doload(Typ,Flnm).
+
+dowrite(Typ,Term):- canonical(Typ),!, write_canonical(Term).
+dowrite(_,Term):- writeq(Term).
+
+store(Typ,Vc,CallTerm):- filename(Typ,Vc,Flnm), tell(Flnm),
+    CallTerm, dowrite(Typ,CallTerm), writeln('.'), fail.
+store(_,_,_):- told.
+
+filename(Typ,Vc,Flnm) :- validtyp(Typ), str_cat(Vc,'.',Flnm1), str_cat(Flnm1,Typ,Flnm).
+
+canonical(Typ) :- filetyp(Typ, Flags), member(can,Flags).
+
+validtyp(Typ) :- filetyp(Typ,_),  !.
+validtyp(Typ) :- write(2,'Invalid file type '), write(2,Typ), halt.
+
+% Non canonical are more human readable
+% Canonical are more efficient
+filetyp(vcir,[]).
+filetyp(iprops,[]).
+filetyp(uprops,[]).
+filetyp(props,[]).
+filetyp(cep,[can]).
+filetyp(eventmap,[]).

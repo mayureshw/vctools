@@ -4,6 +4,20 @@ endif
 
 include Makefile.conf
 
+NON_STPN_MODES	=	FAST
+STPN_MODES		= 	STPN RANDOMPRIO RANDOMPICK
+SIMU_MODES		=	$(NON_STPN_MODES) $(STPN_MODES)
+
+ifeq ($(findstring $(SIMU_MODE),$(SIMU_MODES)),)
+$(error SIMU_MODE must be set to one of $(SIMU_MODES) got $(SIMU_MODE))
+endif
+
+CXXFLAGS	+=	-DSIMU_MODE_$(SIMU_MODE)
+
+ifneq ($(findstring $(SIMU_MODE),$(STPN_MODES)),)
+USECEP	=	y
+endif
+
 OS	=	$(shell uname -s)
 
 ifeq ($(OS),NetBSD)
@@ -22,7 +36,7 @@ AHIRGRAMDIR	=	$(AHIRDIR)/v2/libAhirV2/grammar
 VCGRAMMAR	=	$(AHIRGRAMDIR)/vc.g
 AHIRSRCS	=	$(wildcard $(AHIRSRCDIR)/*.cpp)
 PARSERSRCS	=	vcParser.cpp vcLexer.cpp
-VCTOOLSRCS	=	vcsim.cpp cprcheck.cpp
+VCTOOLSRCS	=	vcsim.cpp
 PARSERHDRS	=	$(PARSERSRCS:.cpp=.hpp) vcParserTokenTypes.hpp
 MISCFILES	=	vcParserTokenTypes.txt
 AHIROBJS	=	$(notdir $(AHIRSRCS:.cpp=.o))
@@ -34,13 +48,18 @@ CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-fPIC -g
 VPATH		+=	$(AHIRSRCDIR)
 
-BINS		=	libahirvc.a libvcsim.so cprcheck.out
+BINS		=	libahirvc.a libvcsim.so
 EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
 ifeq ($(USECEP),y)
 BINS		+=	vc2p.out
 VCTOOLSRCS	+=	vc2p.cpp
+endif
+
+ifeq ($(BUILD_CPR_CHECK),y)
+BINS		+=	cprcheck.out
+VCTOOLSRCS	+=	cprcheck.cpp
 endif
 
 vc2p.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
@@ -68,8 +87,10 @@ $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 libvcsim.so:	vcsim.o libahirvc.a
 	$(CXX) -shared $^ $(LDFLAGS) -o $@
 
+ifeq ($(BUILD_CPR_CHECK),y)
 cprcheck.out:	cprcheck.o libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
+endif
 
 vc2p.out:	vc2p.o libvcsim.so libahirvc.a
 	$(CXX) $< $(LDFLAGS) -o $@
@@ -80,11 +101,15 @@ opf.h:	opf.P
 endif
 
 clean:
-	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES)
+	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES) $(DFILES)
 
 CONFOPTS	=	USECEP USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML
 CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
 CXXFLAGS	+=	-DWIDEUINTSZ=$(WIDEUINTSZ)
+
+ifeq ($(USECEP),y)
+include $(XSBCPPIFDIR)/Makefile.xsbcppif
+endif
 
 ifeq ($(USECEP),y)
 include $(CEPTOOLDIR)/Makefile.ceptool

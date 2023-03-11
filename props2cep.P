@@ -1,0 +1,117 @@
+:-import load/2, store/3 from fileio.
+:-import dep2cep/3 from dep2cep.
+
+:-dynamic scep/4, sdep/2, eventmap/2, patomic/3, reaches/3, dppipe/2, dpstore/2.
+
+:-index(dpe/4,[2]).
+:-index(dppipe/2,[1,2]).
+:-index(dpstore/2,[1,2]).
+:-op(300,fx,#).
+:-op(300,fx,*).
+:-op(400,xfx,and).
+:-op(500,xfx,or).
+:-op(500,xfx,^).
+:-op(700,xfx,->).
+
+%%% Rewrite scep rules to convert high level interval types to basic ones,
+%%% before numerizing.
+rwscep(IR,CR,TAR,FAR) :-
+    ( scep(I,C,TA,FA); gencep(I,C,TA,FA) ),
+    rewritescep((I,C,TA,FA),(IR,CR,TAR,FAR)).
+
+rewritescep( (iwatch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent(V,E).
+rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
+
+uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
+uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
+
+:-table statevar/2.
+statevar(*(V),V) :- !.
+statevar(E,V) :- E=..[F,A,B], binop(F), !,
+    ( statevar(A,V) ; statevar(B,V) ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% dep to numerized cep (TODO: consider making a part of gencep for uniformity)
+cep(I,C,[],[log(Msg),quit]) :- sdep(D,Msg), numerizeDep(D,DN), dep2cep(DN,I,C).
+
+% Generated ceps from higher level patterns (other than dep)
+gencep(iab(P1E,P2E),#(CheckEvent)==0,[],[log(Msg),quit]) :-
+    patomic(P1,P2,Msg), pipeInstEvent(P1,P1E), pipeInstEvent(P2,P2E),
+    inst2pipe(P1,P), inst2pipe(P2,P), pipeEvent(P,CheckEvent), CheckEvent \== P2E.
+
+gencep(iab(StE,LdE),#(CheckEvent)==0,[],[log(Msg),quit]) :-
+    reaches(St,Ld,Msg), storeInstEvent(St,StE), loadInstEvent(Ld,LdE),
+    inst2store(St,S), inst2store(St,S), storeWrEvent(S,CheckEvent).
+
+cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
+    numerizeInterval(I,IN), numerizeExpr(C,CN),
+    numerizeActions(TA,TAN), numerizeActions(FA,FAN).
+
+pipeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
+storeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
+loadInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), loadOpEvent(OpTyp,Etyp).
+
+pipeEvent(Pipe,de(Inst,Etyp)) :-
+    dppipe(Id,Pipe), dpe(Id,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
+storeWrEvent(S,de(Inst,Etyp)) :-
+    dpstore(Id,S), dpe(Id,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
+
+pipeOpEvent(vcInport,ack1).
+pipeOpEvent(vcInport,ftreq).
+pipeOpEvent(vcOutport,req1).
+% Notes: storeOpEvent as suitable for 'reaches'
+loadOpEvent(vcLoad,req0).
+storeOpEvent(vcStore,ack1).
+
+inst2pipe(Inst,Pipe) :- dpe(Id,Inst,_,_), dppipe(Id,Pipe).
+inst2store(Inst,Store) :- dpe(Id,Inst,_,_), dpstore(Id,Store).
+
+numerizeExpr(#(E), #(EN)) :- !, numerizeEvent(E,EN).
+numerizeExpr(*(E), EN) :- atom(E), !, numerizeExpr(*(E,0), EN).
+numerizeExpr(*(Reg,Pos), *(Dpeid,Pos)) :- !, dpe(Dpeid, Reg, _,_).
+numerizeExpr(E,EN) :- E=..[F,A,B], binop(F), !, numerizeExpr(A,AN), numerizeExpr(B,BN), EN=..[F,AN,BN].
+numerizeExpr(E,E) :- atomic(E), !.
+
+binop(O) :- exprbinop(O) ; logbinop(O).
+exprbinop(==).
+logbinop(and).
+logbinop(or).
+
+numerizeActions([],[]):-!.
+numerizeActions([A|Rest],[AN|RestN]):- numerizeAction(A,AN), numerizeActions(Rest,RestN).
+
+numerizeAction(event(E),event(EN)) :- !, numerizeComplexEvent(E,EN).
+numerizeAction(A,A).
+
+numerizeInterval(itill(E), itill(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iself(E), iself(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iev(E), iev(EN)) :- !, numerizeEvent(E,EN).
+numerizeInterval(iab(E1,E2), iab(E1N,E2N)) :- !, numerizeEvent(E1,E1N), numerizeEvent(E2,E2N).
+
+numerizeDep(A->B, AN->BN) :- !, numerizeDepLeg(A,AN), numerizeDepLeg(B,BN).
+
+numerizeDepLeg(E,EN) :- E=..[F,A,B], depbinop(F), !, numerizeDepLeg(A,AN), numerizeDepLeg(B,BN), EN=..[F,AN,BN].
+numerizeDepLeg(E,EN) :- numerizeEvent(E,EN).
+
+depbinop(^):-!.
+
+numerizeEvent( de(Ident,EventTyp), Tid ) :- !, eventTyp(EventTyp), dpe(Objid,Ident,_,_), vctid(Objid,EventTyp,Tid).
+numerizeEvent( ce(EventName), EN ) :- !, numerizeComplexEvent(EventName,EN).
+
+eventTyp(req0).
+eventTyp(req1).
+eventTyp(ack0).
+eventTyp(ack1).
+eventTyp(ftreq).
+
+numerizeComplexEvent(E,EN) :- eventmap(E,EN), !.
+numerizeComplexEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).
+
+lastEventNo(MaxN) :- eventmap(_,MaxN), !.
+lastEventNo(MaxN) :- setof(N, negTid(N), [NegMax|_]), MaxN is NegMax * -1.
+negTid(N) :- vctid(_,_,N1), N is N1 * -1.
+
+
+props2cep(Vc) :- load(vcir,Vc), load(props,Vc),
+    store(cep,Vc,cep(_,_,_,_)), store(eventmap,Vc,eventmap(_,_)).

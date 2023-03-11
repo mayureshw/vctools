@@ -7,7 +7,7 @@
 #include "vcParser.hpp"
 #include "misc.h"
 #include "dot.h"
-#include "pninfo.h"
+#include "vcpetrinet.h"
 #include "operators.h"
 #include "pipes.h"
 #include "opf.h"
@@ -19,8 +19,6 @@
 #endif
 
 using namespace std::placeholders;
-
-const string CEPDAT = "cepdat"; // Want to parameterize this file?
 
 // Bridge classes between vc IR and Petri net simulator
 // Can use inheritance as long as we don't need extra attribs, else use
@@ -38,8 +36,9 @@ protected:
 public:
     string label() { return _label; }
     SystemBase* sys() { return _module->sys(); }
+    VcPetriNet* pn() { return _module->pn(); }
     Element(vcRoot* elem, ModuleBase* module) : _elem(elem), _module(module) {}
-    virtual void buildPN(PNInfo&)=0;
+    virtual void buildPN()=0;
 };
 
 class DPElement : public Element
@@ -70,7 +69,7 @@ class DPElement : public Element
             }
         }
     }
-    void sreq2ack(PNInfo& pni) { buildSreqToAckPath(_reqs[0], _acks[0], pni); }
+    void sreq2ack() { buildSreqToAckPath(_reqs[0], _acks[0]); }
 public:
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
     VCtyp _vctyp;
@@ -82,17 +81,17 @@ public:
     // tree and connect sreq->curend if these is no flow through driver else
     // transitively insert all ftreq transitions in between and connect strt
     // with the leaf of the chain
-    void buildSreqToAckPath(PNNode* strt, PNNode* curend, PNInfo& pni)
+    void buildSreqToAckPath(PNNode* strt, PNNode* curend)
     {
         vector<DPElement*> ftdrvs;
         flowthrDrivers(ftdrvs);
         if ( ftdrvs.size() == 0 )
-            PetriNet::createArc(strt, curend, pni.pnes);
+            pn()->createArc(strt, curend);
         else for(auto ftdrv:ftdrvs)
         {
-            auto ftreq = ftdrv->ftreq(pni);
-            PetriNet::createArc(ftreq, curend, pni.pnes);
-            ftdrv->buildSreqToAckPath(strt, ftreq, pni);
+            auto ftreq = ftdrv->ftreq();
+            pn()->createArc(ftreq, curend);
+            ftdrv->buildSreqToAckPath(strt, ftreq);
         }
     }
     PNTransition* getReqTransition(int indx)
@@ -118,7 +117,7 @@ public:
 
     // General guideline for buildPN* functions: Retain the CP interface defined by _reqs and _acks as-is
     // Can improvise a network (e.g. additional places/transitions) within those boundaries
-    void buildPNPhi(PNInfo& pni)
+    void buildPNPhi()
     {
         vector<DPElement*> ftdrvs;
         flowthrDrivers(ftdrvs);
@@ -128,25 +127,25 @@ public:
             cout << "vc2pn: flowthrDrivers drivers for phi not handled" << endl;
             exit(1);
         }
-        auto phplace = new PNPlace("DPE:" + _label + "_phplace");
+        auto phplace = pn()->createPlace("DPE:" + _label + "_phplace");
         auto rootindex = elem()->Get_Root_Index();
         for(int i=0; i<_reqs.size(); i++)
         {
             auto req = _reqs[i];
-            PetriNet::createArc(req, phplace, pni.pnes);
+            pn()->createArc(req, phplace);
 #           ifdef USECEP
-            pni.vctid.add({ rootindex, "req" + to_string(i), req->_nodeid });
+            pn()->vctid.add({ rootindex, "req" + to_string(i), req->_nodeid });
 #           endif
             req->setEnabledActions(bind(&Operator::select,_op,i,_1));
         }
-        PetriNet::createArc(phplace, _acks[0], pni.pnes);
+        pn()->createArc(phplace, _acks[0]);
 #       ifdef USECEP
-        pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
 #       endif
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
-    void buildPNBranch(PNInfo& pni)
+    void buildPNBranch()
     {
         vector<DPElement*> ftdrvs;
         flowthrDrivers(ftdrvs);
@@ -155,21 +154,21 @@ public:
             cout << "vc2pn: branch has flowthrough driver count != 1, unhandled" << endl;
             exit(1);
         }
-        auto ftreq = ftdrvs[0]->ftreq(pni);
-        auto brplace = new PNPlace("DPE:" + _label + "_brplace");
+        auto ftreq = ftdrvs[0]->ftreq();
+        auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
         brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
         // Unlike other users of buildSreqToAckPath, since we want it to end in
         // a place, we take first step ad hoc and ask the first driver to
         // invoke buildSreqToAckPath
-        ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq, pni);
-        PetriNet::createArc(ftreq, brplace, pni.pnes);
-        PetriNet::createArc(brplace, _acks[0], pni.pnes);
-        PetriNet::createArc(brplace, _acks[1], pni.pnes );
+        ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq);
+        pn()->createArc(ftreq, brplace);
+        pn()->createArc(brplace, _acks[0]);
+        pn()->createArc(brplace, _acks[1]);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
-        pni.vctid.add({ rootindex, "req0", ftreq->_nodeid });
-        pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
-        pni.vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+        pn()->vctid.add({ rootindex, "req0", ftreq->_nodeid });
+        pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
     }
     int uackIndx()
@@ -199,17 +198,17 @@ public:
     {
         return _vctyp == vcInport_ and (((vcIOport*)elem())->Get_Pipe())->Get_Signal();
     }
-    void wrapPNWithGuard(PNInfo& pni)
+    void wrapPNWithGuard()
     {
         auto dpelabel = "DPE:" + _label + "_";
-        PNTransition *go = new PNTransition(dpelabel + "go");
-        PNTransition *nogo = new PNTransition(dpelabel + "nogo");
-        PNTransition *nogo_ureq = new PNTransition(dpelabel + "nogo_ureq");
-        PNPlace *brplace = new PNPlace(dpelabel + "brplace");
+        PNTransition *go = pn()->createTransition(dpelabel + "go");
+        PNTransition *nogo = pn()->createTransition(dpelabel + "nogo");
+        PNTransition *nogo_ureq = pn()->createTransition(dpelabel + "nogo_ureq");
+        PNPlace *brplace = pn()->createPlace(dpelabel + "brplace");
         brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
-        PNPlace *gsackplace = new PNPlace(dpelabel + "gsackplace");
-        PNPlace *guackplace = new PNPlace(dpelabel + "guackplace");
-        PNPlace *gureqplace = new PNPlace(dpelabel + "gureqplace");
+        PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
+        PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");
+        PNPlace *gureqplace = pn()->createPlace(dpelabel + "gureqplace");
 
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
@@ -219,38 +218,38 @@ public:
             auto driver = elem()->Get_Guard_Wire()->Get_Driver();
             assert(driver);
             auto driverDPE = _module->getDPE(driver);
-            auto driverFtreq = driverDPE->ftreq(pni);
-            driverDPE->buildSreqToAckPath(gsreq, driverFtreq, pni);
-            PetriNet::createArc(driverFtreq, brplace, pni.pnes);
+            auto driverFtreq = driverDPE->ftreq();
+            driverDPE->buildSreqToAckPath(gsreq, driverFtreq);
+            pn()->createArc(driverFtreq, brplace);
         }
         else
-            PetriNet::createArc(gsreq, brplace, pni.pnes);
+            pn()->createArc(gsreq, brplace);
 
         if ( elem()->Get_Guard_Complement() )
         {
-            PetriNet::createArc(brplace, go, pni.pnes);
-            PetriNet::createArc(brplace, nogo, pni.pnes);
+            pn()->createArc(brplace, go);
+            pn()->createArc(brplace, nogo);
         }
         else
         {
-            PetriNet::createArc(brplace, nogo, pni.pnes);
-            PetriNet::createArc(brplace, go, pni.pnes);
+            pn()->createArc(brplace, nogo);
+            pn()->createArc(brplace, go);
         }
-        PetriNet::createArc(nogo, gsackplace, pni.pnes);
-        PetriNet::createArc(nogo, nogo_ureq, pni.pnes);
-        PetriNet::createArc(nogo_ureq, guackplace, pni.pnes);
-        PetriNet::createArc(go, sreq, pni.pnes);
-        PetriNet::createArc(go, ureq, pni.pnes);
-        PetriNet::createArc(sack, gsackplace, pni.pnes);
-        PetriNet::createArc(uack, guackplace, pni.pnes);
-        PetriNet::createArc(gsackplace, gsack, pni.pnes);
-        PetriNet::createArc(guackplace, guack, pni.pnes);
-        PetriNet::createArc(gureq, gureqplace, pni.pnes);
-        PetriNet::createArc(gureqplace, ureq, pni.pnes);
-        PetriNet::createArc(gureqplace, nogo_ureq, pni.pnes);
+        pn()->createArc(nogo, gsackplace);
+        pn()->createArc(nogo, nogo_ureq);
+        pn()->createArc(nogo_ureq, guackplace);
+        pn()->createArc(go, sreq);
+        pn()->createArc(go, ureq);
+        pn()->createArc(sack, gsackplace);
+        pn()->createArc(uack, guackplace);
+        pn()->createArc(gsackplace, gsack);
+        pn()->createArc(guackplace, guack);
+        pn()->createArc(gureq, gureqplace);
+        pn()->createArc(gureqplace, ureq);
+        pn()->createArc(gureqplace, nogo_ureq);
     }
     // buildPN that suits most DPEs
-    void buildPNDefault(PNInfo& pni)
+    void buildPNDefault()
     {
         bool isIport = _vctyp == vcInport_;
         bool isOport = _vctyp == vcOutport_;
@@ -259,20 +258,20 @@ public:
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
-        sreq2ack(pni);
-        PetriNet::createArc(_acks[0], _acks[1], pni.pnes); // Since sreq/ureq can be ||, need this sync
-        PetriNet::createArc(_reqs[1], _acks[1], pni.pnes);
-        auto uack2sack = (PNPlace*) PetriNet::createArc(
-            _acks[1], _acks[0], pni.pnes,
+        sreq2ack();
+        pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
+        pn()->createArc(_reqs[1], _acks[1]);
+        auto uack2sack = (PNPlace*) pn()->createArc(
+            _acks[1], _acks[0],
             "MARKP:" + _acks[0]->_name
             );
         uack2sack->setMarking(1);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
-        pni.vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
-        pni.vctid.add({ rootindex, "req1", _reqs[1]->_nodeid });
-        pni.vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
-        pni.vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "req1", _reqs[1]->_nodeid });
+        pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
         if ( isIport or isOport )
         {
@@ -281,8 +280,8 @@ public:
             auto ureq = _reqs[1];
             auto uack = _acks[1];
             auto pipe = ((IOPort*)_op)->_pipe;
-            if ( isIport ) pipe->buildPNIport(ureq, uack, pni); // See comment "In AHIR..." above
-            else pipe->buildPNOport(sreq, sack, pni);
+            if ( isIport ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
+            else pipe->buildPNOport(sreq, sack);
         }
         else if ( _vctyp == vcCall_ )
         {
@@ -295,37 +294,41 @@ public:
             auto calledEntryPlace = calledModule->entryPlace();
             auto calledMutexPlace = calledModule->mutexPlace();
 
-            auto inProgressPlace = new PNPlace(_label+".CallInProgress");
+            auto inProgressPlace = pn()->createPlace(_label+".CallInProgress");
             // sack requires called module's mutex token
-            PetriNet::createArc(calledMutexPlace, sack, pni.pnes);
+            pn()->createArc(calledMutexPlace, sack);
             // and passes token to inProgressPlace and called module's entry
-            PetriNet::createArc(sack, inProgressPlace, pni.pnes);
-            PetriNet::createArc(sack, calledEntryPlace, pni.pnes);
+            pn()->createArc(sack, inProgressPlace);
+            pn()->createArc(sack, calledEntryPlace);
             // uack requires inProgressPlace and called module's exit place token
-            PetriNet::createArc(inProgressPlace, uack, pni.pnes);
-            PetriNet::createArc(calledExitPlace, uack, pni.pnes);
+            pn()->createArc(inProgressPlace, uack);
+            pn()->createArc(calledExitPlace, uack);
             // and releases a token to called module's mutex
-            PetriNet::createArc(uack, calledMutexPlace, pni.pnes);
+            pn()->createArc(uack, calledMutexPlace);
         }
     }
-    PNTransition* ftreq(PNInfo& pni)
+    PNTransition* ftreq()
     {
-        PNTransition *ftreq = new PNTransition("DPE:" + _label + "_ftreq");
+        PNTransition *ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
+#       endif
         ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
         // if this ftreq relates with a pipe, need to connect with pipe's pnet
         if ( isSignalInport() )
-            ((IOPort*)_op)->_pipe->buildPNIport(ftreq, ftreq, pni);
+            ((IOPort*)_op)->_pipe->buildPNIport(ftreq, ftreq);
         return ftreq;
     }
     void createGuardReqs()
     {
         for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
-            _greqs.push_back(new PNTransition("DPE:" + _label + "_greq_" + to_string(i)));
+            _greqs.push_back(pn()->createTransition("DPE:" + _label + "_greq_" + to_string(i)));
     }
     void createGuardAcks()
     {
         for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
-            _gacks.push_back(new PNTransition("DPE:" + _label + "_gack_" + to_string(i)));
+            _gacks.push_back(pn()->createTransition("DPE:" + _label + "_gack_" + to_string(i)));
     }
     void createReqs()
     {
@@ -333,28 +336,28 @@ public:
         // each context a separate req is created
         if ( not elem()->Get_Flow_Through() )
             for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
-                _reqs.push_back(new PNTransition("DPE:" + _label + "_req_" + to_string(i)));
+                _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
     }
     void createAcks()
     {
         for(int i=0; i<elem()->Get_Number_Of_Acks(); i++)
-            _acks.push_back(new PNTransition("DPE:" + _label + "_ack_" + to_string(i)));
+            _acks.push_back(pn()->createTransition("DPE:" + _label + "_ack_" + to_string(i)));
     }
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
         if ( isDeemedFlowThrough() ); // PN built by consumers / module output for flow throughs
         else if ( _vctyp == vcBranch_ )
-            buildPNBranch(pni);
+            buildPNBranch();
         else if ( _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_ )
-            buildPNPhi(pni);
+            buildPNPhi();
         else if ( ( _reqs.size() == 2 ) && ( _acks.size() == 2 ) ) // Default handling
-            buildPNDefault(pni);
+            buildPNDefault();
         else
         {
             cout << "vc2pn: unhandled req-ack pattern reqs=" << _reqs.size() << " acks=" << _acks.size() << " " << _elem->Kind() << " " << endl;
             exit(1);
         }
-        if ( isDeemedGuarded() ) wrapPNWithGuard(pni);
+        if ( isDeemedGuarded() ) wrapPNWithGuard();
     }
 
     void setGuardBranchInpv()
@@ -472,13 +475,13 @@ class GroupCPElement : public CPElement
 protected:
     vcCPElementGroup* elem() { return (vcCPElementGroup*) _elem; }
     // sub-classes that have some internal arcs to build should override this
-    virtual void buildPNlocal(PNInfo& pni)
+    virtual void buildPNlocal()
     {
     }
 public:
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
-        buildPNlocal(pni);
+        buildPNlocal();
         // TODO: Take input and output transition first, then other things
         // from transition take its DPE and index, from that DPE and index take corresp transition from DPE
         if ( elem()->Get_Has_Input_Transition() )
@@ -488,21 +491,21 @@ public:
             DPElement *dpe = _module->getDPE(vcdpe);
             int ackindx = vcdpe->Get_Ack_Index(inpt);
             PNTransition *inppnt = dpe->getAckTransition(ackindx);
-            PetriNet::createArc(inppnt, inPNNode(), pni.pnes);
+            pn()->createArc(inppnt, inPNNode());
         }
         else
         {
             for(auto predeg: elem()->Get_Predecessors())
             {
                 auto *predcpe = (GroupCPElement*) _module->getCPE(predeg);
-                PetriNet::createArc(predcpe->outPNNode(), inPNNode(), pni.pnes);
+                pn()->createArc(predcpe->outPNNode(), inPNNode());
             }
             // TODO: Temporarily replicating _predecessor logic for _marked_predecessors
             for(auto predeg: elem()->Get_Marked_Predecessors())
             {
                 auto *predcpe = (GroupCPElement*) _module->getCPE(predeg);
-                auto markedplace = (PNPlace*) PetriNet::createArc(
-                    predcpe->outPNNode(), inPNNode(), pni.pnes,
+                auto markedplace = (PNPlace*) pn()->createArc(
+                    predcpe->outPNNode(), inPNNode(),
                     "MARKP:" + inPNNode()->_name
                     );
                 markedplace->setMarking(1);
@@ -517,7 +520,7 @@ public:
                 DPElement *dpe = _module->getDPE(vcdpe);
                 int reqindx = vcdpe->Get_Req_Index(optran);
                 PNTransition *optrant = dpe->getReqTransition(reqindx);
-                PetriNet::createArc(outPNNode(), optrant, pni.pnes);
+                pn()->createArc(outPNNode(), optrant);
             }
         }
         // NOTE: _pnnode serves as output end, hence below code won't work for
@@ -527,14 +530,14 @@ public:
         //    for(auto succeg: _elem->_successors)
         //    {
         //        CPElement *succcpe = _module->getCPE(succeg);
-        //        PetriNet::createArc(_pnnode, succcpe->_pnnode, pnes);
+        //        pn()->createArc(_pnnode, succcpe);
         //    }
         //if ( _elem->_is_join or _elem->Get_Is_Merge() )
         //{
         //    for(auto predeg: _elem->Get_Predecessors())
         //    {
         //        CPElement *predcpe = _module->getCPE(predeg);
-        //        PetriNet::createArc(predcpe->_pnnode, _pnnode, pnes);
+        //        pn()->createArc(predcpe->_pnnode);
         //    }
         //}
     }
@@ -553,7 +556,7 @@ public:
     string color() { return "green"; }
     PlaceElement(vcCPElementGroup* elemg, ModuleBase* module) : GroupCPElement(elemg, module)
     {
-        _pnnode = new PNPlace("CPE:"+to_string(elem()->Get_Group_Index())+":"+label());
+        _pnnode = pn()->createPlace("CPE:"+to_string(elem()->Get_Group_Index())+":"+label());
     }
 };
 
@@ -564,7 +567,7 @@ public:
     string color() { return "blue"; }
     TransElement(vcCPElementGroup* elemg, ModuleBase* module) : GroupCPElement(elemg, module)
     {
-        _pnnode = new PNTransition("CPE:"+to_string(elem()->Get_Group_Index())+":"+label());
+        _pnnode = pn()->createTransition("CPE:"+to_string(elem()->Get_Group_Index())+":"+label());
     }
 };
 
@@ -579,15 +582,15 @@ public:
     string color() { return "blue"; }
     PNNode* inPNNode() { return _inPNNode; }
     PNNode* outPNNode() { return _outPNNode; }
-    void buildPNlocal(PNInfo& pni)
+    void buildPNlocal()
     {
-        PetriNet::createArc(_inPNNode, _outPNNode, pni.pnes);
+        pn()->createArc(_inPNNode, _outPNNode);
     }
     PTElement(vcCPElementGroup* elemg, ModuleBase* module) : GroupCPElement(elemg, module)
     {
         _pnnode = NULL;
-        _inPNNode = new PNPlace("CPE:P:"+to_string(elem()->Get_Group_Index())+":"+label());
-        _outPNNode = new PNTransition("CPE:T:"+to_string(elem()->Get_Group_Index())+":"+label());
+        _inPNNode = pn()->createPlace("CPE:P:"+to_string(elem()->Get_Group_Index())+":"+label());
+        _outPNNode = pn()->createTransition("CPE:T:"+to_string(elem()->Get_Group_Index())+":"+label());
     }
 };
 
@@ -610,33 +613,33 @@ class PhiSeqCPElement : public SoloCPElement
 protected:
     vcPhiSequencer* elem() { return (vcPhiSequencer*) _elem; }
 public:
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
         auto pnSampleAck = vce2pnnode(elem()->_phi_sample_ack);
         auto pnUpdAck = vce2pnnode(elem()->_phi_update_ack);
         auto pnMuxAck = vce2pnnode(elem()->_phi_mux_ack);
 
         auto pnSampleReq = vce2pnnode(elem()->_phi_sample_req);
-        auto pnSampleReqPlace = new PNPlace("ps_sreqplace");
-        PetriNet::createArc(pnSampleReq, pnSampleReqPlace, pni.pnes);
+        auto pnSampleReqPlace = pn()->createPlace("ps_sreqplace");
+        pn()->createArc(pnSampleReq, pnSampleReqPlace);
 
         auto pnUpdateReq = vce2pnnode(elem()->_phi_update_req);
-        auto pnUpdateReqPlace = new PNPlace("ps_ureqplace");
-        PetriNet::createArc(pnUpdateReq, pnUpdateReqPlace, pni.pnes);
+        auto pnUpdateReqPlace = pn()->createPlace("ps_ureqplace");
+        pn()->createArc(pnUpdateReq, pnUpdateReqPlace);
 
         // from architecture Behave of phi_sequencer_v2
-        PetriNet::createArc(pnMuxAck, pnUpdAck, pni.pnes);
+        pn()->createArc(pnMuxAck, pnUpdAck);
 
-        auto reduceSampleAck = new PNPlace("reduce_sacks");
+        auto reduceSampleAck = pn()->createPlace("reduce_sacks");
         for(auto srcsack : elem()->_src_sample_acks)
-            PetriNet::createArc(vce2pnnode(srcsack), reduceSampleAck, pni.pnes);
+            pn()->createArc(vce2pnnode(srcsack), reduceSampleAck);
 
-        PetriNet::createArc(reduceSampleAck, pnSampleAck, pni.pnes);
+        pn()->createArc(reduceSampleAck, pnSampleAck);
 
         // Extra tt Basis the way we handle Phi (Do we need these?)
-        PetriNet::createArc(pnSampleReq, pnSampleAck, pni.pnes);
-        PetriNet::createArc(pnUpdateReq, pnUpdAck, pni.pnes);
-        PetriNet::createArc(pnSampleAck, pnUpdAck, pni.pnes);
+        pn()->createArc(pnSampleReq, pnSampleAck);
+        pn()->createArc(pnUpdateReq, pnUpdAck);
+        pn()->createArc(pnSampleAck, pnUpdAck);
 
         for(int i=0; i<elem()->_triggers.size(); i++)
         {
@@ -646,14 +649,14 @@ public:
             auto pnSrcUpdReq = vce2pnnode(elem()->_src_update_reqs[i]);
             auto pnPhiMuxReq = vce2pnnode(elem()->_phi_mux_reqs[i]);
 
-            PetriNet::createArc(pnSrcUpdAck, pnPhiMuxReq, pni.pnes);
+            pn()->createArc(pnSrcUpdAck, pnPhiMuxReq);
 
             // conditional fork for phi_sample_req
-            PetriNet::createArc(pnTrig, pnSrcSampleReq, pni.pnes);
-            PetriNet::createArc(pnSampleReqPlace, pnSrcSampleReq, pni.pnes);
+            pn()->createArc(pnTrig, pnSrcSampleReq);
+            pn()->createArc(pnSampleReqPlace, pnSrcSampleReq);
             // conditional fork for phi_update_req
-            PetriNet::createArc(pnTrig, pnSrcUpdReq, pni.pnes);
-            PetriNet::createArc(pnUpdateReqPlace, pnSrcUpdReq, pni.pnes);
+            pn()->createArc(pnTrig, pnSrcUpdReq);
+            pn()->createArc(pnUpdateReqPlace, pnSrcUpdReq);
         }
     }
     PhiSeqCPElement(vcPhiSequencer* elem, ModuleBase* module) : SoloCPElement(elem, module)
@@ -671,7 +674,7 @@ public:
         _depth = depth;
         ((PNPlace*) _pnnode)->setMarking(_depth-1);
     }
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
         auto depthPlace = (PNPlace*) _pnnode;
 
@@ -687,34 +690,27 @@ public:
         // We create output transitions internally and connect with the vC
         // created ones to avoid issues related to whether it is place or transition
         // On input side it seems to be always a transition
-        auto exitOut = new PNTransition("exitOut");
-        auto contOut = new PNTransition("contOut");
+        auto exitOut = pn()->createTransition("exitOut");
+        auto contOut = pn()->createTransition("contOut");
 
         // Our own intenal network
-        PetriNet::createArc(pnLoopTerm, exitOut, pni.pnes);
-        PetriNet::createArc(pnLoopCont, contOut, pni.pnes);
-        PetriNet::createArc(pnIterOver, depthPlace, pni.pnes);
-        PetriNet::createArc(depthPlace, contOut, pni.pnes);
+        pn()->createArc(pnLoopTerm, exitOut);
+        pn()->createArc(pnLoopCont, contOut);
+        pn()->createArc(pnIterOver, depthPlace);
+        pn()->createArc(depthPlace, contOut);
 
         // Weighted arcs between depthPlace and exitOut
-        auto depthExitArc = new PNPTArc(depthPlace, exitOut);
-        depthExitArc->_wt = _depth;
-        auto exitDepthArc = new PNTPArc(exitOut, depthPlace);
-        exitDepthArc->_wt = _depth - 1;
-        // Since we do not use createArc (because we want access to arc wt) have to insert them all
-        pni.pnes.insert(depthPlace);
-        pni.pnes.insert(exitOut);
-        pni.pnes.insert(depthExitArc);
-        pni.pnes.insert(exitDepthArc);
+        pn()->createArc(depthPlace, exitOut, "", _depth);
+        pn()->createArc(exitOut, depthPlace, "", _depth - 1);
 
         // from architecture Behave of loop_terminator
         // Connections between our transitions and outer elements
-        PetriNet::createArc(exitOut, pnLoopExit, pni.pnes);
-        PetriNet::createArc(contOut, pnLoopBack, pni.pnes);
+        pn()->createArc(exitOut, pnLoopExit);
+        pn()->createArc(contOut, pnLoopBack);
 
     }
     LoopTerminatorCPElement(vcLoopTerminator* elem, ModuleBase* module) : SoloCPElement(elem, module)
-        { _pnnode = new PNPlace("MARKP:LoopDepth"); }
+        { _pnnode = pn()->createPlace("MARKP:LoopDepth"); }
 };
 
 class TransitionMergeCPElement : public SoloCPElement
@@ -722,21 +718,21 @@ class TransitionMergeCPElement : public SoloCPElement
 protected:
     vcTransitionMerge* elem() { return (vcTransitionMerge*) _elem; }
 public:
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
         auto mypnnode = (PNPlace*) _pnnode;
         auto outpnnode = vce2pnnode(elem()->Get_Out_Transition());
-        PetriNet::createArc(mypnnode, outpnnode, pni.pnes);
+        pn()->createArc(mypnnode, outpnnode);
         // from architecture default_arch of transition_merge
         // (just OrReduce)
         for(auto inTxn : elem()->Get_In_Transitions())
         {
             auto inpnnpde = vce2pnnode(inTxn);
-            PetriNet::createArc(inpnnpde, mypnnode, pni.pnes);
+            pn()->createArc(inpnnpde, mypnnode);
         }
     }
     TransitionMergeCPElement(vcTransitionMerge* elem, ModuleBase* module) : SoloCPElement(elem, module)
-        { _pnnode = new PNPlace("TMRG:"+_label); }
+        { _pnnode = pn()->createPlace("TMRG:"+_label); }
 };
 
 #define MAPPER(VCTYP,TYP) \
@@ -791,6 +787,7 @@ class Module : public ModuleBase
 public:
     bool _isDaemon;
     SystemBase* sys() { return _sys; }
+    VcPetriNet* pn() { return _sys->pn(); }
     DPElement* getDPE(vcDatapathElement* vcdpe) { return _ef.getDPElement(vcdpe); }
     CPElement* getCPE(vcCPElement* cpe) { return _ef.getGroupCPElement(_cp->Get_Group(cpe)); }
     GETCPE(vcCPElementGroup,GroupCPElement)
@@ -872,7 +869,7 @@ public:
             DatumBase* argdatum = inparamDatum(arg);
             argdatum->blindcopy(inpv[i]);
         }
-        _moduleEntryPlace->addtokens(1);
+        pn()->addtokens(_moduleEntryPlace, 1);
     }
     void moduleEntry()
     {
@@ -926,16 +923,16 @@ public:
             }
         }
     }
-    void buildPN(PNInfo& pni)
+    void buildPN()
     {
-        for(auto e:_dpelist) e->buildPN(pni);
+        for(auto e:_dpelist) e->buildPN();
         for(auto e:_dpelist) e->setinpv(); // Need to call this after buildPN of dpe, as datapath is cyclic
-        for(auto e:_cpelist) e->buildPN(pni);
+        for(auto e:_cpelist) e->buildPN();
 
         vcCPElement* entry = _cp->Get_Entry_Element();
         vcCPElementGroup* entryGroup = _cp->Get_CPElement_To_Group_Map()[entry];
         CPElement *entryCPE = getCPE(entryGroup);
-        PetriNet::createArc(_moduleEntryPlace, entryCPE->inPNNode(), pni.pnes);
+        pn()->createArc(_moduleEntryPlace, entryCPE->inPNNode());
 
         vcCPElement* exitElem = _cp->Get_Exit_Element();
         vcCPElementGroup* exitGroup = _cp->Get_CPElement_To_Group_Map()[exitElem];
@@ -947,8 +944,8 @@ public:
             exitCPENode = (PNTransition*) exitCPE->outPNNode();
         else
         {
-            exitCPENode = new PNTransition("extraexit");
-            PetriNet::createArc(exitCPE->outPNNode(), exitCPENode, pni.pnes);
+            exitCPENode = pn()->createTransition("extraexit");
+            pn()->createArc(exitCPE->outPNNode(), exitCPENode);
         }
 
         vector<DPElement*> ftopdrvs;
@@ -957,34 +954,32 @@ public:
         // If some flow through operators connect to outputs trigger their ft
         // transition between exitCPENode and _moduleExitPlace
         if ( ftopdrvs.size() == 0 )
-            PetriNet::createArc(exitCPENode, _moduleExitPlace, pni.pnes);
+            pn()->createArc(exitCPENode, _moduleExitPlace);
         else
         {
-            PNTransition *exitCPENode1 = new PNTransition("ftcollect");
+            PNTransition *exitCPENode1 = pn()->createTransition("ftcollect");
             for(auto ftopdrv:ftopdrvs)
             {
-                auto ftr = ftopdrv->ftreq(pni);
-                ftopdrv->buildSreqToAckPath(exitCPENode, ftr, pni);
-                PetriNet::createArc(ftr, exitCPENode1, pni.pnes);
+                auto ftr = ftopdrv->ftreq();
+                ftopdrv->buildSreqToAckPath(exitCPENode, ftr);
+                pn()->createArc(ftr, exitCPENode1);
             }
-            PetriNet::createArc(exitCPENode1, _moduleExitPlace, pni.pnes);
+            pn()->createArc(exitCPENode1, _moduleExitPlace);
         }
 
         if ( _isDaemon )
         {
-            PetriNet::createArc(_moduleMutexOrDaemonPlace, _moduleEntryPlace, pni.pnes);
-            PetriNet::createArc(_moduleExitPlace, _moduleMutexOrDaemonPlace, pni.pnes);
+            pn()->createArc(_moduleMutexOrDaemonPlace, _moduleEntryPlace);
+            pn()->createArc(_moduleExitPlace, _moduleMutexOrDaemonPlace);
         }
-        else pni.pnes.insert(_moduleMutexOrDaemonPlace); // For top modules no createArc, so let's add
-
     }
     void setExit(function<void()> exithook) { _exithook = exithook; }
     Module(vcModule* vcm, SystemBase* sys, bool isDaemon) : _vcm(vcm), _sys(sys), _isDaemon(isDaemon)
     {
         _cp = _vcm->Get_Control_Path();
-        _moduleEntryPlace = new PNPlace("MOD:"+name()+".entry");
-        _moduleExitPlace = new PNPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
-        _moduleMutexOrDaemonPlace = new PNPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
+        _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
+        _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
+        _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
         _moduleExitPlace->setAddActions(bind(&Module::moduleExit,this));
         _moduleEntryPlace->setAddActions(bind(&Module::moduleEntry,this));
         for(auto e:_cp->Get_CPElement_Groups())
@@ -1019,7 +1014,7 @@ class System : public SystemBase
     map<string,PipeFeeder*> _feedermap;
     map<string,PipeReader*> _readermap;
     vcSystem* _vcs;
-    PetriNet *_pn;
+    VcPetriNet *_pn;
     PNPlace *_sysPreExitPlace;
     PNPTArc *_sysExitArc;
     OpFactory _opfactory = {this};
@@ -1030,43 +1025,40 @@ class System : public SystemBase
     void markExit()
     {
         cout << "Received exit event" << endl;
-        _sysPreExitPlace->addtokens(1);
+        pn()->addtokens(_sysPreExitPlace, 1);
     }
     // system will exit after that many exit events occur, where an exit event
     // is when tokens are added to _sysPreExitPlace by calling markExit
     void setExitWt(unsigned wt) { _sysExitArc->_wt = wt; }
-    void buildSysExitPN(PNInfo& pni)
+    void buildSysExitPN()
     {
-        _sysPreExitPlace = new PNPlace("sysPreExit");
+        _sysPreExitPlace = pn()->createPlace("sysPreExit");
 
-        auto pre2exitTransition = new PNTransition("sysPreToExit");
+        auto pre2exitTransition = pn()->createTransition("sysPreToExit");
 
-        _sysExitArc = new PNPTArc(_sysPreExitPlace, pre2exitTransition);
+        pn()->createArc(_sysPreExitPlace, pre2exitTransition);
+        _sysExitArc = (PNPTArc*) _sysPreExitPlace->_oarcs[0];
 
-        auto sysExitPlace = new PNQuitPlace("sysExit");
-        PetriNet::createArc(pre2exitTransition, sysExitPlace, pni.pnes);
+        auto sysExitPlace = pn()->createQuitPlace("sysExit");
+        pn()->createArc(pre2exitTransition, sysExitPlace);
 
         // Only for those not passed to createArc, we have to add
-        pni.pnes.insert(_sysPreExitPlace);
-        pni.pnes.insert(_sysExitArc);
     }
     void buildPN()
     {
-        for(auto m:_modules) m.second->buildPN(_pni);
-        for(auto p:_pipemap) { p.second->buildPN(_pni); }
-        for(auto p:_feedermap) { p.second->buildPN(_pni); }
-        for(auto p:_readermap) { p.second->buildPN(_pni); }
-        buildSysExitPN(_pni);
-#       ifdef USECEP
-        _intervalManager = new IntervalManager(CEPDAT);
-        _pn = new PetriNet( _pni.pnes, [this](unsigned e){ this->_intervalManager->route(e); } );
-#       else
-        _pn = new PetriNet( _pni.pnes );
+        for(auto m:_modules) m.second->buildPN();
+        for(auto p:_pipemap) { p.second->buildPN(); }
+        for(auto p:_feedermap) { p.second->buildPN(); }
+        for(auto p:_readermap) { p.second->buildPN(); }
+        buildSysExitPN();
+#       ifdef SIMU_MODE_STPN
+        pn()->setDelayModels();
 #       endif
     }
 public:
-    PNInfo _pni;
-    void stop() { _pn->quit(); } // For low level simulator interface
+    void stop() { pn()->quit(); } // For low level simulator interface
+    VcPetriNet* pn() { return _pn; }
+    vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
     PipeFeeder* getFeeder(string pipename)
     {
         auto it = _feedermap.find(pipename);
@@ -1113,13 +1105,12 @@ public:
     void printPNJsonFile() { _pn->printjson(); }
     void printPNPNMLFile() { _pn->printpnml(); }
     void wait() { _pn->wait(); }
-    PetriNet* pn() { return _pn; }
     Pipe* pipeMap(vcPipe* pipe)
     {
         auto it = _pipemap.find(pipe);
         if ( it != _pipemap.end() ) return it->second;
 
-        Pipe* retval = _opfactory.vcp2p(pipe);
+        Pipe* retval = _opfactory.vcp2p(pipe, pn());
         _pipemap.emplace(pipe, retval);
         return retval;
     }
@@ -1183,6 +1174,14 @@ public:
     }
     System(vcSystem* vcs, const set<string>& daemons) : _vcs(vcs)
     {
+        string basename = vcs->Get_Id();
+#       ifdef USECEP
+        _pn = new VcPetriNet ( basename, [this](unsigned e, unsigned long eseqno){ this->_intervalManager->route(e, eseqno); } );
+#       else
+        _pn = new VcPetriNet ( basename );
+#       endif
+        Pipe::setLogfile(basename+".pipes.log");
+        Operator::setLogfile(basename+".ops.log");
         for(auto m:_vcs->Get_Ordered_Modules())
         {
             string modulename = m->Get_Id();
@@ -1202,6 +1201,9 @@ public:
             _readermap.emplace(pname,reader);
         }
         buildPN();
+#ifdef USECEP
+        _intervalManager = new IntervalManager(basename, &_opfactory);
+#endif
         _pn->init();
     }
     ~System()
