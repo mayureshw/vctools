@@ -25,7 +25,7 @@ LDFLAGS	+=	-L/usr/pkg/lib -lantlr
 CXXFLAGS+=	-I/usr/pkg/include
 ANTLR	=	antlr
 else
-LDFLAGS	+=	-lantlr-pic
+LDFLAGS	+=	-lantlr-pic -ldl
 ANTLR	=	runantlr
 endif
 
