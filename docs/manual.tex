@@ -349,6 +349,8 @@ There are two interfaces to the simulator. Both the interfaces are documented in
 
 Note that in both the modes, the simulation may terminate if any of the properties being checked fails. We will look at the properties that can be specified in Sec \ref{Sec:Props}.
 
+Documentation in the \texttt{vcsim.h} and examples in the \texttt{examples} directory are extremely important to look at to understand how to use the simulator. One important aspect to note from the examples is the mapping between Aa data types and the templatate argument passed to Datum. You should use nearest C type for the given with matching choice of signed / unsigned as shown in the examples.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Writing properties to check}
 
@@ -407,6 +409,28 @@ To view examples of various files, use the examples provided in the \texttt{exam
 \end{tabular}
 
 \end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Examining the simulation results}
+
+Various kinds of outputs that constitute the simulation results are as follows:
+
+\begin{tabular}{p{.2\linewidth}p{.8\linewidth}}
+
+Standard output &
+All calls and returns to modules, with input and output parameters are logged on stdout. One may want to redirect them to a file. \\\hline
+
+ops, petri net and pipe logs &
+These logs may be enabled or disabled when compling the simulator, using \texttt{Makefile.conf}. The format of these logs is also described in the same file. The event sequence number field (if enabled) helps correlate these logs with each other. \\\hline
+
+CEP log &
+Various properties (internal and user supplied) may produce the CEP logs. These contain a message as may be specified in the property specification, the values of the variables used in the condition, the interval in terms of event types and event sequence numbers etc. This information is in integer form and it needs some work to pretty print it in symbolic form. For now, the integers, mainly the event types, can be interpreted by looking at the \texttt{.vcir} file.
+\\\hline
+
+Test bench output &
+The test bench program may produce some outputs as the test bench designer may choose \\
+
+\end{tabular}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \clearpage
