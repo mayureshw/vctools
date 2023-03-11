@@ -323,7 +323,7 @@ cd $VCTOOLSDIR/examples
 make -j4
 \end{lstlisting}
 
-You may go through each example's source code (.aa and .cpp file) to understand the example and run the executable (.out) for that example and examine the results.
+It will help to go through each example's source code (.aa and .cpp file) to understand the example and run the executable (.out) for that example and examine the results.
 
 \end{enumerate}
 
@@ -456,5 +456,56 @@ To view examples of various files, use the examples provided in the \texttt{exam
 Fig \ref{Fig:PropGrammar} shows the grammar to specify symbolic properties to be checked by randomized simulation using vC simulator. Non terminals with names ending in $Ident$ represent the vC identifiers that identify an instance of the corresponding operator; namely: $PipeOp$ represents read or writes from a pipe, $Load$ and $Store$ represent corresponding operations on a storage object; $Op$ represents any arbitrary AHIR operator instance.
 
 $EventTyp$ is event type as per AHIR split protocol. $req0, req1$ represent sample and update request respectively and $ack0, ack1$ represent resspective acknowledgments. $ftreq$ represents a flow through request, which is an extra event type introduced by the simulator to trigger what is modeled as a combinational logic in AHIR based system.
+
+Tab \ref{Tab:PropSemantics} explains the semantics of the properties. It is advisable to go through the examples directory to get a clearer idea about how these are applied on real examples. Look for examples have a \texttt{.uprops} file.
+
+At present the grammar is based on Prolog terms. Note a few nuances of the grammar:
+
+\begin{enumerate}
+\item Prolog requires that strings starting with an uppercase letter or underscore must be enclosed in single quotes. As a thumb rule you may like to enclose all strings (such as vC identifiers, event types, log message strings you specify etc.) in single quotes.
+\item Part of the line starting with a \% is treated as a comment.
+\end{enumerate}
+
+\begin{table}[H]
+\begin{tabular}{lp{.8\linewidth}}
+
+$sdep(E1,E2,Msg).$ &
+\vspace{-.7cm}
+
+\begin{itemize}
+\item The property states that events $E1$ and $E2$ must strictly alternate. The event, which has to be a data path event, is represented as $de(OpIdent,EventTyp)$, where $OpIdent$ and $EventTyp$ are explained at the start of this section.
+\item On violation, $Msg$ will be reported in the CEP log and the simulation will stop.
+\item Example in: \texttt{examples/vcsim06.uprops}
+\end{itemize} \\\hline
+
+$patomic(P1,P2,Msg).$ &
+\vspace{-.7cm}
+
+\begin{itemize}
+\item $P1$ and $P2$ must be operator instance names from vC that identify operations on the same pipe. Then this property states, no other operation happens on the same pipe between these two.
+\item On violation, $Msg$ will be reported in the CEP log and the simulation will stop.
+\item Example in: \texttt{examples/vcsim05.uprops}
+\end{itemize}\\\hline
+
+$reaches(SW,SR,Msg).$ &
+\vspace{-.7cm}
+
+\begin{itemize}
+\item $SW$ must be a store operator instance and $SR$ a read operator instance, both on the same storage. Then this property states, no write to the same storage happens between $SW$ and $SR$ operations, thus the value written to the storage at $SW$ `reaches' the read at $SR$.
+\item On violation, $Msg$ will be reported in the CEP log and the simulation will stop.
+\item Example in: \texttt{examples/vcsim06.uprops}
+\end{itemize}\\\hline
+
+$scep(I,C,TA,FA).$ &
+\vspace{-.7cm}
+
+\begin{itemize}
+\item This is a low level syntax to state properties using CEP formalism. We will be adding more details of it in future.
+\end{itemize}\\
+
+\end{tabular}
+\caption{Semantics of symbolic properties}
+\label{Tab:PropSemantics}
+\end{table}
 
 \end{document}
