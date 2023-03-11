@@ -1,2 +1,2 @@
-patomic('RPIPE_signal_6_inst','WPIPE_signal_8_inst',[log('Atomic pipe check failed'),quit]).
-patomic('RPIPE_signal_20_inst','WPIPE_signal_22_inst',[log('Atomic pipe check failed'),quit]).
+patomic('RPIPE_signal_6_inst','WPIPE_signal_8_inst','Atomic pipe check failed').
+patomic('RPIPE_signal_20_inst','WPIPE_signal_22_inst','Atomic pipe check failed').
