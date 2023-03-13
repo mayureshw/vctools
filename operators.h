@@ -89,6 +89,7 @@ template <typename Tout> class OperatorT : public Operator
 {
 protected:
     Tout _mask = 0;
+    Tout _msbmask = 0;
     Datum<Tout> z, op;
     Tout mask(Tout val)
     {
@@ -101,7 +102,10 @@ public:
         _resv.push_back(&z);
         opv.push_back(&op);
         if constexpr ( ! is_floating_point<Tout>::value )
+        {
             _mask = getmask<Tout>(width);
+            _msbmask = 1 << ( width - 1 );
+        }
     }
 };
 
@@ -253,7 +257,7 @@ public:
     string oplabel() { return "ShiftRA"; }
     Tout eval(Tin1 x, Tin2 y)
     {
-        auto signmask = x & ( 1 << ( this->op.width() - 1 ) );
+        auto signmask = x & this->_msbmask;
         if ( signmask == 0 ) return x >> y;
         Tout retval = x;
         for(int i=0; i<y; i++) retval = ( retval >> 1 ) | signmask;
