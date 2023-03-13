@@ -35,29 +35,30 @@ extracls( vcBinarySplitOperator ).
 extracls( vcUnarySplitOperator  ).
 
 % operators identified by vC operator
-opop( 'Plus',   '+'  ).
-opop( 'Minus',  '-'  ).
-opop( 'Mult',   '*'  ).
-opop( 'Div',    '/'  ).
-opop( 'Lt',     '<'  ).
-opop( 'Le',     '<=' ).
-opop( 'Gt',     '>'  ).
-opop( 'Ge',     '>=' ).
-opop( 'Ne',     '!=' ).
-opop( 'Eq',     '==' ).
-opop( 'And',    '&'  ).
-opop( 'Or',     '|'  ).
-opop( 'Xor',    '^'  ).
-opop( 'Nand',   '~&' ).
-opop( 'Nor',    '~|' ).
-opop( 'Xnor',   '~^' ).
-opop( 'Not',    '~'  ).
-opop( 'Bitsel', '[]' ).
-opop( 'Concat', '&&' ).
-opop( 'ShiftL', '<<' ).
-opop( 'ShiftR', '>>' ).
-opop( 'RotateL','<o<').
-opop( 'RotateR','>o>').
+opop( 'Plus',   '+'   ).
+opop( 'Minus',  '-'   ).
+opop( 'Mult',   '*'   ).
+opop( 'Div',    '/'   ).
+opop( 'Lt',     '<'   ).
+opop( 'Le',     '<='  ).
+opop( 'Gt',     '>'   ).
+opop( 'Ge',     '>='  ).
+opop( 'Ne',     '!='  ).
+opop( 'Eq',     '=='  ).
+opop( 'And',    '&'   ).
+opop( 'Or',     '|'   ).
+opop( 'Xor',    '^'   ).
+opop( 'Nand',   '~&'  ).
+opop( 'Nor',    '~|'  ).
+opop( 'Xnor',   '~^'  ).
+opop( 'Not',    '~'   ).
+opop( 'Bitsel', '[]'  ).
+opop( 'Concat', '&&'  ).
+opop( 'ShiftL', '<<'  ).
+opop( 'ShiftR', '>>'  ).
+opop( 'ShiftRA','$S>>').
+opop( 'RotateL','<o<' ).
+opop( 'RotateR','>o>' ).
 
 subtyps( bool,    [ uint8_t ] ).
 subtyps( uint,    [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
@@ -76,6 +77,7 @@ sign(O, [Any]         ) :- member( O, ['Inport','Outport'] ),
     !, any(Any).
 sign(O, [NF1,NF1,NF2] ) :- member( O, ['ShiftL','ShiftR','RotateL','RotateR'] ),
     !, nofloat(NF1), nofloat(NF2).
+sign('ShiftRA',[UInt,UInt,UInt]   ):-!, uint(UInt).
 sign('Not',    [NF,NF]            ):-!, nofloat(NF).
 sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).

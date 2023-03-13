@@ -246,6 +246,20 @@ public:
     Tout eval(Tin1 x, Tin2 y) { return this->swap(x, this->rotateby(y)); }
 };
 
+template <typename Tout, typename Tin1, typename Tin2> class ShiftRA : public BinOperator<Tout, Tin1, Tin2>
+{
+using BinOperator<Tout, Tin1, Tin2>::BinOperator;
+public:
+    string oplabel() { return "ShiftRA"; }
+    Tout eval(Tin1 x, Tin2 y)
+    {
+        auto signmask = x & ( 1 << ( this->op.width() - 1 ) );
+        if ( signmask == 0 ) return x >> y;
+        Tout retval = x;
+        for(int i=0; i<y; i++) retval = ( retval >> 1 ) | signmask;
+        return retval;
+    }
+};
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {
