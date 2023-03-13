@@ -191,6 +191,7 @@ public:
 BINOP( Plus,   x + y  ) 
 BINOP( Minus,  x - y  )
 BINOP( Mult,   x * y  )
+BINOP( Div,    x / y  )
 BINOP( And,    x & y  )
 BINOP( Or,     x | y  )
 BINOP( Xor,    x ^ y  )

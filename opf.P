@@ -38,6 +38,7 @@ extracls( vcUnarySplitOperator  ).
 opop( 'Plus',   '+'  ).
 opop( 'Minus',  '-'  ).
 opop( 'Mult',   '*'  ).
+opop( 'Div',    '/'  ).
 opop( 'Lt',     '<'  ).
 opop( 'Le',     '<=' ).
 opop( 'Gt',     '>'  ).
@@ -65,7 +66,7 @@ subtyps( float,   [ float, double ] ).
 
 nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
-sign(O, [Num,Num,Num] ) :- member( O, ['Plus','Minus','Mult'] ),
+sign(O, [Num,Num,Num] ) :- member( O, ['Plus','Minus','Mult','Div'] ),
     !, numeric(Num).
 sign(O, [Bool,Num,Num]) :- member( O, ['Lt','Le','Gt','Ge','Ne','Eq'] ),
     !, bool(Bool), numeric(Num).
