@@ -89,7 +89,6 @@ template <typename Tout> class OperatorT : public Operator
 {
 protected:
     Tout _mask = 0;
-    Tout _msbmask = 0;
     Datum<Tout> z, op;
     Tout mask(Tout val)
     {
@@ -102,10 +101,7 @@ public:
         _resv.push_back(&z);
         opv.push_back(&op);
         if constexpr ( ! is_floating_point<Tout>::value )
-        {
             _mask = getmask<Tout>(width);
-            _msbmask = 1 << ( width - 1 );
-        }
     }
 };
 
@@ -130,6 +126,19 @@ template <typename Tout, typename Tin1, typename Tin2> class BinOperator : publi
 {
 using OperatorT<Tout>::OperatorT;
 protected:
+    // By convention msbmask is taken for 0th argument of inpv
+    Tin1 msbmask() { return 1 << ( this->_ipv[0]->width() - 1 ); }
+    bool isNegative(Tout val) { return ( msbmask() & val ) != 0; }
+    bool signedLT(Tout val1, Tout val2)
+    {
+        bool val1Neg = isNegative(val1);
+        bool val2Neg = isNegative(val2);
+        // if both have same sign bit, let unsigned comparison decide
+        if ( val1Neg == val2Neg ) return val1 < val2;
+        // Hereafter both values don't have same sign bit
+        if ( val1Neg ) return true; // i.e. val1 is negative and val2 is non negative
+        return false; // val2 is negative and val1 is non negative
+    }
     virtual Tout eval(Tin1 x, Tin2 y) = 0;
 public:
     void sack(unsigned long eseqno)
@@ -210,6 +219,11 @@ BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
 BINOP( Concat, ( ((Tout) x) << INPWIDTH(1) ) | (Tout) y )
 
+BINOP( SLt, this->signedLT(x,y)             )
+BINOP( SLe, this->signedLT(x,y) || (x == y) )
+BINOP( SGt, this->signedLT(y,x)             )
+BINOP( SGe, this->signedLT(y,x) || (x == y) )
+
 BINOP2( Bitsel, ( ( x >> yint ) & (Tin1) 1 ) != 0 )
 BINOP2( ShiftL, x << yint )
 BINOP2( ShiftR, x >> yint )
@@ -257,10 +271,9 @@ public:
     string oplabel() { return "ShiftRA"; }
     Tout eval(Tin1 x, Tin2 y)
     {
-        auto signmask = x & this->_msbmask;
-        if ( signmask == 0 ) return x >> y;
+        if ( not this->isNegative(x) ) return x >> y;
         Tout retval = x;
-        for(int i=0; i<y; i++) retval = ( retval >> 1 ) | signmask;
+        for(int i=0; i<y; i++) retval = ( retval >> 1 ) | this->msbmask();
         return retval;
     }
 };
