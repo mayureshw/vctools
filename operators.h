@@ -286,6 +286,33 @@ public:
     Tout eval(Tin x) { return this->mask( ~x ); }
 };
 
+template <typename Tout, typename Tin> class CastOperator : public UnaryOperator<Tout, Tin>
+{
+protected:
+    Tin _imsbmask, _inomsbmask;
+    Tout _omsbmask, _onomsbmask, _replcarrymask;
+public:
+    CastOperator(unsigned owidth, unsigned iwidth, string label="") : UnaryOperator<Tout,Tin>(owidth, label)
+    {
+        _imsbmask = 1 << (iwidth - 1);
+        _omsbmask = 1 << (owidth - 1);
+        _inomsbmask = this->template getmask<Tin>(iwidth - 1);
+        _onomsbmask = this->template getmask<Tout>(owidth - 1);
+        _replcarrymask = ( owidth < iwidth ) ? _omsbmask : this->_mask ^ _inomsbmask;
+    }
+};
+
+template <typename Tout, typename Tin> class S2S : public CastOperator<Tout, Tin>
+{
+using CastOperator<Tout, Tin>::CastOperator;
+public:
+    string oplabel() { return "S2S"; }
+    Tout eval(Tin x)
+    {
+        return ( (this->_imsbmask & x) == 0 ) ? x : this->_replcarrymask | x;
+    }
+};
+
 template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Select : public TernOperator<Tout, Tin1, Tin2, Tin3>
 {
 using TernOperator<Tout, Tin1, Tin2, Tin3>::TernOperator;

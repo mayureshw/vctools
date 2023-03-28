@@ -66,6 +66,9 @@ opop( 'SLe',    '$S<=$S' ).
 opop( 'SGt',    '$S>$S'  ).
 opop( 'SGe',    '$S>=$S' ).
 
+% Typecasts
+opop( 'S2S',    '$S:=$S' ).
+
 subtyps( bool,    [ uint8_t ] ).
 subtyps( uint,    [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
 subtyps( 'WUINT', [ 'WUINT' ] ).
@@ -85,6 +88,8 @@ sign(O, [NF1,NF1,NF2] )   :- member( O, ['ShiftL','ShiftR','RotateL','RotateR'] 
     !, nofloat(NF1), nofloat(NF2).
 sign(O, [UInt,UInt,UInt] ):- member( O, ['ShiftRA','SGt','SLt','SGe','SLe'] ),
     !, uint(UInt).
+sign(O, [UInt1,UInt2] )   :- member( O, ['S2S'] ),
+    !, uint(UInt1), uint(UInt2).
 sign('Not',    [NF,NF]            ):-!, nofloat(NF).
 sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
@@ -109,6 +114,7 @@ creator( 'Load',  'createLoad'    ):-!.
 creator( 'Store', 'createStore'   ):-!.
 creator( 'Call',  'createCall'    ):-!.
 creator( 'Slice', 'createSlice'   ):-!.
+creator( 'S2S',   'createCast'    ):-!.
 creator( _,       'createGeneral' ).
 
 %%%%%%%%%% Pipe related %%%%%%%%%%
