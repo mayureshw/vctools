@@ -152,7 +152,7 @@ public:
         flowthrDrivers(ftdrvs);
         if( ftdrvs.size() != 1 )
         {
-            cout << "vc2pn: branch has flowthrough driver count != 1, unhandled" << endl;
+            cout << "vc2pn: branch has flowthrough driver count != 1, unhandled: " << elem()->Get_Id() << endl;
             exit(1);
         }
         auto ftreq = ftdrvs[0]->ftreq();
