@@ -37,6 +37,7 @@ public:
     string label() { return _label; }
     SystemBase* sys() { return _module->sys(); }
     VcPetriNet* pn() { return _module->pn(); }
+    bool inVolatileModule() { return _module->isVolatile(); }
     Element(vcRoot* elem, ModuleBase* module) : _elem(elem), _module(module) {}
     virtual void buildPN()=0;
 };
@@ -177,7 +178,7 @@ public:
     }
     bool isDeemedFlowThrough()
     {
-        return elem()->Get_Flow_Through() or isSignalInport();
+        return elem()->Get_Flow_Through() or isSignalInport() or inVolatileModule();
     }
     bool isDeemedGuarded()
     {
@@ -798,6 +799,7 @@ public:
     PNPlace* mutexPlace() { return _moduleMutexOrDaemonPlace; }
     PNPlace* entryPlace() { return _moduleEntryPlace; }
     PNPlace* exitPlace() { return _moduleExitPlace; }
+    bool isVolatile() { return _vcm->Get_Volatile_Flag(); }
     DatumBase* opregForWire(vcWire *w)
     {
         vcDatapathElement *driver = w->Get_Driver();
