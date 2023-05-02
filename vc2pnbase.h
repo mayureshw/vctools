@@ -38,6 +38,7 @@ public:
     virtual vector<DatumBase*> iparamV() = 0;
     virtual vector<DatumBase*> oparamV() = 0;
     virtual DatumBase* opregForWire(vcWire*) = 0;
+    virtual bool isVolatile() = 0;
 };
 
 #endif
