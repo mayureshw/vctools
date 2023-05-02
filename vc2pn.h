@@ -354,7 +354,7 @@ public:
             buildPNDefault();
         else
         {
-            cout << "vc2pn: unhandled req-ack pattern reqs=" << _reqs.size() << " acks=" << _acks.size() << " " << _elem->Kind() << " " << endl;
+            cout << "vc2pn: unhandled req-ack pattern reqs=" << _reqs.size() << " acks=" << _acks.size() << " " << _elem->Kind() << " " << _elem->Get_Id()  << endl;
             exit(1);
         }
         if ( isDeemedGuarded() ) wrapPNWithGuard();
