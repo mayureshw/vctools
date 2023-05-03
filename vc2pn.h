@@ -152,6 +152,11 @@ public:
         brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
         pn()->createArc(brplace, _acks[0]);
         pn()->createArc(brplace, _acks[1]);
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+#       endif
         return brplace;
     }
     void buildPNBranchFT(vector<DPElement*>& ftdrvs)
@@ -163,17 +168,19 @@ public:
         // invoke buildSreqToAckPath
         ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq);
         pn()->createArc(ftreq, brplace);
-        auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "req0", ftreq->_nodeid });
-        pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
-        pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
     }
     void buildPNBranchConst(vcWire* w)
     {
         auto brplace = createBrPlaceAcks();
         pn()->createArc(_reqs[0], brplace);
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
+#       endif
     }
     void buildPNBranch()
     {
