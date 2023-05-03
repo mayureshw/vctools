@@ -146,31 +146,53 @@ public:
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
-    void buildPNBranch()
+    PNPlace* createBrPlaceAcks()
     {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if( ftdrvs.size() != 1 )
-        {
-            cout << "vc2pn: branch has flowthrough driver count != 1, unhandled: " << elem()->Get_Id() << endl;
-            exit(1);
-        }
-        auto ftreq = ftdrvs[0]->ftreq();
         auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
         brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
+        pn()->createArc(brplace, _acks[0]);
+        pn()->createArc(brplace, _acks[1]);
+        return brplace;
+    }
+    void buildPNBranchFT(vector<DPElement*>& ftdrvs)
+    {
+        auto ftreq = ftdrvs[0]->ftreq();
+        auto brplace = createBrPlaceAcks();
         // Unlike other users of buildSreqToAckPath, since we want it to end in
         // a place, we take first step ad hoc and ask the first driver to
         // invoke buildSreqToAckPath
         ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq);
         pn()->createArc(ftreq, brplace);
-        pn()->createArc(brplace, _acks[0]);
-        pn()->createArc(brplace, _acks[1]);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
         pn()->vctid.add({ rootindex, "req0", ftreq->_nodeid });
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
+    }
+    void buildPNBranchConst(vcWire* w)
+    {
+        auto brplace = createBrPlaceAcks();
+        pn()->createArc(_reqs[0], brplace);
+    }
+    void buildPNBranch()
+    {
+        auto inpwires = elem()->Get_Input_Wires();
+        if ( inpwires.size() != 1 )
+        {
+            cout << "vc2pn: branch has input driver count != 1: " << elem()->Get_Id() << endl;
+            exit(1);
+        }
+        auto condwire = inpwires[0];
+        vector<DPElement*> ftdrvs;
+        flowthrDrivers(ftdrvs);
+        if( ftdrvs.size() == 1 ) buildPNBranchFT(ftdrvs);
+        else if ( condwire->Is_Constant() ) buildPNBranchConst(condwire);
+        else
+        {
+            cout << "vc2pn: branch has non-flowthrough non-const driver : " << elem()->Get_Id() << endl;
+            exit(1);
+        }
     }
     int uackIndx()
     {
