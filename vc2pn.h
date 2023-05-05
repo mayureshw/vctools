@@ -1203,6 +1203,16 @@ public:
         fillCollectopmap(collects, collectopmap);
         logSysOp(collectopmap);
     }
+    vector<DatumBase*> oparamV(string modulename)
+    {
+        auto it = _modules.find(modulename);
+        if (it == _modules.end())
+        {
+            cout << "vc2pn:oparamV: Module not found: " << modulename << endl;
+            exit(1);
+        }
+        else return it->second->oparamV();
+    }
     System(vcSystem* vcs, const set<string>& daemons) : _vcs(vcs)
     {
         string basename = vcs->Get_Id();
