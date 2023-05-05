@@ -62,6 +62,7 @@ public:
     void invoke();
     void feedPipe(const string pipename, const vector<DatumBase*>& feedv);
     vector<DatumBase*> readPipe(const string pipename, unsigned cnt);
+    vector<DatumBase*> oparamV(string modulename);
     VcsimIf(string vcflnm, const set<string>& daemons);
     ~VcsimIf();
 };

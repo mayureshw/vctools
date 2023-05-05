@@ -70,6 +70,11 @@ void VcsimIf::invoke()
     _sys->invoke("", {}, {}, {}, emptymap);
 }
 
+vector<DatumBase*> VcsimIf::oparamV(string modulename)
+{
+    return _sys->oparamV(modulename);
+}
+
 VcsimIf::VcsimIf(string vcflnm, const set<string>& daemons)
 {
     ifstream stream;
