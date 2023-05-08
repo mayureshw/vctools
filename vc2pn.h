@@ -2,6 +2,8 @@
 #define _VC2PN_H
 
 #include <map>
+#include <mutex>
+#include <condition_variable>
 #include <functional>
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
@@ -814,6 +816,9 @@ class Module : public ModuleBase
     function<void()> _exithook = NULL;
     PNPlace *_moduleEntryPlace, *_moduleExitPlace, *_moduleMutexOrDaemonPlace;
     ElementFactory _ef { ElementFactory(this) };
+    bool _moduleExited = true;
+    condition_variable _moduleExitedCV;
+    mutex _moduleExitedMutex;
 public:
     bool _isDaemon;
     SystemBase* sys() { return _sys; }
@@ -892,6 +897,13 @@ public:
         ofs.open(name()+"_dp.dot");
         _vcm->Get_Data_Path()->Print_Data_Path_As_Dot_File(ofs);
     }
+    void moduleInvoke(const vector<DatumBase*>& inpv)
+    {
+        unique_lock<mutex> ul(_moduleExitedMutex);
+        _moduleExited = false;
+        invoke(inpv);
+        _moduleExitedCV.wait( ul, [this] { return _moduleExited;} );
+    }
     void invoke(const vector<DatumBase*>& inpv)
     {
         for(int i=0; i<inpv.size(); i++)
@@ -915,6 +927,11 @@ public:
         for(auto op:_outparamDatum)
             cout << " " << op.first << "=" << op.second->str();
         cout << endl;
+        {
+            lock_guard<mutex> ul(_moduleExitedMutex);
+            _moduleExited = true;
+        }
+        _moduleExitedCV.notify_all();
         if ( _exithook != NULL ) _exithook();
         else _exithook = NULL; // Once we exit, reset the hook, it is active only for 1 invocation
     }
@@ -1160,6 +1177,16 @@ public:
             vector<DatumBase*>& v = _readermap[c.first]->collect();
             collectopmap.emplace(c.first,v);
         }
+    }
+    void moduleInvoke(string modulename, const vector<DatumBase*>& inpv)
+    {
+        auto it = _modules.find(modulename);
+        if (it == _modules.end())
+        {
+            cout << "vc2pn:moduleInvoke Module not found: " << modulename << endl;
+            exit(1);
+        }
+        else it->second->moduleInvoke(inpv);
     }
     // TODO: We may want to return module output vector and collection pipe vectors
     void invoke(string module, const vector<DatumBase*>& inpv,
