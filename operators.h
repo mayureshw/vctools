@@ -330,9 +330,12 @@ public:
     {
         auto x = INPVAL(Tin,0);
         if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
-            this->z = this->mask( ( x >> _l ).to_ulong() );
-        else
-            this->z = this->mask( ( x >> _l ) );
+        {
+            bitset<sizeof(unsigned long)> z1 = 0;
+            for(int i=0, b = _l; i < this->z.width(); i++, b++) z1[i] = x[b];
+            this->z = z1.to_ulong();
+        }
+        else this->z = this->mask( ( x >> _l ) );
     }
     Slice(unsigned width, string label, unsigned l) : _l(l),
         OperatorT<Tout>(width, label) {}
