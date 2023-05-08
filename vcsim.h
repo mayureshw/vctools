@@ -60,6 +60,7 @@ class VcsimIf
 public:
     void stop();
     void invoke();
+    vector<DatumBase*> moduleInvoke(string modulename, const vector<DatumBase*>& inpv = {});
     void feedPipe(const string pipename, const vector<DatumBase*>& feedv);
     vector<DatumBase*> readPipe(const string pipename, unsigned cnt);
     vector<DatumBase*> oparamV(string modulename);
