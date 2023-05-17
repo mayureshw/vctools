@@ -1,6 +1,8 @@
 using namespace std;
 
 #include <iostream>
+#include <functional>
+#include <filesystem>
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
 #include "cpp2xsb.h"
@@ -71,7 +73,7 @@ class ModuleIR
         }
     }
 public:
-    void exportIR(ofstream& pfile)
+    void export_prolog(ofstream& pfile)
     {
         _cpeg.dump(pfile);
         _cpe.dump(pfile);
@@ -93,11 +95,17 @@ class SysIR
     Rel<long,string> _m = {"m"};
     System& _sys;
 public:
-    void exportIR(ofstream& pfile)
+    void export_prolog()
     {
+        string filename = _sys.name() + ".vcir";
+        ofstream pfile(filename);
         _m.dump(pfile);
-        for(auto mir:_moduleirs) mir->exportIR(pfile);
+        for(auto mir:_moduleirs) mir->export_prolog(pfile);
         _sys.pn()->vctid.dump(pfile);
+    }
+    void export_json()
+    {
+        // TODO: to be developed
     }
     SysIR(vcSystem& vcs, System& sys) : _sys(sys)
     {
@@ -113,21 +121,47 @@ public:
     }
 };
 
+#define EXPORTFN(FORMAT) \
+{ #FORMAT, [](SysIR& sysir) { sysir.export_##FORMAT(); } }
+
+map<string,function<void(SysIR&)>> exporters =
+{
+    EXPORTFN(prolog),
+    EXPORTFN(json),
+};
+
+void usage(char* argv0)
+{
+    string formatopts = "";
+    for(auto expfn : exporters)
+    {
+        if ( formatopts != "" ) formatopts += "|";
+        formatopts += expfn.first;
+    }
+    cout << "Usage: " << argv0 << " <" << formatopts << "> <vcfile> [daemons...]" << endl;
+    exit(1);
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc < 3)
-    {
-        cout << "Usage: " << argv[0] << " <vcfile> <vcirfile> [daemons...]" << endl;
-        exit(1);
-    }
 
+    if (argc < 3) usage(argv[0]);
+
+    string vcflnm = argv[2];
+    filesystem::path vcpath(vcflnm);
+    string basename = vcpath.stem();
+
+    auto it = exporters.find(argv[1]);
+    if ( it == exporters.end() ) usage(argv[0]);
+
+    auto exportfn = it->second;
 
     set<string> daemons;
     for(int i=3; i<argc; i++) daemons.insert(argv[i]);
 
     vcSystem::_opt_flag = true;
-    vcSystem vcs("sys");
-    vcs.Parse(argv[1]);
+    vcSystem vcs(basename);
+    vcs.Parse(vcflnm);
     // Setting all modules as top. Will have to borrow one or more CLI args of
     // vc2vhdl. It's mainly for vc IR to clean up unreachable modules, so
     // doesn't affect much to the simulator.
@@ -136,7 +170,5 @@ int main(int argc, char* argv[])
     System sys(&vcs, daemons);
 
     SysIR sysir(vcs,sys);
-
-    ofstream pfile(argv[2]);
-    sysir.exportIR(pfile);
+    exportfn(sysir);
 }
