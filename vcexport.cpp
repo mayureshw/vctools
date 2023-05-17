@@ -102,10 +102,14 @@ public:
         _m.dump(pfile);
         for(auto mir:_moduleirs) mir->export_prolog(pfile);
         _sys.pn()->vctid.dump(pfile);
+        pfile.close();
     }
     void export_json()
     {
-        // TODO: to be developed
+        string filename = _sys.name() + ".json";
+        ofstream jfile(filename);
+        _sys.pn()->printjson(jfile);
+        jfile.close();
     }
     SysIR(vcSystem& vcs, System& sys) : _sys(sys)
     {
