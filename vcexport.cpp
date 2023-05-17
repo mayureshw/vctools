@@ -106,8 +106,8 @@ public:
     }
     void export_json()
     {
-        string filename = _sys.name() + ".json";
-        ofstream jfile(filename);
+        string pnetfile = _sys.name() + "_petri.json";
+        ofstream jfile(pnetfile);
         _sys.pn()->printjson(jfile);
         jfile.close();
     }
