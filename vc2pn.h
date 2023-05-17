@@ -705,6 +705,7 @@ public:
     {
         _depth = depth;
         ((PNPlace*) _pnnode)->setMarking(_depth-1);
+        ((PNPlace*) _pnnode)->setCapacity(_depth);
     }
     void buildPN()
     {

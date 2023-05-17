@@ -185,8 +185,8 @@ protected:
     }
     BlockingPipe(unsigned depth, string label, VcPetriNet *pn) : Pipe(depth,label,pn)
     {
-        _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth);
-        _filledPlace = pn->createPlace(_label+".Filled");
+        _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
+        _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
     }
 };
 
@@ -290,7 +290,7 @@ public:
         _sreq = pn()->createTransition("PipeIf_sreq");
         _sack = pn()->createTransition("PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
-        _triggerPlace = pn()->createPlace("PipeIf_trigger");
+        _triggerPlace = pn()->createPlace("PipeIf_trigger",0,0);
     }
 };
 
