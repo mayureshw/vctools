@@ -1151,7 +1151,6 @@ public:
     }
     void printDPDotFiles() { for(auto m:_modules) m.second->printDPDotFile(); }
     void printPNDotFile() { _pn->printdot(); }
-    void printPNJsonFile() { _pn->printjson(); }
     void printPNPNMLFile() { _pn->printpnml(); }
     void wait() { _pn->wait(); }
     Pipe* pipeMap(vcPipe* pipe)

@@ -19,10 +19,6 @@ void dbghooks(vcSystem& vcs, System& sys)
     sys.printPNDotFile();
 #   endif
 
-#   ifdef GEN_PETRIJSON
-    sys.printPNJsonFile();
-#   endif
-
 #   ifdef GEN_PETRIPNML
     sys.printPNPNMLFile();
 #   endif
