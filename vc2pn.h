@@ -1104,6 +1104,7 @@ class System : public SystemBase
 #       endif
     }
 public:
+    string name() { return _vcs->Get_Id(); }
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
