@@ -106,10 +106,35 @@ public:
     }
     void export_json()
     {
-        string pnetfile = _sys.name() + "_petri.json";
-        ofstream jfile(pnetfile);
-        _sys.pn()->printjson(jfile);
-        jfile.close();
+        string pnetflnm = _sys.name() + "_petri.json";
+        ofstream pnetfile(pnetflnm);
+        _sys.pn()->printjson(pnetfile);
+        pnetfile.close();
+
+        string jsonflnm = _sys.name() + ".json";
+        ofstream jsonfile(jsonflnm);
+
+        JSONSTR(mutexes)
+        JSONSTR(passive_branches)
+
+        JsonFactory jf;
+        JsonMap top;
+
+        list<pair<JsonKey*,PNAnnotation>> annkeys {
+            { &mutexes_key,          Mutex_         },
+            { &passive_branches_key, PassiveBranch_ },
+            };
+
+        for(auto p:annkeys)
+        {
+            auto annlist = jf.createJsonList();
+            for(auto n:_sys.pn()->getNodeset(p.second))
+                annlist->push_back( jf.createJsonAtom<unsigned>( n->_nodeid ) );
+            top.push_back( { p.first, annlist } );
+        }
+
+        top.print(jsonfile);
+        jsonfile.close();
     }
     SysIR(vcSystem& vcs, System& sys) : _sys(sys)
     {

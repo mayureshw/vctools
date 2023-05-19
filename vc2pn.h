@@ -1029,6 +1029,7 @@ public:
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
+        if ( ! _isDaemon ) pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
         _moduleExitPlace->setAddActions(bind(&Module::moduleExit,this));
         _moduleEntryPlace->setAddActions(bind(&Module::moduleEntry,this));
         for(auto e:_cp->Get_CPElement_Groups())
