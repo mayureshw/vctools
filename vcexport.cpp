@@ -116,6 +116,7 @@ public:
 
         JSONSTR(mutexes)
         JSONSTR(passive_branches)
+        JSONSTR(branches)
 
         JsonFactory jf;
         JsonMap top;
@@ -123,6 +124,7 @@ public:
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
             { &passive_branches_key, PassiveBranch_ },
+            { &branches_key,         Branch_        },
             };
 
         for(auto p:annkeys)

@@ -151,6 +151,7 @@ public:
     PNPlace* createBrPlaceAcks()
     {
         auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
+        pn()->annotatePNNode(brplace, Branch_);
         brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
         pn()->createArc(brplace, _acks[0]);
         pn()->createArc(brplace, _acks[1]);
@@ -237,6 +238,7 @@ public:
         PNTransition *nogo = pn()->createTransition(dpelabel + "nogo");
         PNTransition *nogo_ureq = pn()->createTransition(dpelabel + "nogo_ureq");
         PNPlace *brplace = pn()->createPlace(dpelabel + "brplace");
+        pn()->annotatePNNode(brplace, Branch_);
         brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
         PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");

@@ -35,6 +35,7 @@ using namespace std;
 typedef enum {
     Mutex_,
     PassiveBranch_,
+    Branch_,
     } PNAnnotation;
 
 class VcPetriNet : public PetriNetVariant
@@ -44,6 +45,7 @@ using PetriNetVariant::PetriNetVariant;
     map<PNAnnotation,set<PNNode*>> _annotations = {
         { Mutex_, {} },
         { PassiveBranch_, {} },
+        { Branch_, {} },
         };
 public:
 #ifdef USECEP
