@@ -5,7 +5,11 @@ import json
 import os
 
 class Node:
+    def fanin(self): return len(self.predecessors)
+    def fanout(self): return len(self.successors)
     def __init__(self,nodeid,props):
+        self.successors = {}
+        self.predecessors = {}
         self.nodeid = nodeid
         self.__dict__.update(props)
 
@@ -25,12 +29,41 @@ class PetriNet:
             }
         self.transitions = {
             int(nodeid) : Transition(nodeid,props)
-            for (nodeid,props) in pnobj['places'].items()
+            for (nodeid,props) in pnobj['transitions'].items()
             }
+        self.nodes = {**self.places,**self.transitions}
+        for arc in pnobj['arcs']:
+            src = arc['src']
+            tgt = arc['tgt']
+            wt = arc['wt']
+            srcnode = self.nodes[src]
+            tgtnode = self.nodes[tgt]
+            srcnode.successors[tgt] = wt
+            tgtnode.predecessors[src] = wt
 
 class VcPetriNet(PetriNet):
     def __init__(self,pnobj):
         super().__init__(pnobj)
+
+class Vcir:
+    def mutexFanInOuts(self):
+        mutexplaces = [ self.pn.nodes[mutex] for mutex in self.mutexes ]
+        for p in mutexplaces:
+            if p.fanin() != p.fanout():
+                print('fanin',p.fanin(),'fanout',p.fanout(),'mismatch for mutex place',p.nodeid)
+    def branchPlaceType(self):
+        branchplaces = [ p for p in self.pn.places.values() if p.fanout() > 1 ]
+        for p in branchplaces:
+            if p not in self.mutexes and p not in self.passive_branches and p not in self.branches:
+                print('unresolved branch place:',p.nodeid)
+    def validate(self):
+        self.mutexFanInOuts()
+        self.branchPlaceType()
+    def __init__(self,jsonobj,pn):
+        self.pn = pn
+        self.mutexes = set(jsonobj['mutexes'])
+        self.passive_branches = set(jsonobj['passive_branches'])
+        self.branches = set(jsonobj['branches'])
 
 def checkFilExists(flnm):
     if not os.path.exists(flnm):
@@ -49,3 +82,5 @@ if __name__ == '__main__':
     pnobj = json.load(open(pnflnm))
     pn = VcPetriNet(pnobj)
     jsonobj = json.load(open(jsonflnm))
+    vcir = Vcir(jsonobj,pn)
+    vcir.validate()
