@@ -147,6 +147,7 @@ public:
     Pipe(unsigned depth, string label, VcPetriNet* pn) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn)
     {
         _mutexPlace = _pn->createPlace("MARKP:"+_label+".Mutex",1);
+        pn->annotatePNNode(_mutexPlace, Mutex_);
     }
     ~Pipe()
     {
@@ -186,7 +187,9 @@ protected:
     BlockingPipe(unsigned depth, string label, VcPetriNet *pn) : Pipe(depth,label,pn)
     {
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
+        pn->annotatePNNode(_freePlace, PassiveBranch_);
         _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
+        pn->annotatePNNode(_filledPlace, PassiveBranch_);
     }
 };
 

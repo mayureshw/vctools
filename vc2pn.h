@@ -243,6 +243,7 @@ public:
         PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");
         PNPlace *gureqplace = pn()->createPlace(dpelabel + "gureqplace");
+        pn()->annotatePNNode(gureqplace, PassiveBranch_);
 
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
@@ -655,10 +656,12 @@ public:
 
         auto pnSampleReq = vce2pnnode(elem()->_phi_sample_req);
         auto pnSampleReqPlace = pn()->createPlace("ps_sreqplace");
+        pn()->annotatePNNode(pnSampleReqPlace, PassiveBranch_);
         pn()->createArc(pnSampleReq, pnSampleReqPlace);
 
         auto pnUpdateReq = vce2pnnode(elem()->_phi_update_req);
         auto pnUpdateReqPlace = pn()->createPlace("ps_ureqplace");
+        pn()->annotatePNNode(pnUpdateReqPlace, PassiveBranch_);
         pn()->createArc(pnUpdateReq, pnUpdateReqPlace);
 
         // from architecture Behave of phi_sequencer_v2
@@ -745,7 +748,10 @@ public:
 
     }
     LoopTerminatorCPElement(vcLoopTerminator* elem, ModuleBase* module) : SoloCPElement(elem, module)
-        { _pnnode = pn()->createPlace("MARKP:LoopDepth"); }
+    {
+        _pnnode = pn()->createPlace("MARKP:LoopDepth");
+        pn()->annotatePNNode( _pnnode, PassiveBranch_ );
+    }
 };
 
 class TransitionMergeCPElement : public SoloCPElement
@@ -1031,7 +1037,11 @@ public:
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
-        if ( ! _isDaemon ) pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
+        if ( ! _isDaemon )
+        {
+            pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
+            pn()->annotatePNNode( _moduleExitPlace, PassiveBranch_ );
+        }
         _moduleExitPlace->setAddActions(bind(&Module::moduleExit,this));
         _moduleEntryPlace->setAddActions(bind(&Module::moduleEntry,this));
         for(auto e:_cp->Get_CPElement_Groups())
