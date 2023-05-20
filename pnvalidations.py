@@ -57,9 +57,17 @@ class Vcir:
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
                 print('unresolved branch place:',p.nodeid,p.label)
+    def atMostOneMutex(self):
+        mutexControlled = { self.pn.nodes[s] for m in self.mutexes for s in self.pn.nodes[m].successors }
+        for mc in mutexControlled:
+            mcpreds = [ self.pn.nodes[p] for p in mc.predecessors ]
+            controllingMutexCnt = len(list(p for p in mcpreds if p.nodeid in self.mutexes))
+            if controllingMutexCnt > 1 :
+                print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
+        self.atMostOneMutex()
     def __init__(self,jsonobj,pn):
         self.pn = pn
         self.mutexes = set(jsonobj['mutexes'])
