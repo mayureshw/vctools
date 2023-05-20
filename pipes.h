@@ -226,6 +226,7 @@ public:
     NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn) : BlockingPipe(depth,label,pn)
     {
         _popPlace = pn->createPlace(_label+".pop");
+        pn->annotatePNNode(_popPlace, PassiveBranch_);
     }
 };
 

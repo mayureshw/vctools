@@ -64,6 +64,9 @@ class Vcir:
             controllingMutexCnt = len(list(p for p in mcpreds if p.nodeid in self.mutexes))
             if controllingMutexCnt > 1 :
                 print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
+    # Wish list
+    # - Successors of a passive branch must be mutually exclusive. Requires
+    # analysis to check since they may not directly depend on a mutex.
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
