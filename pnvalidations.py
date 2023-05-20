@@ -24,11 +24,11 @@ class Place(Node):
 class PetriNet:
     def __init__(self,pnobj):
         self.places = {
-            int(nodeid) : Place(nodeid,props)
+            int(nodeid) : Place(int(nodeid),props)
             for (nodeid,props) in pnobj['places'].items()
             }
         self.transitions = {
-            int(nodeid) : Transition(nodeid,props)
+            int(nodeid) : Transition(int(nodeid),props)
             for (nodeid,props) in pnobj['transitions'].items()
             }
         self.nodes = {**self.places,**self.transitions}
@@ -50,12 +50,13 @@ class Vcir:
         mutexplaces = [ self.pn.nodes[mutex] for mutex in self.mutexes ]
         for p in mutexplaces:
             if p.fanin() != p.fanout():
-                print('fanin',p.fanin(),'fanout',p.fanout(),'mismatch for mutex place',p.nodeid)
+                print('fanin',p.fanin(),'fanout',p.fanout(),'mismatch for mutex place',p.nodeid,p.label)
     def branchPlaceType(self):
+        resolved_branches = self.mutexes.union(self.passive_branches).union(self.branches)
         branchplaces = [ p for p in self.pn.places.values() if p.fanout() > 1 ]
         for p in branchplaces:
-            if p not in self.mutexes and p not in self.passive_branches and p not in self.branches:
-                print('unresolved branch place:',p.nodeid)
+            if p.nodeid not in resolved_branches:
+                print('unresolved branch place:',p.nodeid,p.label)
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
