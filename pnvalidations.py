@@ -69,6 +69,10 @@ class Vcir:
         for p in highCapPlaces:
             if p.nodeid not in self.passive_branches:
                 print('Places with capacity > 1 must be passive branches',p.nodeid,p.label)
+    def joinCapacity(self):
+        highJoinTrns = [ t for t in self.pn.transitions.values() if t.fanin > 4 ]
+        for t in highJoinTrns:
+            print('Joins up to fanin 4 supported (as of now)',t.nodeid,t.label,t.fanin())
     # Wish list
     # - Successors of a passive branch must be mutually exclusive. Requires
     # analysis to check since they may not directly depend on a mutex.
