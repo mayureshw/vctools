@@ -64,6 +64,11 @@ class Vcir:
             controllingMutexCnt = len(list(p for p in mcpreds if p.nodeid in self.mutexes))
             if controllingMutexCnt > 1 :
                 print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
+    def highCapacityMustBePassive(self):
+        highCapPlaces = [ p for p in self.pn.places.values() if p.capacity > 1 ]
+        for p in highCapPlaces:
+            if p.nodeid not in self.passive_branches:
+                print('Places with capacity > 1 must be passive branches',p.nodeid,p.label)
     # Wish list
     # - Successors of a passive branch must be mutually exclusive. Requires
     # analysis to check since they may not directly depend on a mutex.
@@ -71,6 +76,7 @@ class Vcir:
         self.mutexFanInOuts()
         self.branchPlaceType()
         self.atMostOneMutex()
+        self.highCapacityMustBePassive()
     def __init__(self,jsonobj,pn):
         self.pn = pn
         self.mutexes = set(jsonobj['mutexes'])
