@@ -93,9 +93,9 @@ class Vcir:
         highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
         for a in highWtArcs:
             print('High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
-    # Wish list
-    # - Successors of a passive branch must be mutually exclusive. Requires
-    # analysis to check since they may not directly depend on a mutex.
+    def checksNotAutomated(self):
+        print('Do run simulator with PN_PLACE_CAPACITY_EXCEPTION enabled. It is not checked by this tool.')
+        print('Do ensure, successors of passive branch are mutually exclusive. It is not checked, as it requires analysis such as unfoldings.')
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
