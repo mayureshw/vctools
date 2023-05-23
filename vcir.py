@@ -1,3 +1,5 @@
+import sys, json, os
+
 class Node:
     def fanin(self): return len(self.predecessors)
     def fanout(self): return len(self.successors)
@@ -70,13 +72,23 @@ class Vcir:
     # Wish list
     # - Successors of a passive branch must be mutually exclusive. Requires
     # analysis to check since they may not directly depend on a mutex.
+    def checkFilExists(self,flnm):
+        if not os.path.exists(flnm):
+            print('Did not find file', flnm)
+            sys.exit(1)
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
         self.atMostOneMutex()
         self.highCapacityMustBePassive()
-    def __init__(self,jsonobj,pn):
-        self.pn = pn
+    def __init__(self,stem):
+        pnflnm = stem + '_petri.json'
+        jsonflnm = stem + '.json'
+        self.checkFilExists(pnflnm)
+        self.checkFilExists(jsonflnm)
+        pnobj = json.load(open(pnflnm))
+        self.pn = VcPetriNet(pnobj)
+        jsonobj = json.load(open(jsonflnm))
         self.mutexes = set(jsonobj['mutexes'])
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
