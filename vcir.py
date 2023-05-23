@@ -19,6 +19,7 @@ class Transition(Node):
         super().__init__(nodeid,props)
 
 class Place(Node):
+    def isHighCapacity(self): return self.capacity > 1 or self.capacity == 0
     def __init__(self,nodeid,props):
         super().__init__(nodeid,props)
 
@@ -76,7 +77,7 @@ class Vcir:
             if controllingMutexCnt > 1 :
                 print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
     def highCapacityMustBePassive(self):
-        highCapPlaces = [ p for p in self.pn.places.values() if p.capacity > 1 ]
+        highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
             if p.nodeid not in self.passive_branches:
                 print('Places with capacity > 1 must be passive branches',p.nodeid,p.label)
@@ -84,18 +85,28 @@ class Vcir:
         highJoinTrns = [ t for t in self.pn.transitions.values() if t.fanin > 4 ]
         for t in highJoinTrns:
             print('Joins up to fanin 4 supported (as of now)',t.nodeid,t.label,t.fanin())
+    def highCapacityNotSupported(self):
+        highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
+        for p in highCapPlaces:
+            print('High capacity places not supported in asyncvhdl as of now',p.nodeid,p.label,p.capacity)
+    def arcWtNotSupported(self):
+        highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
+        for a in highWtArcs:
+            print('High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
     # Wish list
     # - Successors of a passive branch must be mutually exclusive. Requires
     # analysis to check since they may not directly depend on a mutex.
-    def checkFilExists(self,flnm):
-        if not os.path.exists(flnm):
-            print('Did not find file', flnm)
-            sys.exit(1)
     def validate(self):
         self.mutexFanInOuts()
         self.branchPlaceType()
         self.atMostOneMutex()
         self.highCapacityMustBePassive()
+        self.highCapacityNotSupported()
+        self.arcWtNotSupported()
+    def checkFilExists(self,flnm):
+        if not os.path.exists(flnm):
+            print('Did not find file', flnm)
+            sys.exit(1)
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'
