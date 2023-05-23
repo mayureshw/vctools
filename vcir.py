@@ -85,6 +85,11 @@ class Vcir:
         highJoinTrns = [ t for t in self.pn.transitions.values() if t.fanin > 4 ]
         for t in highJoinTrns:
             print('Joins up to fanin 4 supported (as of now)',t.nodeid,t.label,t.fanin())
+    def branchFanout(self):
+        branchplaces = [ self.pn.places[p] for p in self.branches ]
+        for p in branchplaces:
+            if p.fanout() != 2 :
+                print('Branch fanout must be 2',p.nodeid,p.label,p.fanout())
     def highCapacityNotSupported(self):
         highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
@@ -101,6 +106,7 @@ class Vcir:
         self.branchPlaceType()
         self.atMostOneMutex()
         self.highCapacityMustBePassive()
+        self.branchFanout()
         self.highCapacityNotSupported()
         self.arcWtNotSupported()
     def checkFilExists(self,flnm):
