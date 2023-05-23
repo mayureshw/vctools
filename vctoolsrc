@@ -5,6 +5,7 @@ export CEPTOOLDIR=$GITHUBHOME/ceptool
 export PATH=$PATH:$AHIRDIR/prebuilt_ubuntu_16.04_release/bin
 export PATH=$PATH:$VCTOOLSDIR
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VCTOOLSDIR
+export PYTHONPATH=$PYTHONPATH:$VCTOOLSDIR
 
 if [ ! -z "$XSBDIR" ]
 then
