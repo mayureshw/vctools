@@ -1,11 +1,16 @@
 import sys, json, os
 
+class Arc:
+    def __init__(self,d):
+        self.__dict__.update(d)
 class Node:
-    def fanin(self): return len(self.predecessors)
-    def fanout(self): return len(self.successors)
+    def fanin(self): return len(self.iarcs)
+    def fanout(self): return len(self.oarcs)
+    def successors(self): return [ a.tgtnode for a in self.oarcs ]
+    def predecessors(self): return [ a.srcnode for a in self.iarcs ]
     def __init__(self,nodeid,props):
-        self.successors = {}
-        self.predecessors = {}
+        self.oarcs = []
+        self.iarcs = []
         self.nodeid = nodeid
         self.__dict__.update(props)
 
@@ -28,14 +33,25 @@ class PetriNet:
             for (nodeid,props) in pnobj['transitions'].items()
             }
         self.nodes = {**self.places,**self.transitions}
+        self.arcs = []
         for arc in pnobj['arcs']:
             src = arc['src']
             tgt = arc['tgt']
             wt = arc['wt']
             srcnode = self.nodes[src]
             tgtnode = self.nodes[tgt]
-            srcnode.successors[tgt] = wt
-            tgtnode.predecessors[src] = wt
+            srcpos = srcnode.fanout()
+            tgtpos = tgtnode.fanin()
+            arcobj = Arc({
+                'srcnode' : srcnode,
+                'tgtnode' : tgtnode,
+                'srcpos'  : srcpos,
+                'tgtpos'  : tgtpos,
+                'wt'      : wt,
+                })
+            srcnode.oarcs += [ arcobj ]
+            tgtnode.iarcs += [ arcobj ]
+            self.arcs += [ arcobj ]
 
 class VcPetriNet(PetriNet):
     def __init__(self,pnobj):
@@ -54,10 +70,9 @@ class Vcir:
             if p.nodeid not in resolved_branches:
                 print('unresolved branch place:',p.nodeid,p.label)
     def atMostOneMutex(self):
-        mutexControlled = { self.pn.nodes[s] for m in self.mutexes for s in self.pn.nodes[m].successors }
+        mutexControlled = { s for m in self.mutexes for s in self.pn.nodes[m].successors() }
         for mc in mutexControlled:
-            mcpreds = [ self.pn.nodes[p] for p in mc.predecessors ]
-            controllingMutexCnt = len(list(p for p in mcpreds if p.nodeid in self.mutexes))
+            controllingMutexCnt = len(list(p for p in mc.predecessors() if p.nodeid in self.mutexes))
             if controllingMutexCnt > 1 :
                 print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
     def highCapacityMustBePassive(self):
