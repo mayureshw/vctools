@@ -27,7 +27,7 @@ class Node:
         arc.rel = rel # enough to do in any one of _add functions
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
-        arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all' ]
+        arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
         self.oarcs = { r:[] for r in arcrels }
         self.iarcs = { r:[] for r in arcrels }
         self.nodeid = nodeid
@@ -96,8 +96,9 @@ class VcPetriNet:
             tgtnode.addIarc(arcobj)
             if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
                 revarc = arcobj.reversedArc()
-                srcnode._addIarc(arcobj.rel,revarc)
-                tgtnode._addOarc(arcobj.rel,revarc)
+                revrel = 'rev_' + arcobj.rel
+                srcnode._addIarc(revrel,revarc)
+                tgtnode._addOarc(revrel,revarc)
 
 class Vcir:
     def mutexFanInOuts(self):
