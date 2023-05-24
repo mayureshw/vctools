@@ -9,11 +9,14 @@ class Node:
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
     def _addOarc(self,rel,arc):
+        arc.srcpos = len(self.oarcs[rel])
         self.oarcs[rel] += [arc]
         self.oarcs['all'] += [arc]
     def _addIarc(self,rel,arc):
+        arc.tgtpos = len(self.iarcs[rel])
         self.iarcs[rel] += [arc]
         self.iarcs['all'] += [arc]
+        arc.rel = rel
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all' ]
@@ -23,6 +26,7 @@ class Node:
         self.__dict__.update(props)
 
 class Transition(Node):
+    def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
     def isJoin(self): return self.fanin('petri') > 1
     def addIarc(self,arc):
@@ -37,6 +41,7 @@ class Transition(Node):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(Node):
+    def nodeType(self): return 'Place'
     def arcRel(self): return 'mutex' if self.isMutex() else \
             'passivebranch' if self.isPassiveBranch() else \
             'branch' if self.isBranch() else \
