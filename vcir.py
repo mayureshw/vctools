@@ -1,9 +1,17 @@
 import sys, json, os
 
 class Arc:
+    def reversedArc(self): return Arc({
+        'srcnode'   : self.tgtnode,
+        'tgtnode'   : self.srcnode,
+        'wt'        : self.wt,
+        'isOrigArc' : False,
+        })
     def __init__(self,d): self.__dict__.update(d)
 
 class Node:
+    def isPlace(self): return False
+    def isTransition(self): return False
     def fanin(self,rel): return len(self.iarcs[rel])
     def fanout(self,rel): return len(self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
@@ -16,7 +24,7 @@ class Node:
         arc.tgtpos = len(self.iarcs[rel])
         self.iarcs[rel] += [arc]
         self.iarcs['all'] += [arc]
-        arc.rel = rel
+        arc.rel = rel # enough to do in any one of _add functions
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all' ]
@@ -26,6 +34,7 @@ class Node:
         self.__dict__.update(props)
 
 class Transition(Node):
+    def isTransition(self): return True
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
     def isJoin(self): return self.fanin('petri') > 1
@@ -41,6 +50,7 @@ class Transition(Node):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(Node):
+    def isPlace(self): return True
     def nodeType(self): return 'Place'
     def arcRel(self): return 'mutex' if self.isMutex() else \
             'passivebranch' if self.isPassiveBranch() else \
@@ -77,12 +87,17 @@ class VcPetriNet:
             srcnode = self.nodes[ arc['src'] ]
             tgtnode = self.nodes[ arc['tgt'] ]
             arcobj = Arc({
-                'srcnode' : srcnode,
-                'tgtnode' : tgtnode,
-                'wt'      : arc['wt'],
+                'srcnode'   : srcnode,
+                'tgtnode'   : tgtnode,
+                'wt'        : arc['wt'],
+                'isOrigArc' : True,
                 })
             srcnode.addOarc(arcobj)
             tgtnode.addIarc(arcobj)
+            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
+                revarc = arcobj.reversedArc()
+                srcnode._addIarc(arcobj.rel,revarc)
+                tgtnode._addOarc(arcobj.rel,revarc)
 
 class Vcir:
     def mutexFanInOuts(self):
