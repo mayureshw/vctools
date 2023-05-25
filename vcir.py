@@ -5,9 +5,18 @@ class Arc:
         'srcnode'   : self.tgtnode,
         'tgtnode'   : self.srcnode,
         'wt'        : self.wt,
-        'isOrigArc' : False,
+        'rel'       : 'rev_' + self.rel,
         })
-    def __init__(self,d): self.__dict__.update(d)
+    def inferRel(self): return (
+        'mutex' if self.srcnode.isMutex() else \
+        'passivebranch' if self.srcnode.isPassiveBranch() else \
+        'branch' if self.srcnode.isBranch() else \
+        'petri'
+        ) if self.srcnode.isPlace() else \
+        'petri'
+    def __init__(self,d):
+        self.__dict__.update(d)
+        self.rel = self.inferRel()
 
 class Node:
     def isPlace(self): return False
@@ -16,15 +25,14 @@ class Node:
     def fanout(self,rel): return len(self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
-    def _addOarc(self,rel,arc):
-        arc.srcpos = len(self.oarcs[rel])
-        self.oarcs[rel] += [arc]
+    def addOarc(self,arc):
+        arc.srcpos = len(self.oarcs[arc.rel])
+        self.oarcs[arc.rel] += [arc]
         self.oarcs['all'] += [arc]
-    def _addIarc(self,rel,arc):
-        arc.tgtpos = len(self.iarcs[rel])
-        self.iarcs[rel] += [arc]
+    def addIarc(self,arc):
+        arc.tgtpos = len(self.iarcs[arc.rel])
+        self.iarcs[arc.rel] += [arc]
         self.iarcs['all'] += [arc]
-        arc.rel = rel # enough to do in any one of _add functions
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
@@ -38,36 +46,15 @@ class Transition(Node):
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
     def isJoin(self): return self.fanin('petri') > 1
-    def addIarc(self,arc):
-        # For transitions srcplace type governs the iarc type
-        arcrel = arc.srcnode.arcRel()
-        self._addIarc(arcrel,arc)
-    def addOarc(self,arc):
-        # For transitions tgtplace mutex has arctype mutex
-        # for all others it's a petri arc
-        arcrel = arc.tgtnode.arcRel() if arc.tgtnode.isMutex() else 'petri'
-        self._addOarc(arcrel,arc)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(Node):
     def isPlace(self): return True
     def nodeType(self): return 'Place'
-    def arcRel(self): return 'mutex' if self.isMutex() else \
-            'passivebranch' if self.isPassiveBranch() else \
-            'branch' if self.isBranch() else \
-            'petri'
     def isMutex(self): return self.nodeid in self.vcir.mutexes
     def isBranch(self): return self.nodeid in self.vcir.branches
     def isPassiveBranch(self): return self.nodeid in self.vcir.passive_branches
     def isMerge(self): return self.fanin('petri') > 1
-    def addIarc(self,arc):
-        # For mutex, all arcs are mutex, for others i/c arcs are petri
-        arcrel = self.arcRel() if self.isMutex() else 'petri'
-        self._addIarc(arcrel,arc)
-    def addOarc(self,arc):
-        # For places own type governs the oarc type
-        arcrel = self.arcRel()
-        self._addOarc(arcrel,arc)
     def isHighCapacity(self): return self.capacity > 1 or self.capacity == 0
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
@@ -90,15 +77,13 @@ class VcPetriNet:
                 'srcnode'   : srcnode,
                 'tgtnode'   : tgtnode,
                 'wt'        : arc['wt'],
-                'isOrigArc' : True,
                 })
             srcnode.addOarc(arcobj)
             tgtnode.addIarc(arcobj)
             if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
                 revarc = arcobj.reversedArc()
-                revrel = 'rev_' + arcobj.rel
-                srcnode._addIarc(revrel,revarc)
-                tgtnode._addOarc(revrel,revarc)
+                srcnode.addIarc(revarc)
+                tgtnode.addOarc(revarc)
 
 class Vcir:
     def mutexFanInOuts(self):
