@@ -22,6 +22,9 @@ class Arc:
         self.__dict__.update(d)
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
+# Purpose of making NodeProp is to make sure that the property and its message always remain in sync
+class NodeProp: pass
+
 class NodeClass :
     sign  = lambda : False
     props = []
@@ -31,16 +34,16 @@ class MutexPlace(NodeClass):
     props = [
 ('rev_mutex fanin = mutex fanout', lambda n: n.fanin('rev_mutex') == n.fanout('mutex')),
 ('petri fanin = mutex fanout'    , lambda n: n.fanin('petri') == n.fanout('mutex')    ),
-('all fanin = mutex fanout * 2'  , lambda n: n.fanin('all') == n.fanout('mutex') * 2  ),
-('all fanout = mutex fanout'     , lambda n: n.fanout('all') == n.fanout('mutex')     ),
+('total fanin = mutex fanout * 2'  , lambda n: n.fanin('total') == n.fanout('mutex') * 2  ),
+('total fanout = mutex fanout'     , lambda n: n.fanout('total') == n.fanout('mutex')     ),
         ]
 
 class PassiveBranchPlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.isPassiveBranch()
     props = [
 ('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')     ),
-('all fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('all') == n.fanout('passivebranch') + n.fanin('petri')),
-('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')                  ),
+('total fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('total') == n.fanout('passivebranch') + n.fanin('petri')),
+('total fanout = passivebranch fanout'             , lambda n: n.fanout('total') == n.fanout('passivebranch')                  ),
         ]
 
 class BranchPlace(NodeClass):
@@ -48,36 +51,36 @@ class BranchPlace(NodeClass):
     props = [
 ('branch fanout = 2', lambda n: n.fanout('branch') == 2),
 ('petri fanin = 1'  , lambda n: n.fanin('petri') == 1  ),
-('all fanin = 1'    , lambda n: n.fanin('all') == 1    ),
-('all fanout = 2'   , lambda n: n.fanout('all') == 2   ),
+('total fanin = 1'    , lambda n: n.fanin('total') == 1    ),
+('total fanout = 2'   , lambda n: n.fanout('total') == 2   ),
         ]
 
 class MergePlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
     props = [
-('all fanin = 2' , lambda n: n.fanin('all') == 2 ),
-('all fanout = 1', lambda n: n.fanout('all') == 1),
+('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
+('total fanout = 1', lambda n: n.fanout('total') == 1),
         ]
 
 class PassThrough(NodeClass):
-    sign  = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
+    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
 
 class ForkTransition(NodeClass):
     sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
     props = [
-('all fanin = 1' , lambda n: n.fanin('all') == 1 ),
-('all fanout = 2', lambda n: n.fanout('all') == 2),
+('total fanin = 1' , lambda n: n.fanin('total') == 1 ),
+('total fanout = 2', lambda n: n.fanout('total') == 2),
         ]
 
 class JoinTransition(NodeClass):
     sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
     props = [
-('all fanin = 2' , lambda n: n.fanin('all') == 2 ),
-('all fanout = 1', lambda n: n.fanout('all') == 1),
+('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
+('total fanout = 1', lambda n: n.fanout('total') == 1),
         ]
 
 class Node:
-    arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
+    arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
     def nodeClass(self): return self.classname
     def isPlace(self): return False
     def isTransition(self): return False
@@ -88,11 +91,11 @@ class Node:
     def addOarc(self,arc):
         arc.srcpos = len(self.oarcs[arc.rel])
         self.oarcs[arc.rel] += [arc]
-        self.oarcs['all'] += [arc]
+        self.oarcs['total'] += [arc]
     def addIarc(self,arc):
         arc.tgtpos = len(self.iarcs[arc.rel])
         self.iarcs[arc.rel] += [arc]
-        self.iarcs['all'] += [arc]
+        self.iarcs['total'] += [arc]
     def nodeinfo(self): return str({
         **{
         rel : ( self.fanin(rel), self.fanout(rel) )
@@ -176,11 +179,11 @@ class Vcir:
     def mutexFanInOuts(self):
         mutexplaces = [ self.pn.nodes[mutex] for mutex in self.mutexes ]
         for p in mutexplaces:
-            if p.fanin('all') != p.fanout('all'):
-                print('fanin',p.fanin('all'),'fanout',p.fanout('all'),'mismatch for mutex place',p.nodeid,p.label)
+            if p.fanin('total') != p.fanout('total'):
+                print('fanin',p.fanin('total'),'fanout',p.fanout('total'),'mismatch for mutex place',p.nodeid,p.label)
     def branchPlaceType(self):
         resolved_branches = self.mutexes.union(self.passive_branches).union(self.branches)
-        branchplaces = [ p for p in self.pn.places.values() if p.fanout('all') > 1 ]
+        branchplaces = [ p for p in self.pn.places.values() if p.fanout('total') > 1 ]
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
                 print('unresolved branch place:',p.nodeid,p.label)
