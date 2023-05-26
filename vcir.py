@@ -1,5 +1,5 @@
 import sys, json, os
-from operator import gt, eq, and_, mul, ne
+from operator import gt, eq, ne, and_, mul, add
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -66,46 +66,46 @@ lambda n: e( v(n,'total','fanin'),     eq, e( v(n,'mutex','fanout'), mul, c(2) )
 lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
         ]
 
-#class PassiveBranchPlace(NodeClass):
-#    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
-#    props = [
-#('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')     ),
-#('total fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('total') == n.fanout('passivebranch') + n.fanin('petri')),
-#('total fanout = passivebranch fanout'             , lambda n: n.fanout('total') == n.fanout('passivebranch')                  ),
-#        ]
-#
-#class BranchPlace(NodeClass):
-#    sign  = lambda n : n.isPlace() and n.isBranch()
-#    props = [
-#('branch fanout = 2', lambda n: n.fanout('branch') == 2),
-#('petri fanin = 1'  , lambda n: n.fanin('petri') == 1  ),
-#('total fanin = 1'    , lambda n: n.fanin('total') == 1    ),
-#('total fanout = 2'   , lambda n: n.fanout('total') == 2   ),
-#        ]
-#
-#class MergePlace(NodeClass):
-#    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
-#    props = [
-#('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
-#('total fanout = 1', lambda n: n.fanout('total') == 1),
-#        ]
-#
-#class PassThrough(NodeClass):
-#    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
-#
-#class ForkTransition(NodeClass):
-#    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
-#    props = [
-#('total fanin = 1' , lambda n: n.fanin('total') == 1 ),
-#('total fanout = 2', lambda n: n.fanout('total') == 2),
-#        ]
-#
-#class JoinTransition(NodeClass):
-#    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
-#    props = [
-#('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
-#('total fanout = 1', lambda n: n.fanout('total') == 1),
-#        ]
+class PassiveBranchPlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
+    props = [
+lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
+lambda n: e( v(n,'total','fanin'), eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
+lambda n: e( v(n,'total','fanout'), eq, v(n,'passivebranch','fanout') ),
+        ]
+
+class BranchPlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.isBranch()
+    props = [
+lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanout'), eq, c(2) ),
+        ]
+
+class MergePlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    props = [
+lambda n: e( v(n,'total','fanin'), eq, c(2) ),
+lambda n: e( v(n,'total','fanout'), eq, c(1) ),
+        ]
+
+class PassThrough(NodeClass):
+    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
+
+class ForkTransition(NodeClass):
+    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
+    props = [
+lambda n: e( v(n,'total','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanout'), eq, c(2) ),
+        ]
+
+class JoinTransition(NodeClass):
+    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    props = [
+lambda n: e( v(n,'total','fanin'), eq, c(2)),
+lambda n: e( v(n,'total','fanout'), eq, c(1)),
+        ]
 
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
