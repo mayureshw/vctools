@@ -18,6 +18,44 @@ class Arc:
         self.__dict__.update(d)
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
+class NodeClass :
+    sign  = lambda : False
+    props = []
+
+class MutexPlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.isMutex()
+    props = [
+('mutex fanout > 0'              , lambda n: n.fanout('mutex') > 0                    ),
+('rev_mutex fanin = mutex fanout', lambda n: n.fanin('rev_mutex') == n.fanout('mutex')),
+('petri fanin = mutex fanout'    , lambda n: n.fanin('petri') == n.fanout('mutex')    ),
+('all fanin = mutex fanout * 2'  , lambda n: n.fanin('all') == n.fanout('mutex') * 2  ),
+('all fanout = mutex fanout'     , lambda n: n.fanout('all') == n.fanout('mutex')     ),
+        ]
+
+class PassiveBranchPlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
+    props = [
+('passivebranch fanout > 0'                      , lambda n: n.fanout('passivebranch') > 0                            ),
+('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')),
+('petri fanin = 1'                               , lambda n: n.fanin('petri') == 1                                    ),
+('all fanin = passivebranch fanout + 1'          , lambda n: n.fanin('all') == n.fanout('passivebranch') + 1          ),
+('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')             ),
+        ]
+
+class BranchPlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.isBranch()
+    props = [
+('passivebranch fanout > 0'                      , lambda n: n.fanout('passivebranch') > 0                            ),
+('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')),
+('petri fanin = 1'                               , lambda n: n.fanin('petri') == 1                                    ),
+('all fanin = passivebranch fanout + 1'          , lambda n: n.fanin('all') == n.fanout('passivebranch') + 1          ),
+('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')             ),
+        ]
+
+class PassThrough(NodeClass):
+    sign  = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and \
+        n.fanin('petri') == 1 and n.fanout('petri') == 1
+
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
     def isPlace(self): return False
@@ -36,7 +74,7 @@ class Node:
         self.iarcs['all'] += [arc]
     def nodeinfo(self): return str({
         #**{'nodeid' : self.nodeid},
-        **{ 'typ' : self.nodeType(), 'clss' : self.clss },
+        **{ 'typ' : self.nodeType() },
         **{
         rel : ( self.fanin(rel), self.fanout(rel) )
         for rel in self.arcrels
@@ -44,48 +82,23 @@ class Node:
     def processValidations(self,vs):
         for msg,valf in vs:
             if valf(): print(msg, self.nodeinfo(), '\n')
-    def validateClass(self):
-        # vs1: General validation set
-        vs1 = [
-            ('No classification', lambda:\
-                len(self.clss) == 0
-                ),
-            ('Multi classification', lambda:\
-                len(self.clss) > 1
-                ),
-            ('INFO', lambda:\
-                len(self.clss) == 1
-                ),
-            ]
-        self.processValidations(vs1)
-
-        # vs2: class specific validation set
-        vs2 = {
-        'mutexplace' : [
-            ('InvalidMutexPlace', lambda:\
-                self.fanout('mutex') < 1 or \
-                self.fanin('rev_mutex') != self.fanout('mutex') or \
-                self.fanin('petri') != self.fanout('mutex')
-                ),
-            ]
-            }
-        if len(self.clss) == 1:
-            cls = self.clss[0]
-            if cls in vs2: self.processValidations(vs2[cls])
-
     def classify(self):
-        dt = [
-            ('passthrough', lambda:\
-                self.fanin('all') == 1 and self.fanout('all') == 1 and \
-                self.fanin('petri') == 1 and self.fanout('petri') == 1
-                ),
-            ('mutexplace', lambda:\
-                self.isPlace() and self.isMutex()
-                ),
-            ]
-        self.clss = []
-        for (cls,cond) in dt:
-            if cond() : self.clss += [cls]
+        self.nodeclass = None
+        clss = list( nc for nc in NodeClass.__subclasses__() if nc.sign(self) )
+        if len(clss) > 1:
+            print('MultiClassification',clss,self.nodeinfo())
+            return
+        elif len(clss) == 0:
+            print('NoClassification',self.nodeinfo())
+            return
+        nodeclass = clss[0]
+        self.classname = nodeclass.__name__
+        propvios = [ msg for msg,propfn in nodeclass.props if not propfn(self) ]
+        if len(propvios) > 0 :
+            for p in propvios:
+                print('PROPVIO',self.classname,p,self.nodeinfo())
+        else:
+            print('CLASSOK',self.classname,self.nodeinfo())
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         self.oarcs = { r:[] for r in self.arcrels }
