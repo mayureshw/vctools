@@ -32,9 +32,10 @@ class c(NodePropExpr):
     def __init__(self,c): self.val = c
 
 class v(NodePropExpr):
-    def eval(self) : return node.fanin(self.rel) if fantype == 'fanin' else node.fanout(self.rel)
+    def eval(self) : return self.node.fanin(self.rel) if fantype == 'fanin' else self.node.fanout(self.rel)
     def __str__(self) : return self.rel + '-' + self.fantype
     def __init__(self,node,rel,fantype):
+        self.node = node
         self.rel = rel
         self.fantype = fantype
 
@@ -54,18 +55,34 @@ class e(NodePropExpr):
         self.op = op
         self.e2 = e2
 
+class f(NodePropExpr):
+    def eval(self) : return n.getattr(self.f)()
+    def __str__(self) : return self.f
+    def __init__(self,node,f):
+        self.node = node
+        self.f = f
+
 class NodeClass :
-    sign  = lambda : False
+    sign  = []
     props = []
+    @classmethod
+    def checkSign(cls,o): return all( s(o) for s in cls.sign )
     @classmethod
     def printProps(cls):
         for nodecls in cls.__subclasses__():
             print(nodecls.__name__,':')
+            print('\t','Signature:')
+            for s in nodecls.sign:
+                print('\t\t',s(None))
+            print('\t','Properties:')
             for propfn in nodecls.props:
-                print(propfn(None))
+                print('\t\t',propfn(None))
 
 class MutexPlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.isMutex()
+    sign = [
+lambda n: f(n,'isPlace'),
+lambda n: f(n,'isMutex'),
+        ]
     props = [
 lambda n: e( v(n,'rev_mutex','fanin'), eq, v(n,'mutex','fanout') ),
 lambda n: e( v(n,'petri','fanin'),     eq, v(n,'mutex','fanout') ),
@@ -74,7 +91,10 @@ lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
         ]
 
 class PassiveBranchPlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
+    sign  = [
+lambda n: f(n,'isPlace'),
+lambda n: f(n,'isPassiveBranch'),
+        ]
     props = [
 lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
 lambda n: e( v(n,'total','fanin'), eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
@@ -82,7 +102,10 @@ lambda n: e( v(n,'total','fanout'), eq, v(n,'passivebranch','fanout') ),
         ]
 
 class BranchPlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.isBranch()
+    sign  = [
+lambda n: f(n,'isPlace'),
+lambda n: f(n,'isBranch'),
+        ]
     props = [
 lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
 lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
@@ -91,24 +114,41 @@ lambda n: e( v(n,'total','fanout'), eq, c(2) ),
         ]
 
 class MergePlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    sign  = [
+lambda n: f(n,'isPlace'),
+lambda n: e( v(n,'petri','fanin'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
+        ]
     props = [
 lambda n: e( v(n,'total','fanin'), eq, c(2) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
         ]
 
 class PassThrough(NodeClass):
-    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
+    sign = [
+lambda n: e( v(n,'total','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanout'), eq, c(1) ),
+lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
+lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
+        ]
 
 class ForkTransition(NodeClass):
-    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
+    sign  = [
+lambda n: f(n,'isTransition'),
+lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
+lambda n: e( v(n,'petri','fanout'), eq, c(2) ),
+        ]
     props = [
 lambda n: e( v(n,'total','fanin'), eq, c(1) ),
 lambda n: e( v(n,'total','fanout'), eq, c(2) ),
         ]
 
 class JoinTransition(NodeClass):
-    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    sign  = [
+lambda n: f(n,'isTransition'),
+lambda n: e( v(n,'petri','fanin'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
+        ]
     props = [
 lambda n: e( v(n,'total','fanin'), eq, c(2)),
 lambda n: e( v(n,'total','fanout'), eq, c(1)),
@@ -143,7 +183,7 @@ class Node:
         for msg,valf in vs:
             if valf(): print(msg, self.nodeinfo(), '\n')
     def classify(self):
-        clss = list( nc for nc in NodeClass.__subclasses__() if nc.sign(self) )
+        clss = list( nc for nc in NodeClass.__subclasses__() if NodeClass.checkSign(self) )
         if len(clss) > 1:
             print('MultiClassification',clss,self.nodeinfo())
             return
