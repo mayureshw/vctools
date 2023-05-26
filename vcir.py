@@ -289,6 +289,11 @@ class Vcir:
         highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
         for a in highWtArcs:
             print('High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
+    def confusionNotSupported(self):
+        jointrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 1 ]
+        confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.fanout('petri') > 1 ]
+        for p,t in confpairs:
+            print('Cofusion scenarion not supported',p.nodeid,p.label,t.nodeid,t.label)
     def checksNotAutomated(self):
         print('Do run simulator with PN_PLACE_CAPACITY_EXCEPTION enabled. It is not checked by this tool.')
         print('Do ensure, successors of passive branch are mutually exclusive. It is not checked, as it requires analysis such as unfoldings.')
@@ -300,6 +305,7 @@ class Vcir:
         self.branchFanout()
         self.highCapacityNotSupported()
         self.arcWtNotSupported()
+        self.confusionNotSupported()
     def checkFilExists(self,flnm):
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
