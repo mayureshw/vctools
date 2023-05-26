@@ -52,8 +52,15 @@ class BranchPlace(NodeClass):
 ('all fanout = 2'   , lambda n: n.fanout('all') == 2   ),
         ]
 
+class MergePlace(NodeClass):
+    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    props = [
+('all fanin = 2' , lambda n: n.fanin('all') == 2 ),
+('all fanout = 1', lambda n: n.fanout('all') == 1),
+        ]
+
 class PassThrough(NodeClass):
-    sign = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
+    sign  = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
 
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
