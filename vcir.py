@@ -62,6 +62,20 @@ class MergePlace(NodeClass):
 class PassThrough(NodeClass):
     sign  = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
 
+class ForkTransition(NodeClass):
+    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
+    props = [
+('all fanin = 1' , lambda n: n.fanin('all') == 1 ),
+('all fanout = 2', lambda n: n.fanout('all') == 2),
+        ]
+
+class JoinTransition(NodeClass):
+    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+    props = [
+('all fanin = 2' , lambda n: n.fanin('all') == 2 ),
+('all fanout = 1', lambda n: n.fanout('all') == 1),
+        ]
+
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
     def nodeClass(self): return self.classname
