@@ -19,6 +19,7 @@ class Arc:
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
 class Node:
+    arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
     def isPlace(self): return False
     def isTransition(self): return False
     def fanin(self,rel): return len(self.iarcs[rel])
@@ -33,11 +34,62 @@ class Node:
         arc.tgtpos = len(self.iarcs[arc.rel])
         self.iarcs[arc.rel] += [arc]
         self.iarcs['all'] += [arc]
+    def nodeinfo(self): return str({
+        #**{'nodeid' : self.nodeid},
+        **{ 'typ' : self.nodeType(), 'clss' : self.clss },
+        **{
+        rel : ( self.fanin(rel), self.fanout(rel) )
+        for rel in self.arcrels
+        }})
+    def processValidations(self,vs):
+        for msg,valf in vs:
+            if valf(): print(msg, self.nodeinfo(), '\n')
+    def validateClass(self):
+        # vs1: General validation set
+        vs1 = [
+            ('No classification', lambda:\
+                len(self.clss) == 0
+                ),
+            ('Multi classification', lambda:\
+                len(self.clss) > 1
+                ),
+            ('INFO', lambda:\
+                len(self.clss) == 1
+                ),
+            ]
+        self.processValidations(vs1)
+
+        # vs2: class specific validation set
+        vs2 = {
+        'mutexplace' : [
+            ('InvalidMutexPlace', lambda:\
+                self.fanout('mutex') < 1 or \
+                self.fanin('rev_mutex') != self.fanout('mutex') or \
+                self.fanin('petri') != self.fanout('mutex')
+                ),
+            ]
+            }
+        if len(self.clss) == 1:
+            cls = self.clss[0]
+            if cls in vs2: self.processValidations(vs2[cls])
+
+    def classify(self):
+        dt = [
+            ('passthrough', lambda:\
+                self.fanin('all') == 1 and self.fanout('all') == 1 and \
+                self.fanin('petri') == 1 and self.fanout('petri') == 1
+                ),
+            ('mutexplace', lambda:\
+                self.isPlace() and self.isMutex()
+                ),
+            ]
+        self.clss = []
+        for (cls,cond) in dt:
+            if cond() : self.clss += [cls]
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
-        arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
-        self.oarcs = { r:[] for r in arcrels }
-        self.iarcs = { r:[] for r in arcrels }
+        self.oarcs = { r:[] for r in self.arcrels }
+        self.iarcs = { r:[] for r in self.arcrels }
         self.nodeid = nodeid
         self.__dict__.update(props)
 
