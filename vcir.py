@@ -32,7 +32,7 @@ class c(NodePropExpr):
     def __init__(self,c): self.val = c
 
 class v(NodePropExpr):
-    def eval(self) : return self.node.fanin(self.rel) if fantype == 'fanin' else self.node.fanout(self.rel)
+    def eval(self) : return self.node.fanin(self.rel) if self.fantype == 'fanin' else self.node.fanout(self.rel)
     def __str__(self) : return self.rel + '-' + self.fantype
     def __init__(self,node,rel,fantype):
         self.node = node
@@ -56,17 +56,16 @@ class e(NodePropExpr):
         self.e2 = e2
 
 class f(NodePropExpr):
-    def eval(self) : return n.getattr(self.f)()
+    def eval(self) : return getattr(self.node,self.f)()
     def __str__(self) : return self.f
     def __init__(self,node,f):
         self.node = node
         self.f = f
 
 class NodeClass :
-    sign  = []
     props = []
     @classmethod
-    def checkSign(cls,o): return all( s(o) for s in cls.sign )
+    def checkSign(cls,o): return all( s(o).eval() for s in cls.sign )
     @classmethod
     def printProps(cls):
         for nodecls in cls.__subclasses__():
@@ -183,7 +182,7 @@ class Node:
         for msg,valf in vs:
             if valf(): print(msg, self.nodeinfo(), '\n')
     def classify(self):
-        clss = list( nc for nc in NodeClass.__subclasses__() if NodeClass.checkSign(self) )
+        clss = list( nc for nc in NodeClass.__subclasses__() if nc.checkSign(self) )
         if len(clss) > 1:
             print('MultiClassification',clss,self.nodeinfo())
             return
