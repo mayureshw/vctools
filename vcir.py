@@ -1,4 +1,5 @@
 import sys, json, os
+from operator import gt, eq, and_
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -23,7 +24,32 @@ class Arc:
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
 # Purpose of making NodeProp is to make sure that the property and its message always remain in sync
-class NodeProp: pass
+class NodePropExpr:
+    def eval(self) : return self.val
+
+class _c(NodePropExpr):
+    def __str__(self) : return str(self.val)
+    def __init__(self,c): self.val = c
+
+class _v(NodePropExpr):
+    def __str__(self) : self.rel + '-' + self.fantype
+    def __init__(self,node,rel,fantype):
+        self.rel = rel
+        self.fantype = fantype
+        self.val = node.fanin(rel) if fantype == 'fanin' else node.fanout(rel)
+
+class _e(NodePropExpr):
+    oplabel = {
+        gt   : '>',
+        eq   : '=',
+        and_ : 'and',
+        }
+    def __str__(self) : return '( ' + str(self.e1) + ' ' + self.oplabel[self.op] + ' ' + str(self.e2) + ' )'
+    def __init__(self,e1,op,e2):
+        self.e1 = e1
+        self.op = op
+        self.e2 = e2
+        self.val = op(e1.eval(),e2.eval())
 
 class NodeClass :
     sign  = lambda : False
