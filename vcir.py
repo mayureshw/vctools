@@ -1,5 +1,9 @@
 import sys, json, os
 
+# Note:
+#  - nodeType: Broad classification into just Place and Transition
+#  - nodeClass: Further classification based on fanin-fanout structure of a node
+
 class Arc:
     def reversedArc(self): return Arc({
         'srcnode'   : self.tgtnode,
@@ -25,7 +29,6 @@ class NodeClass :
 class MutexPlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.isMutex()
     props = [
-('mutex fanout > 0'              , lambda n: n.fanout('mutex') > 0                    ),
 ('rev_mutex fanin = mutex fanout', lambda n: n.fanin('rev_mutex') == n.fanout('mutex')),
 ('petri fanin = mutex fanout'    , lambda n: n.fanin('petri') == n.fanout('mutex')    ),
 ('all fanin = mutex fanout * 2'  , lambda n: n.fanin('all') == n.fanout('mutex') * 2  ),
@@ -35,29 +38,26 @@ class MutexPlace(NodeClass):
 class PassiveBranchPlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.isPassiveBranch()
     props = [
-('passivebranch fanout > 0'                      , lambda n: n.fanout('passivebranch') > 0                            ),
-('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')),
-('petri fanin = 1'                               , lambda n: n.fanin('petri') == 1                                    ),
-('all fanin = passivebranch fanout + 1'          , lambda n: n.fanin('all') == n.fanout('passivebranch') + 1          ),
-('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')             ),
+('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')     ),
+('all fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('all') == n.fanout('passivebranch') + n.fanin('petri')),
+('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')                  ),
         ]
 
 class BranchPlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.isBranch()
     props = [
-('passivebranch fanout > 0'                      , lambda n: n.fanout('passivebranch') > 0                            ),
-('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')),
-('petri fanin = 1'                               , lambda n: n.fanin('petri') == 1                                    ),
-('all fanin = passivebranch fanout + 1'          , lambda n: n.fanin('all') == n.fanout('passivebranch') + 1          ),
-('all fanout = passivebranch fanout'             , lambda n: n.fanout('all') == n.fanout('passivebranch')             ),
+('branch fanout = 2', lambda n: n.fanout('branch') == 2),
+('petri fanin = 1'  , lambda n: n.fanin('petri') == 1  ),
+('all fanin = 1'    , lambda n: n.fanin('all') == 1    ),
+('all fanout = 2'   , lambda n: n.fanout('all') == 2   ),
         ]
 
 class PassThrough(NodeClass):
-    sign  = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and \
-        n.fanin('petri') == 1 and n.fanout('petri') == 1
+    sign = lambda n : n.fanin('all') == 1 and n.fanout('all') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
 
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'all', 'rev_mutex', 'rev_passivebranch' ]
+    def nodeClass(self): return self.classname
     def isPlace(self): return False
     def isTransition(self): return False
     def fanin(self,rel): return len(self.iarcs[rel])
@@ -73,17 +73,17 @@ class Node:
         self.iarcs[arc.rel] += [arc]
         self.iarcs['all'] += [arc]
     def nodeinfo(self): return str({
-        #**{'nodeid' : self.nodeid},
-        **{ 'typ' : self.nodeType() },
         **{
         rel : ( self.fanin(rel), self.fanout(rel) )
-        for rel in self.arcrels
-        }})
+        for rel in self.arcrels if self.fanin(rel) > 0 or self.fanout(rel) > 0
+        },
+        **{'nodeid' : self.nodeid},
+        **{ 'typ' : self.nodeType() },
+        })
     def processValidations(self,vs):
         for msg,valf in vs:
             if valf(): print(msg, self.nodeinfo(), '\n')
     def classify(self):
-        self.nodeclass = None
         clss = list( nc for nc in NodeClass.__subclasses__() if nc.sign(self) )
         if len(clss) > 1:
             print('MultiClassification',clss,self.nodeinfo())
@@ -104,6 +104,7 @@ class Node:
         self.oarcs = { r:[] for r in self.arcrels }
         self.iarcs = { r:[] for r in self.arcrels }
         self.nodeid = nodeid
+        self.classname = None # set by classify
         self.__dict__.update(props)
 
 class Transition(Node):
