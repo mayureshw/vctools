@@ -1,5 +1,5 @@
 import sys, json, os
-from operator import gt, eq, and_
+from operator import gt, eq, and_, mul, ne
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -27,22 +27,24 @@ class Arc:
 class NodePropExpr:
     def eval(self) : return self.val
 
-class _c(NodePropExpr):
+class c(NodePropExpr):
     def __str__(self) : return str(self.val)
     def __init__(self,c): self.val = c
 
-class _v(NodePropExpr):
-    def __str__(self) : self.rel + '-' + self.fantype
+class v(NodePropExpr):
+    def __str__(self) : return self.rel + '-' + self.fantype
     def __init__(self,node,rel,fantype):
         self.rel = rel
         self.fantype = fantype
         self.val = node.fanin(rel) if fantype == 'fanin' else node.fanout(rel)
 
-class _e(NodePropExpr):
+class e(NodePropExpr):
     oplabel = {
         gt   : '>',
         eq   : '=',
+        ne   : '!=',
         and_ : 'and',
+        mul  : '*',
         }
     def __str__(self) : return '( ' + str(self.e1) + ' ' + self.oplabel[self.op] + ' ' + str(self.e2) + ' )'
     def __init__(self,e1,op,e2):
@@ -58,52 +60,52 @@ class NodeClass :
 class MutexPlace(NodeClass):
     sign  = lambda n : n.isPlace() and n.isMutex()
     props = [
-('rev_mutex fanin = mutex fanout', lambda n: n.fanin('rev_mutex') == n.fanout('mutex')),
-('petri fanin = mutex fanout'    , lambda n: n.fanin('petri') == n.fanout('mutex')    ),
-('total fanin = mutex fanout * 2'  , lambda n: n.fanin('total') == n.fanout('mutex') * 2  ),
-('total fanout = mutex fanout'     , lambda n: n.fanout('total') == n.fanout('mutex')     ),
+lambda n: e( v(n,'rev_mutex','fanin'), eq, v(n,'mutex','fanout') ),
+lambda n: e( v(n,'petri','fanin'),     eq, v(n,'mutex','fanout') ),
+lambda n: e( v(n,'total','fanin'),     eq, e( v(n,'mutex','fanout'), mul, c(2) ) ),
+lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
         ]
 
-class PassiveBranchPlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
-    props = [
-('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')     ),
-('total fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('total') == n.fanout('passivebranch') + n.fanin('petri')),
-('total fanout = passivebranch fanout'             , lambda n: n.fanout('total') == n.fanout('passivebranch')                  ),
-        ]
-
-class BranchPlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.isBranch()
-    props = [
-('branch fanout = 2', lambda n: n.fanout('branch') == 2),
-('petri fanin = 1'  , lambda n: n.fanin('petri') == 1  ),
-('total fanin = 1'    , lambda n: n.fanin('total') == 1    ),
-('total fanout = 2'   , lambda n: n.fanout('total') == 2   ),
-        ]
-
-class MergePlace(NodeClass):
-    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
-    props = [
-('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
-('total fanout = 1', lambda n: n.fanout('total') == 1),
-        ]
-
-class PassThrough(NodeClass):
-    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
-
-class ForkTransition(NodeClass):
-    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
-    props = [
-('total fanin = 1' , lambda n: n.fanin('total') == 1 ),
-('total fanout = 2', lambda n: n.fanout('total') == 2),
-        ]
-
-class JoinTransition(NodeClass):
-    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
-    props = [
-('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
-('total fanout = 1', lambda n: n.fanout('total') == 1),
-        ]
+#class PassiveBranchPlace(NodeClass):
+#    sign  = lambda n : n.isPlace() and n.isPassiveBranch()
+#    props = [
+#('rev_passivebranch fanin = passivebranch fanout', lambda n: n.fanin('rev_passivebranch') == n.fanout('passivebranch')     ),
+#('total fanin = passivebranch fanout + petri fanin', lambda n: n.fanin('total') == n.fanout('passivebranch') + n.fanin('petri')),
+#('total fanout = passivebranch fanout'             , lambda n: n.fanout('total') == n.fanout('passivebranch')                  ),
+#        ]
+#
+#class BranchPlace(NodeClass):
+#    sign  = lambda n : n.isPlace() and n.isBranch()
+#    props = [
+#('branch fanout = 2', lambda n: n.fanout('branch') == 2),
+#('petri fanin = 1'  , lambda n: n.fanin('petri') == 1  ),
+#('total fanin = 1'    , lambda n: n.fanin('total') == 1    ),
+#('total fanout = 2'   , lambda n: n.fanout('total') == 2   ),
+#        ]
+#
+#class MergePlace(NodeClass):
+#    sign  = lambda n : n.isPlace() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+#    props = [
+#('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
+#('total fanout = 1', lambda n: n.fanout('total') == 1),
+#        ]
+#
+#class PassThrough(NodeClass):
+#    sign  = lambda n : n.fanin('total') == 1 and n.fanout('total') == 1 and n.fanin('petri') == 1 and n.fanout('petri') == 1
+#
+#class ForkTransition(NodeClass):
+#    sign  = lambda n : n.isTransition() and n.fanin('petri') == 1 and n.fanout('petri') == 2
+#    props = [
+#('total fanin = 1' , lambda n: n.fanin('total') == 1 ),
+#('total fanout = 2', lambda n: n.fanout('total') == 2),
+#        ]
+#
+#class JoinTransition(NodeClass):
+#    sign  = lambda n : n.isTransition() and n.fanin('petri') == 2 and n.fanout('petri') == 1
+#    props = [
+#('total fanin = 2' , lambda n: n.fanin('total') == 2 ),
+#('total fanout = 1', lambda n: n.fanout('total') == 1),
+#        ]
 
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
@@ -143,7 +145,7 @@ class Node:
             return
         nodeclass = clss[0]
         self.classname = nodeclass.__name__
-        propvios = [ msg for msg,propfn in nodeclass.props if not propfn(self) ]
+        propvios = [ str(propfn) for prop in nodeclass.props for propfn in [prop(self)] if not propfn.eval() ]
         if len(propvios) > 0 :
             for p in propvios:
                 print('PROPVIO',self.classname,p,self.nodeinfo())
