@@ -16,7 +16,7 @@ class Arc:
         'petri'
     def __init__(self,d):
         self.__dict__.update(d)
-        self.rel = self.inferRel()
+        if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
 class Node:
     def isPlace(self): return False
