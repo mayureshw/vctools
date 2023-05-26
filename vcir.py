@@ -97,8 +97,8 @@ lambda n: f(n,'isPassiveBranch'),
         ]
     props = [
 lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
-lambda n: e( v(n,'total','fanin'), eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
-lambda n: e( v(n,'total','fanout'), eq, v(n,'passivebranch','fanout') ),
+lambda n: e( v(n,'total','fanin'),             eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
+lambda n: e( v(n,'total','fanout'),            eq, v(n,'passivebranch','fanout') ),
         ]
 
 class BranchPlace(NodeClass):
@@ -108,49 +108,49 @@ lambda n: f(n,'isBranch'),
         ]
     props = [
 lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
-lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
-lambda n: e( v(n,'total','fanin'), eq, c(1) ),
-lambda n: e( v(n,'total','fanout'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanin'),   eq, c(1) ),
+lambda n: e( v(n,'total','fanin'),   eq, c(1) ),
+lambda n: e( v(n,'total','fanout'),  eq, c(2) ),
         ]
 
 class MergePlace(NodeClass):
     sign  = [
 lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'petri','fanin'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
         ]
     props = [
-lambda n: e( v(n,'total','fanin'), eq, c(2) ),
+lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
         ]
 
 class PassThrough(NodeClass):
     sign = [
-lambda n: e( v(n,'total','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
-lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
+lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
         ]
 
 class ForkTransition(NodeClass):
     sign  = [
 lambda n: f(n,'isTransition'),
-lambda n: e( v(n,'petri','fanin'), eq, c(1) ),
+lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(2) ),
         ]
     props = [
-lambda n: e( v(n,'total','fanin'), eq, c(1) ),
+lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'total','fanout'), eq, c(2) ),
         ]
 
 class JoinTransition(NodeClass):
     sign  = [
 lambda n: f(n,'isTransition'),
-lambda n: e( v(n,'petri','fanin'), eq, c(2) ),
+lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
         ]
     props = [
-lambda n: e( v(n,'total','fanin'), eq, c(2)),
+lambda n: e( v(n,'total','fanin'),  eq, c(2)),
 lambda n: e( v(n,'total','fanout'), eq, c(1)),
         ]
 
