@@ -1,5 +1,5 @@
 import sys, json, os
-from operator import gt, le, eq, ne, and_, mul, add
+from operator import gt, le, eq, ne, and_, or_, mul, add
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -46,6 +46,7 @@ class e(NodePropExpr):
         eq   : '=',
         ne   : '!=',
         and_ : 'and',
+        or_  : 'or',
         mul  : '*',
         add  : '+',
         }
@@ -144,6 +145,7 @@ lambda n: e( v(n,'mutex','fanout'), eq, c(0) ),
 lambda n: e( v(n,'passivebranch','fanin'), eq, v(n,'rev_passivebranch','fanout') ),
 lambda n: e( v(n,'passivebranch','fanout'), eq, c(0) ),
 lambda n: e( v(n,'branch','fanin'), le, c(1) ),
+lambda n: e( e( v(n,'branch','fanin'), eq, c(0) ), or_, e( v(n,'total','fanin') ,eq, c(1) ) ),
 lambda n: e( v(n,'branch','fanout'), eq, c(0) ),
 lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl layer
         ]
