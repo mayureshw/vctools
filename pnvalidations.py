@@ -9,4 +9,3 @@ if len(sys.argv) != 2 :
 
 stem = sys.argv[1]
 vcir = Vcir(stem)
-vcir.validate()

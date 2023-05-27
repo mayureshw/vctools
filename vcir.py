@@ -1,5 +1,5 @@
 import sys, json, os
-from operator import gt, eq, ne, and_, mul, add
+from operator import gt, le, eq, ne, and_, mul, add
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -42,6 +42,7 @@ class v(NodePropExpr):
 class e(NodePropExpr):
     oplabel = {
         gt   : '>',
+        le   : '<=',
         eq   : '=',
         ne   : '!=',
         and_ : 'and',
@@ -123,34 +124,28 @@ lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
         ]
 
-class PassThrough(NodeClass):
+class PassThroughPlace(NodeClass):
     sign = [
+lambda n: f(n,'isPlace'),
 lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
 lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
         ]
 
-class ForkTransition(NodeClass):
-    sign  = [
-lambda n: f(n,'isTransition'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(2) ),
+class MiscTransition(NodeClass):
+    sign = [
+lambda n: f(n,'isTransition')
         ]
     props = [
-lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'total','fanout'), eq, c(2) ),
-        ]
-
-class JoinTransition(NodeClass):
-    sign  = [
-lambda n: f(n,'isTransition'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-        ]
-    props = [
-lambda n: e( v(n,'total','fanin'),  eq, c(2)),
-lambda n: e( v(n,'total','fanout'), eq, c(1)),
+lambda n: e( v(n,'mutex','fanin'), le, c(1) ),
+lambda n: e( v(n,'mutex','fanin'), eq, v(n,'rev_mutex','fanout') ),
+lambda n: e( v(n,'mutex','fanout'), eq, c(0) ),
+lambda n: e( v(n,'passivebranch','fanin'), eq, v(n,'rev_passivebranch','fanout') ),
+lambda n: e( v(n,'passivebranch','fanout'), eq, c(0) ),
+lambda n: e( v(n,'branch','fanin'), le, c(1) ),
+lambda n: e( v(n,'branch','fanout'), eq, c(0) ),
+lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl layer
         ]
 
 class Node:
@@ -195,8 +190,7 @@ class Node:
         if len(propvios) > 0 :
             for p in propvios:
                 print('PROPVIO',self.classname,p,self.nodeinfo())
-        else:
-            print('CLASSOK',self.classname,self.nodeinfo())
+        # else: print('CLASSOK',self.classname,self.nodeinfo())
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         self.oarcs = { r:[] for r in self.arcrels }
@@ -248,61 +242,40 @@ class VcPetriNet:
                 revarc = arcobj.reversedArc()
                 srcnode.addIarc(revarc)
                 tgtnode.addOarc(revarc)
+        for node in self.nodes.values(): node.classify()
 
 class Vcir:
-    def mutexFanInOuts(self):
-        mutexplaces = [ self.pn.nodes[mutex] for mutex in self.mutexes ]
-        for p in mutexplaces:
-            if p.fanin('total') != p.fanout('total'):
-                print('fanin',p.fanin('total'),'fanout',p.fanout('total'),'mismatch for mutex place',p.nodeid,p.label)
     def branchPlaceType(self):
         resolved_branches = self.mutexes.union(self.passive_branches).union(self.branches)
         branchplaces = [ p for p in self.pn.places.values() if p.fanout('total') > 1 ]
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
-                print('unresolved branch place:',p.nodeid,p.label)
-    def atMostOneMutex(self):
-        mutexControlled = { s for m in self.mutexes for s in self.pn.nodes[m].successors('mutex') }
-        for mc in mutexControlled:
-            controllingMutexCnt = len(list(p for p in mc.predecessors('mutex')))
-            if controllingMutexCnt > 1 :
-                print('Transition may be controlled by at most 1 mutexes',mc.nodeid,mc.label,controllingMutexCnt)
+                print('ERROR: unresolved branch place:',p.nodeid,p.label)
+    # TODO: When supported, we might make HighCapacityPlace a class and move this validation there
     def highCapacityMustBePassive(self):
         highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
             if not p.isPassiveBranch():
-                print('Places with capacity > 1 must be passive branches',p.nodeid,p.label)
-    def joinCapacity(self):
-        highJoinTrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 4 ]
-        for t in highJoinTrns:
-            print('Joins up to fanin 4 supported (as of now)',t.nodeid,t.label,t.fanin('petri'))
-    def branchFanout(self):
-        branchplaces = [ self.pn.places[p] for p in self.branches ]
-        for p in branchplaces:
-            if p.fanout('branch') != 2 :
-                print('Branch fanout must be 2',p.nodeid,p.label,p.fanout('branch'))
+                print('ERROR: Places with capacity > 1 must be passive branches',p.nodeid,p.label)
     def highCapacityNotSupported(self):
         highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
-            print('High capacity places not supported in asyncvhdl as of now',p.nodeid,p.label,p.capacity)
+            print('ERROR: High capacity places not supported in asyncvhdl as of now',p.nodeid,p.label,p.capacity)
     def arcWtNotSupported(self):
         highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
         for a in highWtArcs:
-            print('High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
+            print('ERROR: High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
     def confusionNotSupported(self):
         jointrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 1 ]
         confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.fanout('petri') > 1 ]
         for p,t in confpairs:
-            print('Cofusion scenarion not supported',p.nodeid,p.label,t.nodeid,t.label)
+            print('ERROR: Cofusion scenarion not supported',p.nodeid,p.label,t.nodeid,t.label)
     def checksNotAutomated(self):
-        print('Do run simulator with PN_PLACE_CAPACITY_EXCEPTION enabled. It is not checked by this tool.')
-        print('Do ensure, successors of passive branch are mutually exclusive. It is not checked, as it requires analysis such as unfoldings.')
+        print('ERROR: Do run simulator with PN_PLACE_CAPACITY_EXCEPTION enabled. It is not checked by this tool.')
+        print('ERROR: Do ensure, successors of passive branch are mutually exclusive. It is not checked, as it requires analysis such as unfoldings.')
     def validate(self):
-        self.mutexFanInOuts()
         self.branchPlaceType()
-        self.atMostOneMutex()
         self.highCapacityMustBePassive()
-        self.branchFanout()
         self.highCapacityNotSupported()
         self.arcWtNotSupported()
         self.confusionNotSupported()
@@ -321,3 +294,4 @@ class Vcir:
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
         self.pn = VcPetriNet(pnobj,self)
+        self.validate()
