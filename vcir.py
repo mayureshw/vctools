@@ -1,5 +1,7 @@
 import sys, json, os
 from operator import gt, le, eq, ne, and_, or_, mul, add
+from vcnodeclasses import *
+from vcnodeprops import *
 
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
@@ -22,133 +24,6 @@ class Arc:
     def __init__(self,d):
         self.__dict__.update(d)
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
-
-# Purpose of making NodeProp is to make sure that the property and its message always remain in sync
-class NodePropExpr: pass
-
-class c(NodePropExpr):
-    def eval(self) : return self.val
-    def __str__(self) : return str(self.val)
-    def __init__(self,c): self.val = c
-
-class v(NodePropExpr):
-    def eval(self) : return self.node.fanin(self.rel) if self.fantype == 'fanin' else self.node.fanout(self.rel)
-    def __str__(self) : return self.rel + '-' + self.fantype
-    def __init__(self,node,rel,fantype):
-        self.node = node
-        self.rel = rel
-        self.fantype = fantype
-
-class e(NodePropExpr):
-    oplabel = {
-        gt   : '>',
-        le   : '<=',
-        eq   : '=',
-        ne   : '!=',
-        and_ : 'and',
-        or_  : 'or',
-        mul  : '*',
-        add  : '+',
-        }
-    def eval(self) : return self.op(self.e1.eval(),self.e2.eval())
-    def __str__(self) : return '( ' + str(self.e1) + ' ' + self.oplabel[self.op] + ' ' + str(self.e2) + ' )'
-    def __init__(self,e1,op,e2):
-        self.e1 = e1
-        self.op = op
-        self.e2 = e2
-
-class f(NodePropExpr):
-    def eval(self) : return getattr(self.node,self.f)()
-    def __str__(self) : return self.f
-    def __init__(self,node,f):
-        self.node = node
-        self.f = f
-
-class NodeClass :
-    props = []
-    @classmethod
-    def checkSign(cls,o): return all( s(o).eval() for s in cls.sign )
-    @classmethod
-    def printProps(cls):
-        for nodecls in cls.__subclasses__():
-            print(nodecls.__name__,':')
-            print('\t','Signature:')
-            for s in nodecls.sign:
-                print('\t\t',s(None))
-            print('\t','Properties:')
-            for propfn in nodecls.props:
-                print('\t\t',propfn(None))
-
-class MutexPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isMutex'),
-        ]
-    props = [
-lambda n: e( v(n,'rev_mutex','fanin'), eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'petri','fanin'),     eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'total','fanin'),     eq, e( v(n,'mutex','fanout'), mul, c(2) ) ),
-lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
-        ]
-
-class PassiveBranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isPassiveBranch'),
-        ]
-    props = [
-lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
-lambda n: e( v(n,'total','fanin'),             eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
-lambda n: e( v(n,'total','fanout'),            eq, v(n,'passivebranch','fanout') ),
-        ]
-
-class BranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isBranch'),
-        ]
-    props = [
-lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
-lambda n: e( v(n,'petri','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanout'),  eq, c(2) ),
-        ]
-
-class MergePlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-        ]
-    props = [
-lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
-        ]
-
-class PassThroughPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
-lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-        ]
-
-class MiscTransition(NodeClass):
-    sign = [
-lambda n: f(n,'isTransition')
-        ]
-    props = [
-lambda n: e( v(n,'mutex','fanin'), le, c(1) ),
-lambda n: e( v(n,'mutex','fanin'), eq, v(n,'rev_mutex','fanout') ),
-lambda n: e( v(n,'mutex','fanout'), eq, c(0) ),
-lambda n: e( v(n,'passivebranch','fanin'), eq, v(n,'rev_passivebranch','fanout') ),
-lambda n: e( v(n,'passivebranch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'branch','fanin'), le, c(1) ),
-lambda n: e( e( v(n,'branch','fanin'), eq, c(0) ), or_, e( v(n,'total','fanin') ,eq, c(1) ) ),
-lambda n: e( v(n,'branch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl layer
-        ]
 
 class Node:
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
