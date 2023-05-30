@@ -86,14 +86,25 @@ public:
     {
         auto simmodule = _sys.getModule(_vcm);
         auto id_key = jf.createJsonAtom<string>("id");
+        auto optyp_key = jf.createJsonAtom<string>("optyp");
+        auto opwidth_key = jf.createJsonAtom<string>("opwidth");
+
         for( auto simdpe : simmodule->getDPEList() )
         {
             auto dpedict = jf.createJsonMap();
             dpelist->push_back(dpedict);
+
             auto dpeid = simdpe->elem()->Get_Root_Index();
             auto id_val  = jf.createJsonAtom<unsigned>(dpeid);
             dpedict->push_back({id_key,id_val});
+
             auto op = simdpe->getOp();
+
+            auto optyp_val = jf.createJsonAtom<string>(op->oplabel());
+            dpedict->push_back({optyp_key,optyp_val});
+
+            auto opwidth_val = jf.createJsonAtom<unsigned>(op->opwidth());
+            dpedict->push_back({opwidth_key,opwidth_val});
         }
     }
     ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)

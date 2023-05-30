@@ -46,6 +46,7 @@ public:
 #endif
     }
     virtual string oplabel()=0;
+    virtual unsigned opwidth() { return 0; }
     vector<DatumBase*> opv;
     // can't mandate some of these functions on all the operators, some are
     // even unique to a single operator, but have to keep them here to save
@@ -96,6 +97,7 @@ protected:
         else return val & this->_mask;
     }
 public:
+    unsigned opwidth() { return op.width(); }
     OperatorT(unsigned width, string label="") : z(width), op(width), Operator(label)
     {
         _resv.push_back(&z);
