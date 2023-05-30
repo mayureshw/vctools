@@ -72,6 +72,13 @@ class ModuleIR
             processDPED(dpet.second);
         }
     }
+    JsonList* pnv2jsonlist(JsonFactory& jf, vector<PNTransition*> pnv)
+    {
+        auto l = jf.createJsonList();
+        for(auto pn:pnv)
+            l->push_back( jf.createJsonAtom<unsigned>(pn->_nodeid) );
+        return l;
+    }
 public:
     void export_prolog(ofstream& pfile)
     {
@@ -88,6 +95,10 @@ public:
         auto id_key = jf.createJsonAtom<string>("id");
         auto optyp_key = jf.createJsonAtom<string>("optyp");
         auto opwidth_key = jf.createJsonAtom<string>("opwidth");
+        auto reqs_key = jf.createJsonAtom<string>("reqs");
+        auto greqs_key = jf.createJsonAtom<string>("greqs");
+        auto acks_key = jf.createJsonAtom<string>("acks");
+        auto gacks_key = jf.createJsonAtom<string>("gacks");
 
         for( auto simdpe : simmodule->getDPEList() )
         {
@@ -105,6 +116,11 @@ public:
 
             auto opwidth_val = jf.createJsonAtom<unsigned>(op->opwidth());
             dpedict->push_back({opwidth_key,opwidth_val});
+
+            dpedict->push_back({ reqs_key, pnv2jsonlist(jf, simdpe->getReqs())});
+            dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
+            dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
+            dpedict->push_back({ gacks_key, pnv2jsonlist(jf, simdpe->getGAcks())});
         }
     }
     ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)

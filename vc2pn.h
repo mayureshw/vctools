@@ -75,6 +75,10 @@ class DPElement : public Element
     void sreq2ack() { buildSreqToAckPath(_reqs[0], _acks[0]); }
 public:
     Operator *getOp() { return _op; }
+    const vector<PNTransition*>& getReqs() { return _reqs; }
+    const vector<PNTransition*>& getAcks() { return _acks; }
+    const vector<PNTransition*>& getGReqs() { return _greqs; }
+    const vector<PNTransition*>& getGAcks() { return _gacks; }
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
     VCtyp _vctyp;
     // buildSreqToAckPath handles various flow through scenarios, hence its
