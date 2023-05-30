@@ -99,6 +99,7 @@ public:
         auto greqs_key = jf.createJsonAtom<string>("greqs");
         auto acks_key = jf.createJsonAtom<string>("acks");
         auto gacks_key = jf.createJsonAtom<string>("gacks");
+        auto inputs_key = jf.createJsonAtom<string>("inputs");
 
         for( auto simdpe : simmodule->getDPEList() )
         {
@@ -121,6 +122,17 @@ public:
             dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
             dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
             dpedict->push_back({ gacks_key, pnv2jsonlist(jf, simdpe->getGAcks())});
+
+            auto inputsdict = jf.createJsonMap();
+            dpedict->push_back({ inputs_key, inputsdict});
+            auto iws = simdpe->elem()->Get_Input_Wires();
+            for(int i=0; i<iws.size(); i++)
+                if ( iws[i]->Get_Driver() )
+                {
+                    auto i_val = jf.createJsonAtom<string>( to_string(i) );
+                    auto inpid_val = jf.createJsonAtom<unsigned>( iws[i]->Get_Driver()->Get_Root_Index() );
+                    inputsdict->push_back({ i_val, inpid_val });
+                }
         }
     }
     ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)
