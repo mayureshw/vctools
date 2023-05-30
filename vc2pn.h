@@ -74,6 +74,7 @@ class DPElement : public Element
     }
     void sreq2ack() { buildSreqToAckPath(_reqs[0], _acks[0]); }
 public:
+    const Operator *getOp() { return _op; }
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
     VCtyp _vctyp;
     // buildSreqToAckPath handles various flow through scenarios, hence its
@@ -843,6 +844,7 @@ public:
     PNPlace* entryPlace() { return _moduleEntryPlace; }
     PNPlace* exitPlace() { return _moduleExitPlace; }
     bool isVolatile() { return _vcm->Get_Volatile_Flag(); }
+    const list<DPElement*>& getDPEList() { return _dpelist; }
     DatumBase* opregForWire(vcWire *w)
     {
         vcDatapathElement *driver = w->Get_Driver();

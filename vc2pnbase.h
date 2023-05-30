@@ -32,6 +32,7 @@ public:
     virtual CPElement* getCPE(vcLoopTerminator*) = 0;
     virtual CPElement* getCPE(vcTransitionMerge*) = 0;
     virtual DPElement* getDPE(vcDatapathElement*) = 0;
+    virtual const list<DPElement*>& getDPEList() = 0;
     virtual PNPlace* mutexPlace() = 0;
     virtual PNPlace* entryPlace() = 0;
     virtual PNPlace* exitPlace() = 0;

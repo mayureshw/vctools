@@ -82,6 +82,20 @@ public:
         _dppipe.dump(pfile);
         _dpstore.dump(pfile);
     }
+    void buildJsonDPEList(JsonFactory& jf, JsonList* dpelist)
+    {
+        auto simmodule = _sys.getModule(_vcm);
+        auto id_key = jf.createJsonAtom<string>("id");
+        for( auto simdpe : simmodule->getDPEList() )
+        {
+            auto dpedict = jf.createJsonMap();
+            dpelist->push_back(dpedict);
+            auto dpeid = simdpe->elem()->Get_Root_Index();
+            auto id_val  = jf.createJsonAtom<unsigned>(dpeid);
+            dpedict->push_back({id_key,id_val});
+            auto op = simdpe->getOp();
+        }
+    }
     ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)
     {
         // processCPE(); // Disabled till needed
@@ -106,6 +120,7 @@ public:
     }
     void export_json()
     {
+        // 1. Petri net export (generic, unaware of vC)
         string pnetflnm = _sys.name() + "_petri.json";
         ofstream pnetfile(pnetflnm);
         _sys.pn()->printjson(pnetfile);
@@ -114,12 +129,13 @@ public:
         string jsonflnm = _sys.name() + ".json";
         ofstream jsonfile(jsonflnm);
 
+        // 2. Factory and top object declaration
+        JsonFactory jf;
+        JsonMap top;
+
         JSONSTR(mutexes)
         JSONSTR(passive_branches)
         JSONSTR(branches)
-
-        JsonFactory jf;
-        JsonMap top;
 
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
@@ -127,6 +143,7 @@ public:
             { &branches_key,         Branch_        },
             };
 
+        // 3. Additional vC specific properties for Petri net
         for(auto p:annkeys)
         {
             auto annlist = jf.createJsonList();
@@ -135,6 +152,13 @@ public:
             top.push_back( { p.first, annlist } );
         }
 
+        // 4. vC data path
+        JSONSTR(dpes)
+        auto dpelist = jf.createJsonList();
+        top.push_back( { &dpes_key, dpelist } );
+        for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpelist);
+
+        // 5. Write json file
         top.print(jsonfile);
         jsonfile.close();
     }
