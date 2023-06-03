@@ -315,6 +315,14 @@ public:
     }
 };
 
+template <typename Tout, typename Tin> class CCast : public UnaryOperator<Tout, Tin>
+{
+using UnaryOperator<Tout, Tin>::UnaryOperator;
+public:
+    string oplabel() { return "CCast"; }
+    Tout eval(Tin x) { return (Tout) x; }
+};
+
 template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Select : public TernOperator<Tout, Tin1, Tin2, Tin3>
 {
 using TernOperator<Tout, Tin1, Tin2, Tin3>::TernOperator;
