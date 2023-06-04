@@ -187,14 +187,14 @@ public:
     {
         auto ftreq = ftdrvs[0]->ftreq();
         auto brplace = createBrPlaceAcks();
-        // Unlike other users of buildSreqToAckPath, since we want it to end in
-        // a place, we take first step ad hoc and ask the first driver to
-        // invoke buildSreqToAckPath
-        ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq);
-        pn()->createArc(ftreq, brplace);
+        auto brtrans = pn()->createTransition(_label + ".brtrans");
+        pn()->createArc( _reqs[0], brtrans );
+        pn()->createArc( ftreq, brtrans );
+        pn()->createArc( brtrans, brplace );
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "req0", ftreq->_nodeid });
+        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
+        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
 #       endif
     }
     void buildPNBranchConst(vcWire* w)
@@ -228,6 +228,10 @@ public:
     int uackIndx()
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
+    }
+    bool isDeemedPhi()
+    {
+        return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
     }
     bool isDeemedFlowThrough()
     {
@@ -311,7 +315,10 @@ public:
         for(auto ftdrv:ftdrvs)
             pn()->createArc( ftdrv->ftreq(), _ftreq );
         for(auto nonftdrv:nonftdrvs)
-            pn()->createArc( nonftdrv->getAckTransition(1), _ftreq );
+        {
+            auto ackindx = nonftdrv->isDeemedPhi() ? 0 : 1;
+            pn()->createArc( nonftdrv->getAckTransition(ackindx), _ftreq );
+        }
     }
     // buildPN that suits most DPEs
     void buildPNDefault()
@@ -421,7 +428,7 @@ public:
             buildPNFT();
         else if ( _vctyp == vcBranch_ )
             buildPNBranch();
-        else if ( _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_ )
+        else if ( isDeemedPhi() )
             buildPNPhi();
         else if ( ( _reqs.size() == 2 ) && ( _acks.size() == 2 ) ) // Default handling
             buildPNDefault();
