@@ -943,7 +943,7 @@ public:
             cout << " " << op.first << "=" << op.second->str();
         cout << endl;
         {
-            lock_guard<mutex> ul(_moduleExitedMutex);
+            unique_lock<mutex> ul(_moduleExitedMutex);
             _moduleExited = true;
         }
         _moduleExitedCV.notify_all();
