@@ -49,6 +49,7 @@ class DPElement : public Element
     const bool _isGuarded;
     vector<PNTransition*> _reqs, _acks;
     vector<PNTransition*> _greqs, _gacks;
+    PNTransition *_ftreq;
     Operator *_op;
     BRANCH *_guardBranchOp;
     void indexcheck(int indx)
@@ -72,7 +73,22 @@ class DPElement : public Element
             }
         }
     }
-    void sreq2ack() { buildSreqToAckPath(_reqs[0], _acks[0]); }
+    // Why set: helps a+a like expressions trim unnecessary extra nodes
+    void partitionDrivers(set<DPElement*>& ftdrvs, set<DPElement*>& nonftdrvs)
+    {
+        for(auto w:elem()->Get_Input_Wires())
+        {
+            auto driver = w->Get_Driver();
+            if (driver)
+            {
+                auto driverDPE = _module->getDPE(driver);
+                if( driverDPE->isDeemedFlowThrough() )
+                    ftdrvs.insert( driverDPE );
+                else
+                    nonftdrvs.insert( driverDPE );
+            }
+        }
+    }
 public:
     Operator *getOp() { return _op; }
     const vector<PNTransition*>& getReqs() { return _reqs; }
@@ -288,6 +304,15 @@ public:
         pn()->createArc(gureqplace, ureq);
         pn()->createArc(gureqplace, nogo_ureq);
     }
+    void buildPNFT()
+    {
+        set<DPElement*> ftdrvs, nonftdrvs;
+        partitionDrivers(ftdrvs, nonftdrvs);
+        for(auto ftdrv:ftdrvs)
+            pn()->createArc( ftdrv->ftreq(), _ftreq );
+        for(auto nonftdrv:nonftdrvs)
+            pn()->createArc( nonftdrv->getAckTransition(1), _ftreq );
+    }
     // buildPN that suits most DPEs
     void buildPNDefault()
     {
@@ -298,9 +323,13 @@ public:
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
-        sreq2ack();
+        pn()->createArc(_reqs[0], _acks[0]);
         pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
         pn()->createArc(_reqs[1], _acks[1]);
+        set<DPElement*> ftdrvs, nonftdrvs;
+        partitionDrivers(ftdrvs, nonftdrvs);
+        for(auto ftdrv:ftdrvs)
+            pn()->createArc( ftdrv->ftreq(), _reqs[0] );
         auto uack2sack = (PNPlace*) pn()->createArc(
             _acks[1], _acks[0],
             "MARKP:" + _acks[0]->_name
@@ -347,7 +376,8 @@ public:
             pn()->createArc(uack, calledMutexPlace);
         }
     }
-    PNTransition* ftreq()
+    PNTransition* ftreq() { return _ftreq; }
+    PNTransition* createFtreq()
     {
         PNTransition *ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
 #       ifdef USECEP
@@ -377,6 +407,8 @@ public:
         if ( not elem()->Get_Flow_Through() )
             for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
                 _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
+        else _ftreq = createFtreq();
+
     }
     void createAcks()
     {
@@ -385,7 +417,8 @@ public:
     }
     void buildPN()
     {
-        if ( isDeemedFlowThrough() ); // PN built by consumers / module output for flow throughs
+        if ( isDeemedFlowThrough() )
+            buildPNFT();
         else if ( _vctyp == vcBranch_ )
             buildPNBranch();
         else if ( _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_ )
@@ -972,7 +1005,7 @@ public:
             _outparamDatum.emplace(oparam.first, datum);
         }
     }
-    void flowthrOpDrivers(vector<DPElement*>& ftopdrvs)
+    void flowthrOpDrivers(set<DPElement*>& ftopdrvs)
     {
         for(auto oparam: _vcm->Get_Output_Arguments())
         {
@@ -982,7 +1015,7 @@ public:
             {
                 auto driverDPE = getDPE(driver);
                 if( driverDPE->isDeemedFlowThrough() )
-                    ftopdrvs.push_back( driverDPE );
+                    ftopdrvs.insert( driverDPE );
             }
         }
     }
@@ -1011,24 +1044,12 @@ public:
             pn()->createArc(exitCPE->outPNNode(), exitCPENode);
         }
 
-        vector<DPElement*> ftopdrvs;
+        set<DPElement*> ftopdrvs;
         flowthrOpDrivers(ftopdrvs);
 
-        // If some flow through operators connect to outputs trigger their ft
-        // transition between exitCPENode and _moduleExitPlace
-        if ( ftopdrvs.size() == 0 )
-            pn()->createArc(exitCPENode, _moduleExitPlace);
-        else
-        {
-            PNTransition *exitCPENode1 = pn()->createTransition("ftcollect");
-            for(auto ftopdrv:ftopdrvs)
-            {
-                auto ftr = ftopdrv->ftreq();
-                ftopdrv->buildSreqToAckPath(exitCPENode, ftr);
-                pn()->createArc(ftr, exitCPENode1);
-            }
-            pn()->createArc(exitCPENode1, _moduleExitPlace);
-        }
+        for(auto ftopdrv:ftopdrvs)
+            pn()->createArc( ftopdrv->ftreq(), exitCPENode );
+        pn()->createArc(exitCPENode, _moduleExitPlace );
 
         if ( _isDaemon )
         {
