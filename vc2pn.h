@@ -279,8 +279,11 @@ public:
             assert(driver);
             auto driverDPE = _module->getDPE(driver);
             auto driverFtreq = driverDPE->ftreq();
-            driverDPE->buildSreqToAckPath(gsreq, driverFtreq);
-            pn()->createArc(driverFtreq, brplace);
+            auto gsreq_ftreq_join = pn()->createTransition(dpelabel + ".gsreq_ftreq_join");
+
+            pn()->createArc(gsreq, gsreq_ftreq_join);
+            pn()->createArc(driverFtreq, gsreq_ftreq_join);
+            pn()->createArc(gsreq_ftreq_join, brplace);
         }
         else
             pn()->createArc(gsreq, brplace);
@@ -319,6 +322,8 @@ public:
             auto ackindx = nonftdrv->isDeemedPhi() ? 0 : 1;
             pn()->createArc( nonftdrv->getAckTransition(ackindx), _ftreq );
         }
+        if ( ftdrvs.size() == 0 and nonftdrvs.size() == 0 )
+            pn()->createArc( _module->entryTransition(), _ftreq );
     }
     // buildPN that suits most DPEs
     void buildPNDefault()
@@ -886,6 +891,13 @@ public:
 
     PNPlace* mutexPlace() { return _moduleMutexOrDaemonPlace; }
     PNPlace* entryPlace() { return _moduleEntryPlace; }
+    PNTransition* entryTransition()
+    {
+        vcCPElement* entry = _cp->Get_Entry_Element();
+        vcCPElementGroup* entryGroup = _cp->Get_CPElement_To_Group_Map()[entry];
+        CPElement *entryCPE = getCPE(entryGroup);
+        return (PNTransition*) entryCPE->inPNNode();
+    }
     PNPlace* exitPlace() { return _moduleExitPlace; }
     bool isVolatile() { return _vcm->Get_Volatile_Flag(); }
     const list<DPElement*>& getDPEList() { return _dpelist; }
@@ -1032,10 +1044,7 @@ public:
         for(auto e:_dpelist) e->setinpv(); // Need to call this after buildPN of dpe, as datapath is cyclic
         for(auto e:_cpelist) e->buildPN();
 
-        vcCPElement* entry = _cp->Get_Entry_Element();
-        vcCPElementGroup* entryGroup = _cp->Get_CPElement_To_Group_Map()[entry];
-        CPElement *entryCPE = getCPE(entryGroup);
-        pn()->createArc(_moduleEntryPlace, entryCPE->inPNNode());
+        pn()->createArc(_moduleEntryPlace, entryTransition());
 
         vcCPElement* exitElem = _cp->Get_Exit_Element();
         vcCPElementGroup* exitGroup = _cp->Get_CPElement_To_Group_Map()[exitElem];

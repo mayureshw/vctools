@@ -35,6 +35,7 @@ public:
     virtual const list<DPElement*>& getDPEList() = 0;
     virtual PNPlace* mutexPlace() = 0;
     virtual PNPlace* entryPlace() = 0;
+    virtual PNTransition* entryTransition() = 0;
     virtual PNPlace* exitPlace() = 0;
     virtual vector<DatumBase*> iparamV() = 0;
     virtual vector<DatumBase*> oparamV() = 0;
