@@ -99,7 +99,7 @@ public:
         auto acks_key = jf.createJsonAtom<string>("acks");
         auto gacks_key = jf.createJsonAtom<string>("gacks");
         auto ftreq_key = jf.createJsonAtom<string>("ftreq");
-        auto inputs_key = jf.createJsonAtom<string>("inputs");
+        auto dpinputs_key = jf.createJsonAtom<string>("dpinputs");
         auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
@@ -126,8 +126,8 @@ public:
             if ( simdpe->isDeemedFlowThrough() ) ftreqv.push_back( simdpe->ftreq() );
             dpedict->push_back( { ftreq_key, pnv2jsonlist(jf, ftreqv) } );
 
-            auto inputsdict = jf.createJsonMap();
-            dpedict->push_back({ inputs_key, inputsdict});
+            auto dpinputsdict = jf.createJsonMap();
+            dpedict->push_back({ dpinputs_key, dpinputsdict});
             auto constinpdict = jf.createJsonMap();
             dpedict->push_back({ constinps_key, constinpdict });
 
@@ -145,7 +145,7 @@ public:
                 if ( iws[i]->Get_Driver() )
                 {
                     auto inpid_val = jf.createJsonAtom<unsigned>( iws[i]->Get_Driver()->Get_Root_Index() );
-                    inputsdict->push_back({ i_val, inpid_val });
+                    dpinputsdict->push_back({ i_val, inpid_val });
                 }
                 else if ( iws[i]->Is_Constant() )
                 {
