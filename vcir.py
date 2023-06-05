@@ -1,7 +1,6 @@
 import sys, json, os
 from operator import gt, le, eq, ne, and_, or_, mul, add
-from vcnodes import *
-from vcnodeclasses import *
+from vcpnnodes import *
 from vcnodeprops import *
 
 class VcPetriNet:
