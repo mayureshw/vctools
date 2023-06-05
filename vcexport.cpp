@@ -98,6 +98,7 @@ public:
         auto greqs_key = jf.createJsonAtom<string>("greqs");
         auto acks_key = jf.createJsonAtom<string>("acks");
         auto gacks_key = jf.createJsonAtom<string>("gacks");
+        auto ftreq_key = jf.createJsonAtom<string>("ftreq");
         auto inputs_key = jf.createJsonAtom<string>("inputs");
         auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
@@ -121,6 +122,9 @@ public:
             dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
             dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
             dpedict->push_back({ gacks_key, pnv2jsonlist(jf, simdpe->getGAcks())});
+            vector<PNTransition*> ftreqv;
+            if ( simdpe->isDeemedFlowThrough() ) ftreqv.push_back( simdpe->ftreq() );
+            dpedict->push_back( { ftreq_key, pnv2jsonlist(jf, ftreqv) } );
 
             auto inputsdict = jf.createJsonMap();
             dpedict->push_back({ inputs_key, inputsdict});
