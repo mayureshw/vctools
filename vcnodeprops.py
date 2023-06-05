@@ -1,3 +1,5 @@
+from operator import *
+
 # Purpose of making NodeProp is to make sure that the property and its message always remain in sync
 class NodePropExpr: pass
 

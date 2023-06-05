@@ -1,3 +1,4 @@
+from vcnodeprops import *
 # Note:
 #  - nodeType: Broad classification into just Place and Transition
 #  - nodeClass: Further classification based on fanin-fanout structure of a node

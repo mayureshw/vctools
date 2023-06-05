@@ -1,5 +1,5 @@
 import sys, json, os
-from operator import gt, le, eq, ne, and_, or_, mul, add
+from operator import *
 from vcpnnodes import *
 from vcnodeprops import *
 
