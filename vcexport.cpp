@@ -94,13 +94,14 @@ public:
         auto simmodule = _sys.getModule(_vcm);
         auto id_key = jf.createJsonAtom<string>("id");
         auto optyp_key = jf.createJsonAtom<string>("optyp");
-        auto opwidth_key = jf.createJsonAtom<string>("opwidth");
         auto reqs_key = jf.createJsonAtom<string>("reqs");
         auto greqs_key = jf.createJsonAtom<string>("greqs");
         auto acks_key = jf.createJsonAtom<string>("acks");
         auto gacks_key = jf.createJsonAtom<string>("gacks");
         auto inputs_key = jf.createJsonAtom<string>("inputs");
         auto constinps_key = jf.createJsonAtom<string>("constinps");
+        auto iwidths_key = jf.createJsonAtom<string>("iwidths");
+        auto owidths_key = jf.createJsonAtom<string>("owidths");
 
         for( auto simdpe : simmodule->getDPEList() )
         {
@@ -116,9 +117,6 @@ public:
             auto optyp_val = jf.createJsonAtom<string>(op->oplabel());
             dpedict->push_back({optyp_key,optyp_val});
 
-            auto opwidth_val = jf.createJsonAtom<unsigned>(op->opwidth());
-            dpedict->push_back({opwidth_key,opwidth_val});
-
             dpedict->push_back({ reqs_key, pnv2jsonlist(jf, simdpe->getReqs())});
             dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
             dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
@@ -129,9 +127,16 @@ public:
             auto constinpdict = jf.createJsonMap();
             dpedict->push_back({ constinps_key, constinpdict });
 
+            auto iwidthslist = jf.createJsonList();
+            auto owidthslist = jf.createJsonList();
+            dpedict->push_back({ iwidths_key, iwidthslist });
+            dpedict->push_back({ owidths_key, owidthslist });
+
             auto iws = simdpe->elem()->Get_Input_Wires();
             for(int i=0; i<iws.size(); i++)
             {
+                auto width_val = jf.createJsonAtom<unsigned>( iws[i]->Get_Size() );
+                iwidthslist->push_back( width_val );
                 auto i_val = jf.createJsonAtom<string>( to_string(i) );
                 if ( iws[i]->Get_Driver() )
                 {
@@ -145,6 +150,13 @@ public:
                     auto const_val = jf.createJsonAtom<string>(const_str);
                     constinpdict->push_back({ i_val, const_val });
                 }
+            }
+
+            auto ows = simdpe->elem()->Get_Output_Wires();
+            for(auto ow:ows)
+            {
+                auto width_val = jf.createJsonAtom<unsigned>( ow->Get_Size() );
+                owidthslist->push_back( width_val );
             }
         }
     }
