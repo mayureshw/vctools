@@ -85,7 +85,7 @@ class PNArc(Arc):
         'wt'        : self.wt,
         'rel'       : 'rev_' + self.rel,
         })
-    def inferRel(self): return (
+    def _inferRel(self): return (
         'mutex' if self.srcnode.isMutex() else \
         'passivebranch' if self.srcnode.isPassiveBranch() else \
         'branch' if self.srcnode.isBranch() else \
@@ -94,35 +94,11 @@ class PNArc(Arc):
         'petri'
     def __init__(self,d):
         self.__dict__.update(d)
-        if 'rel' not in self.__dict__: self.rel = self.inferRel()
+        if 'rel' not in self.__dict__: self.rel = self._inferRel()
 
 class PNNode(Node):
-    def nodeClass(self): return self.classname
     def isPlace(self): return False
     def isTransition(self): return False
-    def fanin(self,rel): return len(self.iarcs[rel])
-    def fanout(self,rel): return len(self.oarcs[rel])
-    def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
-    def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
-    def addOarc(self,arc):
-        arc.srcpos = len(self.oarcs[arc.rel])
-        self.oarcs[arc.rel] += [arc]
-        self.oarcs['total'] += [arc]
-    def addIarc(self,arc):
-        arc.tgtpos = len(self.iarcs[arc.rel])
-        self.iarcs[arc.rel] += [arc]
-        self.iarcs['total'] += [arc]
-    def nodeinfo(self): return str({
-        **{
-        rel : ( self.fanin(rel), self.fanout(rel) )
-        for rel in self.all_arcrels_with_metrics() if self.fanin(rel) > 0 or self.fanout(rel) > 0
-        },
-        **{'nodeid' : self.nodeid},
-        **{ 'typ' : self.nodeType() },
-        })
-    def processValidations(self,vs):
-        for msg,valf in vs:
-            if valf(): print(msg, self.nodeinfo(), '\n')
     def classify(self):
         clss = list( nc for nc in NodeClass.__subclasses__() if nc.checkSign(self) )
         if len(clss) > 1:
