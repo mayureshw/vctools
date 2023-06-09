@@ -97,27 +97,6 @@ public:
     const vector<PNTransition*>& getGAcks() { return _gacks; }
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
     VCtyp _vctyp;
-    // buildSreqToAckPath handles various flow through scenarios, hence its
-    // name has become a misnomer and should be changed.
-    // Note that strt, curend can be place or transition, further description
-    // is assuming most common scenario of them being a transition.
-    // Call begins with strt=sreq and curend=sack Go backward in flow-through
-    // tree and connect sreq->curend if these is no flow through driver else
-    // transitively insert all ftreq transitions in between and connect strt
-    // with the leaf of the chain
-    void buildSreqToAckPath(PNNode* strt, PNNode* curend)
-    {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if ( ftdrvs.size() == 0 )
-            pn()->createArc(strt, curend);
-        else for(auto ftdrv:ftdrvs)
-        {
-            auto ftreq = ftdrv->ftreq();
-            pn()->createArc(ftreq, curend);
-            ftdrv->buildSreqToAckPath(strt, ftreq);
-        }
-    }
     PNTransition* getReqTransition(int indx)
     {
         vector<PNTransition*>& reqs = isDeemedGuarded() ? _greqs : _reqs;
@@ -414,12 +393,10 @@ public:
     }
     void createReqs()
     {
-        // For Flow Through elements reqs are created on demand so that for
-        // each context a separate req is created
-        if ( not elem()->Get_Flow_Through() )
-            for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
-                _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
-        else _ftreq = createFtreq();
+        if ( isDeemedFlowThrough() )
+            _ftreq = createFtreq();
+        else for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
+            _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
 
     }
     void createAcks()
