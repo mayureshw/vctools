@@ -1,22 +1,5 @@
 from vcnodeprops import *
-# Note:
-#  - nodeType: Broad classification into just Place and Transition
-#  - nodeClass: Further classification based on fanin-fanout structure of a node
-
-class NodeClass :
-    props = []
-    @classmethod
-    def checkSign(cls,o): return all( s(o).eval() for s in cls.sign )
-    @classmethod
-    def printProps(cls):
-        for nodecls in cls.__subclasses__():
-            print(nodecls.__name__,':')
-            print('\t','Signature:')
-            for s in nodecls.sign:
-                print('\t\t',s(None))
-            print('\t','Properties:')
-            for propfn in nodecls.props:
-                print('\t\t',propfn(None))
+from vcirbase import *
 
 class MutexPlace(NodeClass):
     sign = [
@@ -91,8 +74,8 @@ lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl laye
 
 #################################################################################################
 
-class Arc:
-    def reversedArc(self): return Arc({
+class PNArc(Arc):
+    def reversedArc(self): return PNArc({
         'srcnode'   : self.tgtnode,
         'tgtnode'   : self.srcnode,
         'wt'        : self.wt,
@@ -109,7 +92,7 @@ class Arc:
         self.__dict__.update(d)
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
-class Node:
+class PNNode(Node):
     arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
     def nodeClass(self): return self.classname
     def isPlace(self): return False
@@ -160,14 +143,14 @@ class Node:
         self.classname = None # set by classify
         self.__dict__.update(props)
 
-class Transition(Node):
+class Transition(PNNode):
     def isTransition(self): return True
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
     def isJoin(self): return self.fanin('petri') > 1
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
-class Place(Node):
+class Place(PNNode):
     def isPlace(self): return True
     def nodeType(self): return 'Place'
     def isMutex(self): return self.nodeid in self.vcir.mutexes

@@ -1,6 +1,7 @@
 import sys, json, os
 from operator import *
 from vcpnnodes import *
+from vcdpnodes import *
 from vcnodeprops import *
 
 class VcPetriNet:
@@ -18,7 +19,7 @@ class VcPetriNet:
         for arc in pnobj['arcs']:
             srcnode = self.nodes[ arc['src'] ]
             tgtnode = self.nodes[ arc['tgt'] ]
-            arcobj = Arc({
+            arcobj = PNArc({
                 'srcnode'   : srcnode,
                 'tgtnode'   : tgtnode,
                 'wt'        : arc['wt'],
@@ -30,6 +31,10 @@ class VcPetriNet:
                 srcnode.addIarc(revarc)
                 tgtnode.addOarc(revarc)
         for node in self.nodes.values(): node.classify()
+
+class VcDP:
+    def __init__(self,dpes):
+        self.dpes = { d['id'] : Op(d) for d in dpes }
 
 class Vcir:
     def branchPlaceType(self):
@@ -81,4 +86,5 @@ class Vcir:
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
         self.pn = VcPetriNet(pnobj,self)
+        self.dp = VcDP(jsonobj['dpes'])
         self.validate()
