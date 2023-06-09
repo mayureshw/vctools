@@ -1,8 +1,5 @@
-# This module contains base classes for both pn and dpe irs
-
-# Note:
-#  - nodeType: Broad classification into just Place and Transition
-#  - nodeClass: Further classification based on fanin-fanout structure of a node
+# This module contains base classes for both pn and dpe irs. This abstract view
+# of pn and dp forms the basis for vhdl code generation.
 
 class NodeClass:
     props = []
@@ -20,6 +17,18 @@ class NodeClass:
             for propfn in nodecls.props:
                 print('\t\t',propfn(None))
 
-class Node: pass
+class Node:
+    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch' ]
+    _rev_arcrels = [ 'rev_mutex', 'rev_passivebranch' ]
+    _metric_arcrels = [ 'total' ]
+    @classmethod
+    def basic_arcrels(cls): return cls._arcrels
+    @classmethod
+    def rev_arcrels(cls): return cls._rev_arcrels
+    @classmethod
+    def basic_and_rev_arcrels(cls): return cls._arcrels + cls._rev_arcrels
+    @classmethod
+    def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels
+
 class Arc: pass
 

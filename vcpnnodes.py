@@ -1,6 +1,10 @@
 from vcnodeprops import *
 from vcirbase import *
 
+# Note:
+#  - nodeType: Broad classification into just Place and Transition
+#  - nodeClass: Further classification based on fanin-fanout structure of a node
+
 class MutexPlace(NodeClass):
     sign = [
 lambda n: f(n,'isPlace'),
@@ -93,7 +97,6 @@ class PNArc(Arc):
         if 'rel' not in self.__dict__: self.rel = self.inferRel()
 
 class PNNode(Node):
-    arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'total', 'rev_mutex', 'rev_passivebranch' ]
     def nodeClass(self): return self.classname
     def isPlace(self): return False
     def isTransition(self): return False
@@ -112,7 +115,7 @@ class PNNode(Node):
     def nodeinfo(self): return str({
         **{
         rel : ( self.fanin(rel), self.fanout(rel) )
-        for rel in self.arcrels if self.fanin(rel) > 0 or self.fanout(rel) > 0
+        for rel in self.all_arcrels_with_metrics() if self.fanin(rel) > 0 or self.fanout(rel) > 0
         },
         **{'nodeid' : self.nodeid},
         **{ 'typ' : self.nodeType() },
@@ -137,8 +140,8 @@ class PNNode(Node):
         # else: print('CLASSOK',self.classname,self.nodeinfo())
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
-        self.oarcs = { r:[] for r in self.arcrels }
-        self.iarcs = { r:[] for r in self.arcrels }
+        self.oarcs = { r:[] for r in self.all_arcrels_with_metrics() }
+        self.iarcs = { r:[] for r in self.all_arcrels_with_metrics() }
         self.nodeid = nodeid
         self.classname = None # set by classify
         self.__dict__.update(props)
