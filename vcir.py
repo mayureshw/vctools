@@ -5,7 +5,11 @@ from vcdpnodes import *
 from vcnodeprops import *
 
 class VcPetriNet:
+    def isDPArc(self,a): return \
+        self.vcir.dp.isPNDPTrans( a['src'] ) or \
+        self.vcir.dp.isDPPNTrans( a['tgt'] )
     def __init__(self,pnobj,vcir):
+        self.vcir = vcir
         self.places = {
             int(nodeid) : Place(int(nodeid),vcir,props)
             for (nodeid,props) in pnobj['places'].items()
@@ -16,7 +20,8 @@ class VcPetriNet:
             }
         self.nodes = {**self.places,**self.transitions}
         self.arcs = []
-        for arc in pnobj['arcs']:
+        nondparcs = [ a for a in pnobj['arcs'] if not self.isDPArc(a) ]
+        for arc in nondparcs:
             srcnode = self.nodes[ arc['src'] ]
             tgtnode = self.nodes[ arc['tgt'] ]
             arcobj = PNArc({
@@ -33,8 +38,17 @@ class VcPetriNet:
         for node in self.nodes.values(): node.classify()
 
 class VcDP:
+    def isPNDPTrans(self,tid): return tid in self.pndpTrans
+    def isDPPNTrans(self,tid): return tid in self.dppnTrans
+    def getTransSet(self,keys):
+        return { t for dpe in self.dpes.values() for tk in keys for t in dpe[tk] }
     def __init__(self,dpes):
         self.dpes = { int(id):dpe for id,dpe in dpes.items()}
+        pndpkeys = [ 'reqs', 'greqs' ]
+        dppnkeys = [ 'acks', 'gacks' ]
+        # Note: ftreqs remain connected in the PN
+        self.pndpTrans = self.getTransSet( pndpkeys )
+        self.dppnTrans = self.getTransSet( dppnkeys )
 
 class Vcir:
     def branchPlaceType(self):
