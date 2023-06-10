@@ -89,10 +89,9 @@ public:
         _dppipe.dump(pfile);
         _dpstore.dump(pfile);
     }
-    void buildJsonDPEList(JsonFactory& jf, JsonList* dpelist)
+    void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap)
     {
         auto simmodule = _sys.getModule(_vcm);
-        auto id_key = jf.createJsonAtom<string>("id");
         auto optyp_key = jf.createJsonAtom<string>("optyp");
         auto reqs_key = jf.createJsonAtom<string>("reqs");
         auto greqs_key = jf.createJsonAtom<string>("greqs");
@@ -106,12 +105,11 @@ public:
 
         for( auto simdpe : simmodule->getDPEList() )
         {
-            auto dpedict = jf.createJsonMap();
-            dpelist->push_back(dpedict);
-
             auto dpeid = simdpe->elem()->Get_Root_Index();
-            auto id_val  = jf.createJsonAtom<unsigned>(dpeid);
-            dpedict->push_back({id_key,id_val});
+            auto id_val  = jf.createJsonAtom<string>(to_string(dpeid));
+
+            auto dpedict = jf.createJsonMap();
+            dpesmap->push_back({id_val,dpedict});
 
             auto op = simdpe->getOp();
 
@@ -222,9 +220,9 @@ public:
 
         // 4. vC data path
         JSONSTR(dpes)
-        auto dpelist = jf.createJsonList();
-        top.push_back( { &dpes_key, dpelist } );
-        for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpelist);
+        auto dpesmap = jf.createJsonMap();
+        top.push_back( { &dpes_key, dpesmap } );
+        for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpesmap);
 
         // 5. Write json file
         top.print(jsonfile);

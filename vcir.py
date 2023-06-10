@@ -34,7 +34,7 @@ class VcPetriNet:
 
 class VcDP:
     def __init__(self,dpes):
-        self.dpes = { d['id'] : Op(d) for d in dpes }
+        self.dpes = { int(id):dpe for id,dpe in dpes.items()}
 
 class Vcir:
     def branchPlaceType(self):
@@ -85,6 +85,6 @@ class Vcir:
         self.mutexes = set(jsonobj['mutexes'])
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
-        self.pn = VcPetriNet(pnobj,self)
         self.dp = VcDP(jsonobj['dpes'])
+        self.pn = VcPetriNet(pnobj,self)
         self.validate()
