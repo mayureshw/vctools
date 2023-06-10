@@ -18,7 +18,9 @@ class NodeClass:
                 print('\t\t',propfn(None))
 
 class Node:
-    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'data0', 'data1', 'data2', 'data3', 'data4', 'pndp' ]
+    maxdataports = 5
+    _datarels = [ 'data'+str(i) for i in range(maxdataports) ]
+    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'pndp' ] + _datarels
     _rev_arcrels = [ 'rev_mutex', 'rev_passivebranch' ]
     _metric_arcrels = [ 'total' ]
     @classmethod
