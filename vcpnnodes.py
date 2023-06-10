@@ -97,6 +97,8 @@ class PNArc(Arc):
         if 'rel' not in self.__dict__: self.rel = self._inferRel()
 
 class PNNode(Node):
+    def nodeClass(self): return self.classname
+    def optyp(self): return None
     def idstr(self): return 'pn_' + str(self.nodeid)
     def isPlace(self): return False
     def isTransition(self): return False
@@ -116,12 +118,7 @@ class PNNode(Node):
                 print('PROPVIO',self.classname,p,self.nodeinfo())
         # else: print('CLASSOK',self.classname,self.nodeinfo())
     def __init__(self,nodeid,vcir,props):
-        self.vcir = vcir
-        self.oarcs = { r:[] for r in self.all_arcrels_with_metrics() }
-        self.iarcs = { r:[] for r in self.all_arcrels_with_metrics() }
-        self.nodeid = nodeid
-        self.classname = None # set by classify
-        self.__dict__.update(props)
+        super().__init__(nodeid,vcir,props)
 
 class Transition(PNNode):
     def isTransition(self): return True

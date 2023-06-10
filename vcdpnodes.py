@@ -1,5 +1,5 @@
-from operator import *
 from vcnodeprops import *
+from vcirbase import *
 
 class OpClass: pass
 
@@ -44,7 +44,11 @@ class Bitsel(OpClass): pass
 class ShiftL(OpClass): pass
 class ShiftR(OpClass): pass
 
-class Op:
+
+class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
-    def __init__(self,props):
-        self.__dict__.update(props)
+    def nodeClass(self): return 'DPNode'
+    def optyp(self): return self.optyp
+    def idstr(self): return 'dp_' + str(self.nodeid)
+    def __init__(self,nodeid,vcir,props):
+        super().__init__(nodeid,vcir,props)
