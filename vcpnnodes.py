@@ -97,6 +97,7 @@ class PNArc(Arc):
         if 'rel' not in self.__dict__: self.rel = self._inferRel()
 
 class PNNode(Node):
+    def idstr(self): return 'pn_' + str(self.nodeid)
     def isPlace(self): return False
     def isTransition(self): return False
     def classify(self):
