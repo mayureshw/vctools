@@ -43,7 +43,7 @@ class VcDP:
     def getTransSet(self,dpes,keys):
         return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
     def __init__(self,dpes,vcir):
-        self.dpes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
+        self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
         pndpkeys = [ 'reqs', 'greqs' ]
         dppnkeys = [ 'acks', 'gacks' ]
         # Note: ftreqs remain connected in the PN
@@ -89,6 +89,7 @@ class Vcir:
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
+    def nodes(self): return list(self.pn.nodes.values()) + list(self.dp.nodes.values())
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'

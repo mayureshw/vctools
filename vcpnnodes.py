@@ -98,7 +98,7 @@ class PNArc(Arc):
 
 class PNNode(Node):
     def nodeClass(self): return self.classname
-    def optyp(self): return None
+    def optype(self): return None
     def idstr(self): return 'pn_' + str(self.nodeid)
     def isPlace(self): return False
     def isTransition(self): return False

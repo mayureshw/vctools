@@ -51,7 +51,7 @@ class DPArc(Arc):
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
     def nodeClass(self): return 'DPNode'
-    def optyp(self): return self.optyp
+    def optype(self): return self.optyp
     def idstr(self): return 'dp_' + str(self.nodeid)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
