@@ -40,15 +40,15 @@ class VcPetriNet:
 class VcDP:
     def isPNDPTrans(self,tid): return tid in self.pndpTrans
     def isDPPNTrans(self,tid): return tid in self.dppnTrans
-    def getTransSet(self,keys):
-        return { t for dpe in self.dpes.values() for tk in keys for t in dpe[tk] }
-    def __init__(self,dpes):
-        self.dpes = { int(id):dpe for id,dpe in dpes.items()}
+    def getTransSet(self,dpes,keys):
+        return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
+    def __init__(self,dpes,vcir):
+        self.dpes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
         pndpkeys = [ 'reqs', 'greqs' ]
         dppnkeys = [ 'acks', 'gacks' ]
         # Note: ftreqs remain connected in the PN
-        self.pndpTrans = self.getTransSet( pndpkeys )
-        self.dppnTrans = self.getTransSet( dppnkeys )
+        self.pndpTrans = self.getTransSet( dpes, pndpkeys )
+        self.dppnTrans = self.getTransSet( dpes, dppnkeys )
 
 class Vcir:
     def branchPlaceType(self):
@@ -99,6 +99,6 @@ class Vcir:
         self.mutexes = set(jsonobj['mutexes'])
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
-        self.dp = VcDP(jsonobj['dpes'])
+        self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
         self.validate()

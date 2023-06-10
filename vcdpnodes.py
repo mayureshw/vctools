@@ -44,6 +44,9 @@ class Bitsel(OpClass): pass
 class ShiftL(OpClass): pass
 class ShiftR(OpClass): pass
 
+class DPArc(Arc):
+    def __init__(self,d):
+        super().__init__(d)
 
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
