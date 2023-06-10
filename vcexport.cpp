@@ -99,6 +99,8 @@ public:
         auto gacks_key = jf.createJsonAtom<string>("gacks");
         auto ftreq_key = jf.createJsonAtom<string>("ftreq");
         auto dpinps_key = jf.createJsonAtom<string>("dpinps");
+        auto id_key = jf.createJsonAtom<string>("id");
+        auto oppos_key = jf.createJsonAtom<string>("oppos");
         auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
@@ -137,17 +139,26 @@ public:
             auto iws = simdpe->elem()->Get_Input_Wires();
             for(int i=0; i<iws.size(); i++)
             {
-                auto width_val = jf.createJsonAtom<unsigned>( iws[i]->Get_Size() );
+                auto w = iws[i];
+                auto width_val = jf.createJsonAtom<unsigned>( w->Get_Size() );
                 iwidthslist->push_back( width_val );
                 auto i_val = jf.createJsonAtom<string>( to_string(i) );
-                if ( iws[i]->Get_Driver() )
+                auto driver = w->Get_Driver();
+                if ( driver )
                 {
-                    auto inpid_val = jf.createJsonAtom<unsigned>( iws[i]->Get_Driver()->Get_Root_Index() );
-                    dpinpsdict->push_back({ i_val, inpid_val });
+                    auto dpinpssubdict = jf.createJsonMap();
+                    auto inpid_val = jf.createJsonAtom<unsigned>( driver->Get_Root_Index() );
+                    dpinpssubdict->push_back({id_key, inpid_val});
+                    vector<int> opindices;
+                    driver->Get_Output_Wire_Indices(w, opindices);
+                    assert(opindices.size() == 1);
+                    auto oppos_val = jf.createJsonAtom<unsigned>(opindices[0]);
+                    dpinpssubdict->push_back({oppos_key, oppos_val});
+                    dpinpsdict->push_back({ i_val, dpinpssubdict });
                 }
-                else if ( iws[i]->Is_Constant() )
+                else if ( w->Is_Constant() )
                 {
-                    auto vcv = ( (vcConstantWire*) iws[i] )->Get_Value();
+                    auto vcv = ( (vcConstantWire*) w )->Get_Value();
                     string const_str = _sys.valueDatum( vcv )->str();
                     auto const_val = jf.createJsonAtom<string>(const_str);
                     constinpdict->push_back({ i_val, const_val });
