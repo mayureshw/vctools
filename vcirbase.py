@@ -57,5 +57,7 @@ class Node:
         self.classname = None # set by classify
         self.__dict__.update(props)
 
-class Arc: pass
+class Arc:
+    def __init__(self,d):
+        self.__dict__.update(d)
 

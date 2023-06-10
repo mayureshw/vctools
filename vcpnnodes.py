@@ -93,7 +93,7 @@ class PNArc(Arc):
         ) if self.srcnode.isPlace() else \
         'petri'
     def __init__(self,d):
-        self.__dict__.update(d)
+        super().__init__(d)
         if 'rel' not in self.__dict__: self.rel = self._inferRel()
 
 class PNNode(Node):
