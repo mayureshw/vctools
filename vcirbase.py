@@ -19,8 +19,8 @@ class NodeClass:
 
 class Node:
     maxdataports = 5
-    _datarels = [ 'data'+str(i) for i in range(maxdataports) ]
-    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'pndp' ] + _datarels
+    _datarels = [ 'data' ]
+    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'pndp' ]
     _rev_arcrels = [ 'rev_mutex', 'rev_passivebranch' ]
     _metric_arcrels = [ 'total' ]
     @classmethod
@@ -30,7 +30,9 @@ class Node:
     @classmethod
     def basic_and_rev_arcrels(cls): return cls._arcrels + cls._rev_arcrels
     @classmethod
-    def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels
+    def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels + cls._datarels
+    @classmethod
+    def datarels(cls): return cls._datarels
     def fanin(self,rel): return len(self.iarcs[rel])
     def fanout(self,rel): return len(self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
