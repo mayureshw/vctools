@@ -382,7 +382,7 @@ public:
         _ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
         // if this ftreq relates with a pipe, need to connect with pipe's pnet
         if ( isSignalInport() )
-            ((IOPort*)_op)->_pipe->buildPNIport(_ftreq, _ftreq);
+            ((IOPort*)_op)->_pipe->buildPNIport(_ftreq, _ftack);
     }
     void createGuardReqs()
     {
