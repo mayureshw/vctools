@@ -44,9 +44,8 @@ class VcDP:
         return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
     def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
-        pndpkeys = [ 'reqs', 'greqs' ]
-        dppnkeys = [ 'acks', 'gacks' ]
-        # Note: ftreqs remain connected in the PN
+        pndpkeys = [ 'reqs', 'greqs', 'ftreq' ]
+        dppnkeys = [ 'acks', 'gacks', 'ftack' ]
         self.pndpTrans = self.getTransSet( dpes, pndpkeys )
         self.dppnTrans = self.getTransSet( dpes, dppnkeys )
 
