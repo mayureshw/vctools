@@ -49,7 +49,7 @@ class DPElement : public Element
     const bool _isGuarded;
     vector<PNTransition*> _reqs, _acks;
     vector<PNTransition*> _greqs, _gacks;
-    PNTransition *_ftreq;
+    PNTransition *_ftreq, *_ftack;
     Operator *_op;
     BRANCH *_guardBranchOp;
     void indexcheck(int indx)
@@ -164,16 +164,16 @@ public:
     }
     void buildPNBranchFT(vector<DPElement*>& ftdrvs)
     {
-        auto ftreq = ftdrvs[0]->ftreq();
+        auto ftack = ftdrvs[0]->ftack();
         auto brplace = createBrPlaceAcks();
         auto brtrans = pn()->createTransition(_label + ".brtrans");
         pn()->createArc( _reqs[0], brtrans );
-        pn()->createArc( ftreq, brtrans );
+        pn()->createArc( ftack, brtrans );
         pn()->createArc( brtrans, brplace );
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
-        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
+        pn()->vctid.add({ rootindex, "ftack", ftack->_nodeid });
 #       endif
     }
     void buildPNBranchConst(vcWire* w)
@@ -257,12 +257,12 @@ public:
             auto driver = elem()->Get_Guard_Wire()->Get_Driver();
             assert(driver);
             auto driverDPE = _module->getDPE(driver);
-            auto driverFtreq = driverDPE->ftreq();
-            auto gsreq_ftreq_join = pn()->createTransition(dpelabel + ".gsreq_ftreq_join");
+            auto driverFtack = driverDPE->ftack();
+            auto gsreq_ftack_join = pn()->createTransition(dpelabel + ".gsreq_ftack_join");
 
-            pn()->createArc(gsreq, gsreq_ftreq_join);
-            pn()->createArc(driverFtreq, gsreq_ftreq_join);
-            pn()->createArc(gsreq_ftreq_join, brplace);
+            pn()->createArc(gsreq, gsreq_ftack_join);
+            pn()->createArc(driverFtack, gsreq_ftack_join);
+            pn()->createArc(gsreq_ftack_join, brplace);
         }
         else
             pn()->createArc(gsreq, brplace);
@@ -295,7 +295,7 @@ public:
         set<DPElement*> ftdrvs, nonftdrvs;
         partitionDrivers(ftdrvs, nonftdrvs);
         for(auto ftdrv:ftdrvs)
-            pn()->createArc( ftdrv->ftreq(), _ftreq );
+            pn()->createArc( ftdrv->ftack(), _ftreq );
         for(auto nonftdrv:nonftdrvs)
         {
             auto ackindx = nonftdrv->isDeemedPhi() ? 0 : 1;
@@ -320,7 +320,7 @@ public:
         set<DPElement*> ftdrvs, nonftdrvs;
         partitionDrivers(ftdrvs, nonftdrvs);
         for(auto ftdrv:ftdrvs)
-            pn()->createArc( ftdrv->ftreq(), _reqs[0] );
+            pn()->createArc( ftdrv->ftack(), _reqs[0] );
         auto uack2sack = (PNPlace*) pn()->createArc(
             _acks[1], _acks[0],
             "MARKP:" + _acks[0]->_name
@@ -368,18 +368,21 @@ public:
         }
     }
     PNTransition* ftreq() { return _ftreq; }
-    PNTransition* createFtreq()
+    PNTransition* ftack() { return _ftack; }
+    PNTransition* createFtreqAck()
     {
-        PNTransition *ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
+        _ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
+        _ftack = pn()->createTransition("DPE:" + _label + "_ftack");
+        pn()->createArc(_ftreq, _ftack);
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
+        pn()->vctid.add({ rootindex, "ftreq", _ftreq->_nodeid });
+        pn()->vctid.add({ rootindex, "ftack", _ftack->_nodeid });
 #       endif
-        ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
+        _ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
         // if this ftreq relates with a pipe, need to connect with pipe's pnet
         if ( isSignalInport() )
-            ((IOPort*)_op)->_pipe->buildPNIport(ftreq, ftreq);
-        return ftreq;
+            ((IOPort*)_op)->_pipe->buildPNIport(_ftreq, _ftreq);
     }
     void createGuardReqs()
     {
@@ -394,7 +397,7 @@ public:
     void createReqs()
     {
         if ( isDeemedFlowThrough() )
-            _ftreq = createFtreq();
+            createFtreqAck();
         else for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
             _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
 
@@ -1041,7 +1044,7 @@ public:
         flowthrOpDrivers(ftopdrvs);
 
         for(auto ftopdrv:ftopdrvs)
-            pn()->createArc( ftopdrv->ftreq(), exitCPENode );
+            pn()->createArc( ftopdrv->ftack(), exitCPENode );
         pn()->createArc(exitCPENode, _moduleExitPlace );
 
         if ( _isDaemon )
