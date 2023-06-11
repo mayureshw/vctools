@@ -31,8 +31,6 @@ class Node:
     def basic_and_rev_arcrels(cls): return cls._arcrels + cls._rev_arcrels
     @classmethod
     def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels + cls._datarels
-    @classmethod
-    def datarels(cls): return cls._datarels
     def fanin(self,rel): return len(self.iarcs[rel])
     def fanout(self,rel): return len(self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
@@ -59,6 +57,9 @@ class Node:
         self.iarcs = { r:[] for r in self.all_arcrels_with_metrics() }
         self.nodeid = nodeid
         self.classname = None # set by classify
+        # iwidths and owidths come from props for DPNodes
+        self.iwidths = []
+        self.owidths = []
         self.__dict__.update(props)
 
 class Arc:
