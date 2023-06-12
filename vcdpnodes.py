@@ -65,6 +65,24 @@ class DPNode(Node):
                 })
             self.addIarc(arcobj,False)
             srcnode.addOarc(arcobj,False)
+        for req in self.reqs + self.greqs + self.ftreq:
+            srcnode = self.vcir.pn.nodes[req]
+            arcobj = DPArc({
+                'srcnode' : srcnode,
+                'tgtnode' : self,
+                'rel' : 'pndp'
+                })
+            self.addIarc(arcobj)
+            srcnode.addOarc(arcobj)
+        for ack in self.acks + self.gacks + self.ftack:
+            tgtnode = self.vcir.pn.nodes[ack]
+            arcobj = DPArc({
+                'srcnode' : self,
+                'tgtnode' : tgtnode,
+                'rel' : 'pndp'
+                })
+            self.addIarc(arcobj)
+            srcnode.addOarc(arcobj)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
 
