@@ -53,6 +53,18 @@ class DPNode(Node):
     def nodeClass(self): return 'DPNode'
     def optype(self): return self.optyp
     def idstr(self): return 'dp_' + str(self.nodeid)
+    def createArcs(self):
+        for tgtpos,srcinfo in self.dpinps.items():
+            srcnode = self.vcir.dp.nodes[srcinfo['id']]
+            arcobj = DPArc({
+                'srcnode' : srcnode,
+                'srcpos' : srcinfo['oppos'],
+                'tgtnode' : self,
+                'tgtpos' : tgtpos,
+                'rel' : 'data'
+                })
+            self.addIarc(arcobj,False)
+            srcnode.addOarc(arcobj,False)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
 
@@ -61,10 +73,11 @@ class VcDP:
     def isDPPNTrans(self,tid): return tid in self.dppnTrans
     def getTransSet(self,dpes,keys):
         return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
+    def createArcs(self):
+        for n in self.nodes.values(): n.createArcs()
     def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
         pndpkeys = [ 'reqs', 'greqs', 'ftreq' ]
         dppnkeys = [ 'acks', 'gacks', 'ftack' ]
         self.pndpTrans = self.getTransSet( dpes, pndpkeys )
         self.dppnTrans = self.getTransSet( dpes, dppnkeys )
-

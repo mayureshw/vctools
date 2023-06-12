@@ -56,4 +56,5 @@ class Vcir:
         self.branches = set(jsonobj['branches'])
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
+        self.dp.createArcs() # Needs to be done after pn is in place
         self.validate()
