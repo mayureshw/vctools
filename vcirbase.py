@@ -48,6 +48,11 @@ class Node:
         ( self.idstr(), 'data' + str(i), 'out', w )
             for i,w in enumerate(self.owidths)
         ]
+    # Note: fanin/out and in/out arc count are in general different properties
+    # however in case of Petri nets, this difference is relevant only for forks
+    # Hence, for simplicity we treat fanin/out and arc in/out count as same and we
+    # replicate output singal on all ports for fork transitions. However for data path
+    # we treat these notions as different.
     def fanin(self,rel): return len(self.iwidths if rel == 'data' else self.iarcs[rel])
     def fanout(self,rel): return len(self.owidths if rel == 'data' else self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
