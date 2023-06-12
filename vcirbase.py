@@ -31,6 +31,26 @@ class Node:
     def basic_and_rev_arcrels(cls): return cls._arcrels + cls._rev_arcrels
     @classmethod
     def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels + cls._datarels
+    def iarcrels(self): return [
+        ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
+            for rel in self.basic_and_rev_arcrels() for arc in self.iarcs[rel]
+        ] + [
+        ( 'data'+str(arc.tgtpos), self.idstr(), None, 'data'+str(arc.srcpos), arc.srcnode.idstr(), None )
+            for arc in self.iarcs['data']
+        ]
+    def portwidths(self): return [
+        ( self.idstr(), rel, 'in', self.fanin(rel) )
+            for rel in self.basic_and_rev_arcrels() if self.fanin(rel) > 0
+        ] + [
+        ( self.idstr(), rel, 'out', self.fanout(rel) )
+            for rel in self.basic_and_rev_arcrels() if self.fanout(rel) > 0
+        ] + [
+        ( self.idstr(), 'data' + str(i), 'in', w )
+            for i,w in enumerate(self.iwidths)
+        ] + [
+        ( self.idstr(), 'data' + str(i), 'out', w )
+            for i,w in enumerate(self.owidths)
+        ]
     def fanin(self,rel): return len(self.iarcs[rel])
     def fanout(self,rel): return len(self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
