@@ -52,12 +52,12 @@ class Node:
     def fanout(self,rel): return len(self.owidths if rel == 'data' else self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
-    def addOarc(self,arc,srcpos=None):
-        arc.srcpos = len(self.oarcs[arc.rel]) if srcpos == None else srcpos
+    def addOarc(self,arc,inferSrcpos=True):
+        if inferSrcpos: arc.srcpos = len(self.oarcs[arc.rel])
         self.oarcs[arc.rel] += [arc]
         self.oarcs['total'] += [arc]
-    def addIarc(self,arc,tgtpos=None):
-        arc.tgtpos = len(self.iarcs[arc.rel]) if tgtpos == None else tgtpos
+    def addIarc(self,arc,inferTgtpos=True):
+        if inferTgtpos: arc.tgtpos = len(self.iarcs[arc.rel])
         self.iarcs[arc.rel] += [arc]
         self.iarcs['total'] += [arc]
     def nodeinfo(self): return str({
