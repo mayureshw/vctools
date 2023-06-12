@@ -20,30 +20,23 @@ class NodeClass:
 class Node:
     maxdataports = 5
     _datarels = [ 'data' ]
-    _arcrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'pndp' ]
-    _rev_arcrels = [ 'rev_mutex', 'rev_passivebranch' ]
-    _metric_arcrels = [ 'total' ]
+    _controlrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch', 'pndp' ]
+    _metricrels = [ 'total' ]
     @classmethod
-    def basic_arcrels(cls): return cls._arcrels
-    @classmethod
-    def rev_arcrels(cls): return cls._rev_arcrels
-    @classmethod
-    def basic_and_rev_arcrels(cls): return cls._arcrels + cls._rev_arcrels
-    @classmethod
-    def all_arcrels_with_metrics(cls): return cls.basic_and_rev_arcrels() + cls._metric_arcrels + cls._datarels
+    def all_arcrels_with_metrics(cls): return cls._controlrels + cls._metricrels + cls._datarels
     def iarcrels(self): return [
         ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
-            for rel in self.basic_and_rev_arcrels() for arc in self.iarcs[rel]
+            for rel in self._controlrels for arc in self.iarcs[rel]
         ] + [
         ( 'data'+str(arc.tgtpos), self.idstr(), None, 'data'+str(arc.srcpos), arc.srcnode.idstr(), None )
             for arc in self.iarcs['data']
         ]
     def portwidths(self): return [
         ( self.idstr(), rel, 'in', self.fanin(rel) )
-            for rel in self.basic_and_rev_arcrels() if self.fanin(rel) > 0
+            for rel in self._controlrels if self.fanin(rel) > 0
         ] + [
         ( self.idstr(), rel, 'out', self.fanout(rel) )
-            for rel in self.basic_and_rev_arcrels() if self.fanout(rel) > 0
+            for rel in self._controlrels if self.fanout(rel) > 0
         ] + [
         ( self.idstr(), 'data' + str(i), 'in', w )
             for i,w in enumerate(self.iwidths)
