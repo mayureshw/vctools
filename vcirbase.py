@@ -31,6 +31,10 @@ class Node:
         ( 'data'+str(arc.tgtpos), self.idstr(), None, 'data'+str(arc.srcpos), arc.srcnode.idstr(), None )
             for arc in self.iarcs['data']
         ]
+    def constvals(self): return [
+        ( self.idstr(), 'data' + str(pos), val )
+        for pos,val in self.constinps.items()
+        ]
     def portwidths(self): return [
         ( self.idstr(), rel, 'in', self.fanin(rel) )
             for rel in self._controlrels if self.fanin(rel) > 0
@@ -70,9 +74,11 @@ class Node:
         self.iarcs = { r:[] for r in self.all_arcrels_with_metrics() }
         self.nodeid = nodeid
         self.classname = None # set by classify
-        # iwidths and owidths come from props for DPNodes
+        # properties of dpnodes, initialized to empty for non dpnodes
         self.iwidths = []
         self.owidths = []
+        self.constinps = {}
+
         self.__dict__.update(props)
 
 class Arc:
