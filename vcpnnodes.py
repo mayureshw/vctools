@@ -153,8 +153,7 @@ class VcPetriNet:
             }
         self.nodes = {**self.places,**self.transitions}
         self.arcs = []
-        nondparcs = [ a for a in pnobj['arcs'] if not self.isDPArc(a) ]
-        for arc in nondparcs:
+        for arc in pnobj['arcs']:
             srcnode = self.nodes[ arc['src'] ]
             tgtnode = self.nodes[ arc['tgt'] ]
             arcobj = PNArc({
@@ -162,6 +161,7 @@ class VcPetriNet:
                 'tgtnode'   : tgtnode,
                 'wt'        : arc['wt'],
                 })
+            if arcobj.rel == 'petri' and self.isDPArc(arc): continue
             srcnode.addOarc(arcobj)
             tgtnode.addIarc(arcobj)
             if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
