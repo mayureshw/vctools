@@ -32,7 +32,7 @@ class Node:
             for arc in self.iarcs['data']
         ]
     def constvals(self): return [
-        ( self.idstr(), 'data' + str(pos), val )
+        ( self.idstr(), 'data' + str(pos), int(val) )
         for pos,val in self.constinps.items()
         ]
     def portwidths(self): return [
