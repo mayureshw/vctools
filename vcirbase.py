@@ -48,16 +48,16 @@ class Node:
         ( self.idstr(), 'data' + str(i), 'out', w )
             for i,w in enumerate(self.owidths)
         ]
-    def fanin(self,rel): return len(self.iarcs[rel])
-    def fanout(self,rel): return len(self.oarcs[rel])
+    def fanin(self,rel): return len(self.iwidths if rel == 'data' else self.iarcs[rel])
+    def fanout(self,rel): return len(self.owidths if rel == 'data' else self.oarcs[rel])
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
-    def addOarc(self,arc):
-        arc.srcpos = len(self.oarcs[arc.rel])
+    def addOarc(self,arc,srcpos=None):
+        arc.srcpos = len(self.oarcs[arc.rel]) if srcpos == None else srcpos
         self.oarcs[arc.rel] += [arc]
         self.oarcs['total'] += [arc]
-    def addIarc(self,arc):
-        arc.tgtpos = len(self.iarcs[arc.rel])
+    def addIarc(self,arc,tgtpos=None):
+        arc.tgtpos = len(self.iarcs[arc.rel]) if tgtpos == None else tgtpos
         self.iarcs[arc.rel] += [arc]
         self.iarcs['total'] += [arc]
     def nodeinfo(self): return str({
