@@ -137,3 +137,36 @@ class Place(PNNode):
     def isHighCapacity(self): return self.capacity > 1 or self.capacity == 0
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
+class VcPetriNet:
+    def isDPArc(self,a): return \
+        self.vcir.dp.isPNDPTrans( a['src'] ) or \
+        self.vcir.dp.isDPPNTrans( a['tgt'] )
+    def __init__(self,pnobj,vcir):
+        self.vcir = vcir
+        self.places = {
+            int(nodeid) : Place(int(nodeid),vcir,props)
+            for (nodeid,props) in pnobj['places'].items()
+            }
+        self.transitions = {
+            int(nodeid) : Transition(int(nodeid),vcir,props)
+            for (nodeid,props) in pnobj['transitions'].items()
+            }
+        self.nodes = {**self.places,**self.transitions}
+        self.arcs = []
+        nondparcs = [ a for a in pnobj['arcs'] if not self.isDPArc(a) ]
+        for arc in nondparcs:
+            srcnode = self.nodes[ arc['src'] ]
+            tgtnode = self.nodes[ arc['tgt'] ]
+            arcobj = PNArc({
+                'srcnode'   : srcnode,
+                'tgtnode'   : tgtnode,
+                'wt'        : arc['wt'],
+                })
+            srcnode.addOarc(arcobj)
+            tgtnode.addIarc(arcobj)
+            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
+                revarc = arcobj.reversedArc()
+                srcnode.addIarc(revarc)
+                tgtnode.addOarc(revarc)
+        for node in self.nodes.values(): node.classify()
+

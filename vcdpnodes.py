@@ -55,3 +55,16 @@ class DPNode(Node):
     def idstr(self): return 'dp_' + str(self.nodeid)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
+
+class VcDP:
+    def isPNDPTrans(self,tid): return tid in self.pndpTrans
+    def isDPPNTrans(self,tid): return tid in self.dppnTrans
+    def getTransSet(self,dpes,keys):
+        return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
+    def __init__(self,dpes,vcir):
+        self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
+        pndpkeys = [ 'reqs', 'greqs', 'ftreq' ]
+        dppnkeys = [ 'acks', 'gacks', 'ftack' ]
+        self.pndpTrans = self.getTransSet( dpes, pndpkeys )
+        self.dppnTrans = self.getTransSet( dpes, dppnkeys )
+
