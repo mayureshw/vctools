@@ -11,6 +11,7 @@ using namespace std;
 class ModuleIR
 {
     vcModule* _vcm;
+    ModuleBase* _simmod;
     System& _sys;
     Rel<long,string> _cpe = {"cpe"};
     Rel<long,string,string,long> _dpe = {"dpe"};
@@ -80,6 +81,8 @@ class ModuleIR
         return l;
     }
 public:
+    PNPlace* entryPlace() { return _simmod->entryPlace(); }
+    string name() { return _simmod->name(); }
     void export_prolog(ofstream& pfile)
     {
         _cpeg.dump(pfile);
@@ -91,7 +94,6 @@ public:
     }
     void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap)
     {
-        auto simmodule = _sys.getModule(_vcm);
         auto optyp_key = jf.createJsonAtom<string>("optyp");
         auto reqs_key = jf.createJsonAtom<string>("reqs");
         auto greqs_key = jf.createJsonAtom<string>("greqs");
@@ -106,7 +108,7 @@ public:
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
 
-        for( auto simdpe : simmodule->getDPEList() )
+        for( auto simdpe : _simmod->getDPEList() )
         {
             auto dpeid = simdpe->elem()->Get_Root_Index();
             auto id_val  = jf.createJsonAtom<string>(to_string(dpeid));
@@ -179,7 +181,7 @@ public:
             }
         }
     }
-    ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys)
+    ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys), _simmod(sys.getModule(vcm))
     {
         // processCPE(); // Disabled till needed
         processDPE();
@@ -219,6 +221,7 @@ public:
         JSONSTR(mutexes)
         JSONSTR(passive_branches)
         JSONSTR(branches)
+        JSONSTR(module_entries)
 
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
@@ -233,6 +236,15 @@ public:
             for(auto n:_sys.pn()->getNodeset(p.second))
                 annlist->push_back( jf.createJsonAtom<unsigned>( n->_nodeid ) );
             top.push_back( { p.first, annlist } );
+        }
+
+        auto modulentrymap = jf.createJsonMap();
+        top.push_back( { &module_entries_key, modulentrymap } );
+        for(auto mir:_moduleirs)
+        {
+            auto name_key = jf.createJsonAtom<string>( mir->name() );
+            auto entryplace_val = jf.createJsonAtom<unsigned>( mir->entryPlace()->_nodeid );
+            modulentrymap->push_back( { name_key, entryplace_val } );
         }
 
         // 4. vC data path
