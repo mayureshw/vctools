@@ -79,6 +79,11 @@ lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl laye
 #################################################################################################
 
 class PNArc(Arc):
+    def dotprops(self): return \
+        [ ('color','green') ] if self.rel == 'mutex' else \
+        [ ('color','green'), ('style','dotted') ] if self.rel == 'rev_mutex' else \
+        [ ('color','lightblue') ] if self.rel == 'passivebranch' else \
+        [ ('color','lightblue'), ('style','dotted') ] if self.rel == 'rev_passivebranch' else []
     def reversedArc(self): return PNArc({
         'srcnode'   : self.tgtnode,
         'tgtnode'   : self.srcnode,
@@ -101,8 +106,6 @@ class PNNode(Node):
     def nodeClass(self): return self.classname
     def optype(self): return None
     def idstr(self): return 'pn_' + str(self.nodeid)
-    def isPlace(self): return False
-    def isTransition(self): return False
     def classify(self):
         clss = list( nc for nc in NodeClass.__subclasses__() if nc.checkSign(self) )
         if len(clss) > 1:
@@ -122,6 +125,7 @@ class PNNode(Node):
         super().__init__(nodeid,vcir,props)
 
 class Transition(PNNode):
+    def dotprops(self): return [ ( 'shape','rectangle' ) ]
     def isTransition(self): return True
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
@@ -129,6 +133,11 @@ class Transition(PNNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(PNNode):
+    def dotprops(self): return [
+        ('color', 'green' if self.isMutex() else \
+        'blue' if self.isBranch() else \
+        'lightblue' if self.isPassiveBranch() else 'black' )
+        ]
     def isPlace(self): return True
     def nodeType(self): return 'Place'
     def isMutex(self): return self.nodeid in self.vcir.mutexes

@@ -45,11 +45,15 @@ class ShiftL(OpClass): pass
 class ShiftR(OpClass): pass
 
 class DPArc(Arc):
+    def dotprops(self): return \
+        [ ('color','red') ] if self.rel == 'data' else []
     def __init__(self,d):
         super().__init__(d)
 
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
+    def dotprops(self): return [('color','red'),('shape','triangle')]
+    def isDP(self): return True
     def nodeClass(self): return 'DPNode'
     def optype(self): return self.optyp
     def idstr(self): return 'dp_' + str(self.nodeid)

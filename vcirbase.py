@@ -19,12 +19,17 @@ class NodeClass:
 
 class Node:
     maxdataports = 5
-    _datarels = [ 'data' ]
-    _controlrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch', 'pndp' ]
-    _metricrels = [ 'total' ]
+    _datarels = { 'data' }
+    _controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch', 'pndp' }
+    _metricrels = { 'total' }
     @classmethod
-    def all_arcrels_with_metrics(cls): return cls._controlrels + cls._metricrels + cls._datarels
+    def all_arcrels_with_metrics(cls): return cls._controlrels.union(cls._metricrels, cls._datarels)
+    def dotprops(self) : return []
+    def isDP(self): return False
+    def isPlace(self): return False
+    def isTransition(self): return False
     def onreset(self): return 0
+    def iarcsExclMetrics(self): return [ a for r,arcs in self.iarcs.items() if r not in self._metricrels for a in arcs ]
     def iarcrels(self): return [
         ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
             for rel in self._controlrels for arc in self.iarcs[rel]
@@ -88,6 +93,7 @@ class Node:
         self.__dict__.update(props)
 
 class Arc:
+    def dotprops(self): return []
     def __init__(self,d):
         self.__dict__.update(d)
 
