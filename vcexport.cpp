@@ -94,6 +94,7 @@ public:
     }
     void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap)
     {
+        auto label_key = jf.createJsonAtom<string>("label");
         auto optyp_key = jf.createJsonAtom<string>("optyp");
         auto reqs_key = jf.createJsonAtom<string>("reqs");
         auto greqs_key = jf.createJsonAtom<string>("greqs");
@@ -116,8 +117,10 @@ public:
             auto dpedict = jf.createJsonMap();
             dpesmap->push_back({id_val,dpedict});
 
-            auto op = simdpe->getOp();
+            auto label_val = jf.createJsonAtom<string>( simdpe->label() );
+            dpedict->push_back({ label_key, label_val });
 
+            auto op = simdpe->getOp();
             auto optyp_val = jf.createJsonAtom<string>(op->oplabel());
             dpedict->push_back({optyp_key,optyp_val});
 
