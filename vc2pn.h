@@ -208,6 +208,7 @@ public:
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
     }
+    bool isCall() { return _vctyp == vcCall_; }
     bool isDeemedPhi()
     {
         return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;

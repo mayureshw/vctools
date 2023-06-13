@@ -144,7 +144,19 @@ public:
             dpedict->push_back({ iwidths_key, iwidthslist });
             dpedict->push_back({ owidths_key, owidthslist });
 
-            auto iws = simdpe->elem()->Get_Input_Wires();
+            vector<vcWire*> iws;
+            if ( simdpe->isCall() )
+            {
+                auto calledVcModule = ((vcCall*)simdpe->elem())->Get_Called_Module();
+                auto argmap = calledVcModule->Get_Output_Arguments();
+                for( auto oparamname : calledVcModule->Get_Ordered_Output_Arguments() )
+                {
+                    auto it = argmap.find(oparamname);
+                    assert( it != argmap.end() );
+                    iws.push_back(it->second);
+                }
+            }
+            else iws = simdpe->elem()->Get_Input_Wires();
             for(int i=0; i<iws.size(); i++)
             {
                 auto w = iws[i];
