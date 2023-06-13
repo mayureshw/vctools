@@ -125,7 +125,7 @@ class PNNode(Node):
         super().__init__(nodeid,vcir,props)
 
 class Transition(PNNode):
-    def dotprops(self): return [ ( 'shape','rectangle' ) ]
+    def dotprops(self): return [ ( 'shape','rectangle' ), ( 'label', self.idstr() + ':' + self.label ) ]
     def isTransition(self): return True
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
@@ -136,7 +136,8 @@ class Place(PNNode):
     def dotprops(self): return [
         ('color', 'green' if self.isMutex() else \
         'blue' if self.isBranch() else \
-        'lightblue' if self.isPassiveBranch() else 'black' )
+        'lightblue' if self.isPassiveBranch() else 'black' ),
+        ( 'label', self.idstr() + ':' + self.label )
         ]
     def isPlace(self): return True
     def nodeType(self): return 'Place'
