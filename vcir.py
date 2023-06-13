@@ -1,4 +1,5 @@
 import sys, json, os
+from itertools import chain
 from operator import *
 from vcpnnodes import *
 from vcdpnodes import *
@@ -43,7 +44,8 @@ class Vcir:
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
-    def nodes(self): return list(self.pn.nodes.values()) + list(self.dp.nodes.values())
+    def nodes(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values())
+        if n.fanout('total') > 0 ]
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'
