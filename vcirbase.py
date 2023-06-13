@@ -24,6 +24,7 @@ class Node:
     _metricrels = [ 'total' ]
     @classmethod
     def all_arcrels_with_metrics(cls): return cls._controlrels + cls._metricrels + cls._datarels
+    def onreset(self): return 0
     def iarcrels(self): return [
         ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
             for rel in self._controlrels for arc in self.iarcs[rel]
