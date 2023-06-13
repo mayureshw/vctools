@@ -30,7 +30,7 @@ class Vcir:
         jointrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 1 ]
         confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.fanout('petri') > 1 ]
         for p,t in confpairs:
-            print('ERROR: Cofusion scenarion not supported',p.nodeid,p.label,t.nodeid,t.label)
+            print('ERROR: Confusion scenario not supported',p.nodeid,p.label,t.nodeid,t.label)
     def checksNotAutomated(self):
         print('ERROR: Do run simulator with PN_PLACE_CAPACITY_EXCEPTION enabled. It is not checked by this tool.')
         print('ERROR: Do ensure, successors of passive branch are mutually exclusive. It is not checked, as it requires analysis such as unfoldings.')
@@ -56,6 +56,7 @@ class Vcir:
         self.mutexes = set(jsonobj['mutexes'])
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
+        self.simu_only = set(jsonobj['simu_only'])
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
         self.dp.createArcs() # Needs to be done after pn is in place

@@ -149,9 +149,8 @@ class Place(PNNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcPetriNet:
-    def isDPArc(self,a): return \
-        self.vcir.dp.isPNDPTrans( a['src'] ) or \
-        self.vcir.dp.isDPPNTrans( a['tgt'] )
+    def isSimuOnlyArc(self,srcid,tgtid): return \
+        srcid in self.vcir.simu_only or tgtid in self.vcir.simu_only
     def __init__(self,pnobj,vcir):
         self.vcir = vcir
         self.places = {
@@ -165,14 +164,16 @@ class VcPetriNet:
         self.nodes = {**self.places,**self.transitions}
         self.arcs = []
         for arc in pnobj['arcs']:
-            srcnode = self.nodes[ arc['src'] ]
-            tgtnode = self.nodes[ arc['tgt'] ]
+            srcid = arc['src']
+            tgtid = arc['tgt']
+            if self.isSimuOnlyArc(srcid,tgtid): continue
+            srcnode = self.nodes[ srcid ]
+            tgtnode = self.nodes[ tgtid ]
             arcobj = PNArc({
                 'srcnode'   : srcnode,
                 'tgtnode'   : tgtnode,
                 'wt'        : arc['wt'],
                 })
-            if arcobj.rel == 'petri' and self.isDPArc(arc): continue
             srcnode.addOarc(arcobj)
             tgtnode.addIarc(arcobj)
             if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :

@@ -52,7 +52,7 @@ class DPArc(Arc):
 
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
-    def dotprops(self): return [('color','red'),('shape','triangle')]
+    def dotprops(self): return [('color','red'),('shape','triangle'),('label',self.label)]
     def isDP(self): return True
     def nodeClass(self): return 'DPNode'
     def optype(self): return self.optyp
@@ -91,15 +91,7 @@ class DPNode(Node):
         super().__init__(nodeid,vcir,props)
 
 class VcDP:
-    def isPNDPTrans(self,tid): return tid in self.pndpTrans
-    def isDPPNTrans(self,tid): return tid in self.dppnTrans
-    def getTransSet(self,dpes,keys):
-        return { t for dpe in dpes.values() for tk in keys for t in dpe[tk] }
     def createArcs(self):
         for n in self.nodes.values(): n.createArcs()
     def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
-        pndpkeys = [ 'reqs', 'greqs', 'ftreq' ]
-        dppnkeys = [ 'acks', 'gacks', 'ftack' ]
-        self.pndpTrans = self.getTransSet( dpes, pndpkeys )
-        self.dppnTrans = self.getTransSet( dpes, dppnkeys )
