@@ -70,7 +70,7 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : srcnode,
                 'tgtnode' : self,
-                'rel' : 'pndp'
+                'rel' : 'petri'
                 })
             self.addIarc(arcobj)
             srcnode.addOarc(arcobj)
@@ -79,10 +79,10 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : self,
                 'tgtnode' : tgtnode,
-                'rel' : 'pndp'
+                'rel' : 'petri'
                 })
-            self.addIarc(arcobj)
-            srcnode.addOarc(arcobj)
+            tgtnode.addIarc(arcobj)
+            self.addOarc(arcobj)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
 
