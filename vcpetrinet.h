@@ -36,6 +36,7 @@ typedef enum {
     Mutex_,
     PassiveBranch_,
     Branch_,
+    SimuOnly_,
     } PNAnnotation;
 
 class VcPetriNet : public PetriNetVariant
@@ -46,12 +47,13 @@ using PetriNetVariant::PetriNetVariant;
         { Mutex_, {} },
         { PassiveBranch_, {} },
         { Branch_, {} },
+        { SimuOnly_, {} },
         };
 public:
 #ifdef USECEP
     Rel<unsigned,string,unsigned> vctid = {"vctid"};
 #endif
-    set<PNNode*>& getNodeset(PNAnnotation annotation)
+    set<PNNode*>& getAnnotatedNodeset(PNAnnotation annotation)
     {
         auto it = _annotations.find(annotation);
         if ( it == _annotations.end() )
@@ -63,9 +65,8 @@ public:
     }
     void annotatePNNode(PNNode *pnnode, PNAnnotation annotation)
     {
-        getNodeset(annotation).insert(pnnode);
+        getAnnotatedNodeset(annotation).insert(pnnode);
     }
-
 #ifdef SIMU_MODE_STPN
 private:
     DistFactory _df;

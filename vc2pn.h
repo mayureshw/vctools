@@ -315,9 +315,12 @@ public:
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
-        pn()->createArc(_reqs[0], _acks[0]);
-        pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
-        pn()->createArc(_reqs[1], _acks[1]);
+        auto sreq_sack_place = pn()->createArc(_reqs[0], _acks[0]);
+        auto sack_uack_place = pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
+        auto ureq_uack_place = pn()->createArc(_reqs[1], _acks[1]);
+        pn()->annotatePNNode(sreq_sack_place, SimuOnly_);
+        pn()->annotatePNNode(sack_uack_place, SimuOnly_);
+        pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
         set<DPElement*> ftdrvs, nonftdrvs;
         partitionDrivers(ftdrvs, nonftdrvs);
         for(auto ftdrv:ftdrvs)
@@ -327,6 +330,7 @@ public:
             "MARKP:" + _acks[0]->_name
             );
         uack2sack->setMarking(1);
+        pn()->annotatePNNode(uack2sack, SimuOnly_);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });

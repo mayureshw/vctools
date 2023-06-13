@@ -233,19 +233,21 @@ public:
         JSONSTR(mutexes)
         JSONSTR(passive_branches)
         JSONSTR(branches)
+        JSONSTR(simu_only)
         JSONSTR(module_entries)
 
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
             { &passive_branches_key, PassiveBranch_ },
             { &branches_key,         Branch_        },
+            { &simu_only_key,        SimuOnly_      },
             };
 
         // 3. Additional vC specific properties for Petri net
         for(auto p:annkeys)
         {
             auto annlist = jf.createJsonList();
-            for(auto n:_sys.pn()->getNodeset(p.second))
+            for(auto n:_sys.pn()->getAnnotatedNodeset(p.second))
                 annlist->push_back( jf.createJsonAtom<unsigned>( n->_nodeid ) );
             top.push_back( { p.first, annlist } );
         }
