@@ -348,8 +348,9 @@ public:
             if ( isIport ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
             else pipe->buildPNOport(sreq, sack);
         }
-        else if ( _vctyp == vcCall_ )
+        else if ( isCall() )
         {
+            auto sreq = _reqs[0];
             auto sack = _acks[0];
             auto uack = _acks[1];
 
@@ -361,7 +362,7 @@ public:
 
             auto inProgressPlace = pn()->createPlace(_label+".CallInProgress");
             // sack requires called module's mutex token
-            pn()->createArc(calledMutexPlace, sack);
+            pn()->createArc(calledMutexPlace, sreq);
             // and passes token to inProgressPlace and called module's entry
             pn()->createArc(sack, inProgressPlace);
             pn()->createArc(sack, calledEntryPlace);
