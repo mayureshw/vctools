@@ -103,6 +103,7 @@ public:
         auto ftreq_key = jf.createJsonAtom<string>("ftreq");
         auto ftack_key = jf.createJsonAtom<string>("ftack");
         auto dpinps_key = jf.createJsonAtom<string>("dpinps");
+        auto fpinps_key = jf.createJsonAtom<string>("fpinps");
         auto id_key = jf.createJsonAtom<string>("id");
         auto oppos_key = jf.createJsonAtom<string>("oppos");
         auto constinps_key = jf.createJsonAtom<string>("constinps");
@@ -141,6 +142,8 @@ public:
             dpedict->push_back({ dpinps_key, dpinpsdict});
             auto constinpdict = jf.createJsonMap();
             dpedict->push_back({ constinps_key, constinpdict });
+            auto fpinpdict = jf.createJsonMap();
+            dpedict->push_back({ fpinps_key, fpinpdict });
 
             auto iwidthslist = jf.createJsonList();
             auto owidthslist = jf.createJsonList();
@@ -170,14 +173,16 @@ public:
                 if ( driver )
                 {
                     auto dpinpssubdict = jf.createJsonMap();
+                    dpinpsdict->push_back({ i_val, dpinpssubdict });
+
                     auto inpid_val = jf.createJsonAtom<unsigned>( driver->Get_Root_Index() );
                     dpinpssubdict->push_back({id_key, inpid_val});
+
                     vector<int> opindices;
                     driver->Get_Output_Wire_Indices(w, opindices);
                     assert(opindices.size() == 1);
                     auto oppos_val = jf.createJsonAtom<unsigned>(opindices[0]);
                     dpinpssubdict->push_back({oppos_key, oppos_val});
-                    dpinpsdict->push_back({ i_val, dpinpssubdict });
                 }
                 else if ( w->Is_Constant() )
                 {
@@ -185,6 +190,23 @@ public:
                     string const_str = _sys.valueDatum( vcv )->str();
                     auto const_val = jf.createJsonAtom<string>(const_str);
                     constinpdict->push_back({ i_val, const_val });
+                }
+                else if ( w->Kind() == "vcInputWire" )
+                {
+                    auto fpinpssubdict = jf.createJsonMap();
+                    fpinpdict->push_back({ i_val, fpinpssubdict });
+
+                    auto fpid_val = jf.createJsonAtom<unsigned>( entryPlace()->_nodeid );
+                    fpinpssubdict->push_back({id_key, fpid_val});
+
+                    auto parampos = _simmod->getInpParamPos( w->Get_Id() );
+                    auto oppos_val = jf.createJsonAtom<unsigned>(parampos);
+                    fpinpssubdict->push_back({oppos_key, oppos_val});
+                }
+                else
+                {
+                    cout << "vcexport: Unhandled wire type " << w->Kind() << endl;
+                    exit(1);
                 }
             }
 

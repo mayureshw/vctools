@@ -864,6 +864,7 @@ class Module : public ModuleBase
     bool _moduleExited = true;
     condition_variable _moduleExitedCV;
     mutex _moduleExitedMutex;
+    map<string,unsigned> _inpParamPos;
 public:
     bool _isDaemon;
     SystemBase* sys() { return _sys; }
@@ -988,6 +989,16 @@ public:
         if ( _exithook != NULL ) _exithook();
         else _exithook = NULL; // Once we exit, reset the hook, it is active only for 1 invocation
     }
+    unsigned getInpParamPos(string paramname)
+    {
+        auto it = _inpParamPos.find(paramname);
+        if ( it == _inpParamPos.end() )
+        {
+            cout << "vc2pn:getParamPos sought on non-existent param " << name() << " " << paramname << endl;
+            exit(1);
+        }
+        return it->second;
+    }
     void setInparamDatum()
     {
         for(auto iparam: _vcm->Get_Input_Arguments())
@@ -1089,6 +1100,8 @@ public:
         for(auto dpet:_vcm->Get_Data_Path()->Get_DPE_Map())
             _dpelist.push_back(getDPE(dpet.second));
         setOutparamDatum();
+        unsigned i=0;
+        for(auto fp:_vcm->Get_Ordered_Input_Arguments()) _inpParamPos.emplace( fp, i++ );
     }
     ~Module()
     {

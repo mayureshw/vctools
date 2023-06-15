@@ -41,6 +41,7 @@ public:
     virtual vector<DatumBase*> oparamV() = 0;
     virtual DatumBase* opregForWire(vcWire*) = 0;
     virtual bool isVolatile() = 0;
+    virtual unsigned getInpParamPos(string) = 0;
 };
 
 #endif
