@@ -73,6 +73,17 @@ class DPNode(Node):
                 })
             self.addIarc(arcobj,False)
             srcnode.addOarc(arcobj,False)
+        for tgtpos,srcinfo in self.fpinps.items():
+            srcnode = self.vcir.pn.nodes[srcinfo['id']]
+            arcobj = DPArc({
+                'srcnode' : srcnode,
+                'srcpos' : srcinfo['oppos'],
+                'tgtnode' : self,
+                'tgtpos' : tgtpos,
+                'rel' : 'data'
+                })
+            self.addIarc(arcobj,False)
+            srcnode.addOarc(arcobj,False)
         for req in self.reqs + self.greqs + self.ftreq:
             srcnode = self.vcir.pn.nodes[req]
             arcobj = DPArc({
