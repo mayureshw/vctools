@@ -1,3 +1,4 @@
+import sys
 from operator import *
 
 # Purpose of making NodeProp is to make sure that the property and its message always remain in sync
@@ -24,15 +25,26 @@ class e(NodePropExpr):
         ne   : '!=',
         and_ : 'and',
         or_  : 'or',
+        not_ : 'not',
         mul  : '*',
         add  : '+',
         }
-    def eval(self) : return self.op(self.e1.eval(),self.e2.eval())
-    def __str__(self) : return '( ' + str(self.e1) + ' ' + self.oplabel[self.op] + ' ' + str(self.e2) + ' )'
-    def __init__(self,e1,op,e2):
-        self.e1 = e1
-        self.op = op
-        self.e2 = e2
+    def eval(self) : return self.op(*[a.eval() for a in self.args])
+    def __str__(self) : return \
+        ' '.join([ '(', str(self.args[0]), self.oplabel[self.op], str(self.args[1]), ')' ]) \
+            if self.arity == 2 else \
+        ' '.join([ '(', self.oplabel[self.op], str(self.args[0]), ')' ])
+    def __init__(self,*args):
+        if len(args) == 3:
+            self.op = args[1]
+            self.args = [ args[0], args[2] ]
+        elif len(args) == 2:
+            self.op = args[0]
+            self.args = [ args[1] ]
+        else:
+            print('Expression object invalid argument coutnt',args)
+            sys.exit(1)
+        self.arity = len(args) - 1
 
 class f(NodePropExpr):
     def eval(self) : return getattr(self.node,self.f)()

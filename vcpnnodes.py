@@ -5,6 +5,12 @@ from vcirbase import *
 #  - nodeType: Broad classification into just Place and Transition
 #  - nodeClass: Further classification based on fanin-fanout structure of a node
 
+class EntryPlace(NodeClass):
+    sign = [
+lambda n: f(n,'isPlace'),
+lambda n: f(n,'isEntryPlace'),
+        ]
+
 class MutexPlace(NodeClass):
     sign = [
 lambda n: f(n,'isPlace'),
@@ -45,6 +51,7 @@ class MergePlace(NodeClass):
 lambda n: f(n,'isPlace'),
 lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
+lambda n: e( not_, f(n,'isEntryPlace') ),
         ]
     props = [
 lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
@@ -58,6 +65,7 @@ lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'total','fanout'), eq, c(1) ),
 lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
+lambda n: e( not_, f(n,'isEntryPlace') ),
         ]
 
 class MiscTransition(NodeClass):
@@ -141,6 +149,7 @@ class Place(PNNode):
         ]
     def isPlace(self): return True
     def nodeType(self): return 'Place'
+    def isEntryPlace(self): return self.nodeid in self.vcir.module_entries
     def isMutex(self): return self.nodeid in self.vcir.mutexes
     def isBranch(self): return self.nodeid in self.vcir.branches
     def isPassiveBranch(self): return self.nodeid in self.vcir.passive_branches
