@@ -244,6 +244,7 @@ public:
             { &passive_branches_key, PassiveBranch_ },
             { &branches_key,         Branch_        },
             { &simu_only_key,        SimuOnly_      },
+            { &module_entries_key,   ModuleEntry_   },
             };
 
         // 3. Additional vC specific properties for Petri net
@@ -253,15 +254,6 @@ public:
             for(auto n:_sys.pn()->getAnnotatedNodeset(p.second))
                 annlist->push_back( jf.createJsonAtom<unsigned>( n->_nodeid ) );
             top.push_back( { p.first, annlist } );
-        }
-
-        auto modulentrymap = jf.createJsonMap();
-        top.push_back( { &module_entries_key, modulentrymap } );
-        for(auto mir:_moduleirs)
-        {
-            auto name_key = jf.createJsonAtom<string>( mir->name() );
-            auto entryplace_val = jf.createJsonAtom<unsigned>( mir->entryPlace()->_nodeid );
-            modulentrymap->push_back( { name_key, entryplace_val } );
         }
 
         // 4. vC data path
