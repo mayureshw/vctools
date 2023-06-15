@@ -109,6 +109,7 @@ public:
         auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
+        auto calls_key = jf.createJsonAtom<string>("calls");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -150,19 +151,15 @@ public:
             dpedict->push_back({ iwidths_key, iwidthslist });
             dpedict->push_back({ owidths_key, owidthslist });
 
-            vector<vcWire*> iws;
             if ( simdpe->isCall() )
             {
                 auto calledVcModule = ((vcCall*)simdpe->elem())->Get_Called_Module();
-                auto argmap = calledVcModule->Get_Output_Arguments();
-                for( auto oparamname : calledVcModule->Get_Ordered_Output_Arguments() )
-                {
-                    auto it = argmap.find(oparamname);
-                    assert( it != argmap.end() );
-                    iws.push_back(it->second);
-                }
+                auto calledEntryPlaceId = _sys.getModule( calledVcModule )->entryPlace()->_nodeid;
+                auto calledEntryPlace_val = jf.createJsonAtom<unsigned>( calledEntryPlaceId );
+                dpedict->push_back({ calls_key, calledEntryPlace_val });
             }
-            else iws = simdpe->elem()->Get_Input_Wires();
+
+            auto iws = simdpe->elem()->Get_Input_Wires();
             for(int i=0; i<iws.size(); i++)
             {
                 auto w = iws[i];
