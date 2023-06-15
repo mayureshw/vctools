@@ -109,7 +109,8 @@ public:
         auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
-        auto calls_key = jf.createJsonAtom<string>("calls");
+        auto callentry_key = jf.createJsonAtom<string>("callentry");
+        auto callexit_key = jf.createJsonAtom<string>("callexit");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -154,9 +155,15 @@ public:
             if ( simdpe->isCall() )
             {
                 auto calledVcModule = ((vcCall*)simdpe->elem())->Get_Called_Module();
-                auto calledEntryPlaceId = _sys.getModule( calledVcModule )->entryPlace()->_nodeid;
+                auto calledModule = _sys.getModule( calledVcModule );
+
+                auto calledEntryPlaceId = calledModule->entryPlace()->_nodeid;
                 auto calledEntryPlace_val = jf.createJsonAtom<unsigned>( calledEntryPlaceId );
-                dpedict->push_back({ calls_key, calledEntryPlace_val });
+                dpedict->push_back({ callentry_key, calledEntryPlace_val });
+
+                auto calledExitPlaceId = calledModule->exitPlace()->_nodeid;
+                auto calledExitPlace_val = jf.createJsonAtom<unsigned>( calledExitPlaceId );
+                dpedict->push_back({ callexit_key, calledExitPlace_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
@@ -257,6 +264,7 @@ public:
         JSONSTR(branches)
         JSONSTR(simu_only)
         JSONSTR(module_entries)
+        JSONSTR(module_exits)
 
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
@@ -264,6 +272,7 @@ public:
             { &branches_key,         Branch_        },
             { &simu_only_key,        SimuOnly_      },
             { &module_entries_key,   ModuleEntry_   },
+            { &module_exits_key,     ModuleExit_    },
             };
 
         // 3. Additional vC specific properties for Petri net

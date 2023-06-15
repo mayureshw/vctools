@@ -1075,8 +1075,9 @@ public:
     {
         _cp = _vcm->Get_Control_Path();
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
-        pn()->annotatePNNode( _moduleEntryPlace, ModuleEntry_ );
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
+        pn()->annotatePNNode( _moduleEntryPlace, ModuleEntry_ );
+        pn()->annotatePNNode( _moduleExitPlace, ModuleExit_ );
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
         if ( ! _isDaemon )
         {

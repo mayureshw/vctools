@@ -38,6 +38,7 @@ typedef enum {
     Branch_,
     SimuOnly_,
     ModuleEntry_,
+    ModuleExit_,
     } PNAnnotation;
 
 class VcPetriNet : public PetriNetVariant
@@ -50,6 +51,7 @@ using PetriNetVariant::PetriNetVariant;
         { Branch_, {} },
         { SimuOnly_, {} },
         { ModuleEntry_, {} },
+        { ModuleExit_, {} },
         };
 public:
 #ifdef USECEP
