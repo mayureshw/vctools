@@ -46,7 +46,8 @@ class ShiftR(OpClass): pass
 
 class DPArc(Arc):
     def dotprops(self): return \
-        [ ('color','red') ] if self.rel == 'data' else []
+        [ ('color','red') ] if self.rel == 'data' else \
+        [ ('color','orange') ] if self.rel == 'bind' else []
     def __init__(self,d):
         super().__init__(d)
 
@@ -102,6 +103,29 @@ class DPNode(Node):
                 })
             tgtnode.addIarc(arcobj)
             self.addOarc(arcobj)
+        if self.optyp == 'Call':
+            # Call -> Entry : single bind for all inpparams
+            tgtnode = self.vcir.pn.nodes[self.callentry]
+            width = sum(self.iwidths)
+            arcobj = DPArc({
+                'srcnode' : self,
+                'tgtnode' : tgtnode,
+                'rel' : 'bind',
+                'width' : width
+                })
+            tgtnode.addIarc(arcobj)
+            self.addOarc(arcobj)
+            # Exit -> Call : single bind for all opparams
+            srcnode = self.vcir.pn.nodes[self.callexit]
+            width = sum(self.owidths)
+            arcobj = DPArc({
+                'srcnode' : srcnode,
+                'tgtnode' : self,
+                'rel' : 'bind',
+                'width' : width
+                })
+            self.addIarc(arcobj)
+            srcnode.addOarc(arcobj)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
 

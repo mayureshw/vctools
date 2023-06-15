@@ -19,7 +19,7 @@ class NodeClass:
 
 class Node:
     maxdataports = 5
-    _datarels = { 'data' }
+    _datarels = { 'data', 'bind' }
     _controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch', 'pndp' }
     _metricrels = { 'total' }
     @classmethod
@@ -34,8 +34,8 @@ class Node:
         ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
             for rel in self._controlrels for arc in self.iarcs[rel]
         ] + [
-        ( 'data'+str(arc.tgtpos), self.idstr(), None, 'data'+str(arc.srcpos), arc.srcnode.idstr(), None )
-            for arc in self.iarcs['data']
+        ( rel+str(arc.tgtpos), self.idstr(), None, rel+str(arc.srcpos), arc.srcnode.idstr(), None )
+            for rel in self._datarels for arc in self.iarcs[rel]
         ]
     def constvals(self): return [
         ( self.idstr(), 'data' + str(pos), int(val) )
@@ -53,6 +53,12 @@ class Node:
         ] + [
         ( self.idstr(), 'data' + str(i), 'out', w )
             for i,w in enumerate(self.owidths)
+        ] + [
+        ( self.idstr(), 'bind' + str(i), 'in', a.width )
+            for i,a in enumerate(self.iarcs['bind'])
+        ] + [
+        ( self.idstr(), 'bind' + str(i), 'out', a.width )
+            for i,a in enumerate(self.oarcs['bind'])
         ]
     # Note: fanin/out and in/out arc count are in general different properties
     # however in case of Petri nets, this difference is relevant only for forks

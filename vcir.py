@@ -58,6 +58,7 @@ class Vcir:
         self.branches = set(jsonobj['branches'])
         self.simu_only = set(jsonobj['simu_only'])
         self.module_entries = set(jsonobj['module_entries'])
+        self.module_exits = set(jsonobj['module_exits'])
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
         self.dp.createArcs() # Needs to be done after pn is in place

@@ -150,6 +150,7 @@ class Place(PNNode):
     def isPlace(self): return True
     def nodeType(self): return 'Place'
     def isEntryPlace(self): return self.nodeid in self.vcir.module_entries
+    def isExitPlace(self): return self.nodeid in self.vcir.module_exits
     def isMutex(self): return self.nodeid in self.vcir.mutexes
     def isBranch(self): return self.nodeid in self.vcir.branches
     def isPassiveBranch(self): return self.nodeid in self.vcir.passive_branches
@@ -158,17 +159,17 @@ class Place(PNNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcPetriNet:
-    def isSimuOnlyArc(self,srcid,tgtid): return \
-        srcid in self.vcir.simu_only or tgtid in self.vcir.simu_only
+    def isSimuOnlyArc(self,srcid,tgtid): return self.isSimuOnlyNode(srcid) or self.isSimuOnlyNode(tgtid)
+    def isSimuOnlyNode(self,nodeid): return nodeid in self.vcir.simu_only
     def __init__(self,pnobj,vcir):
         self.vcir = vcir
         self.places = {
             int(nodeid) : Place(int(nodeid),vcir,props)
-            for (nodeid,props) in pnobj['places'].items()
+            for (nodeid,props) in pnobj['places'].items() if not self.isSimuOnlyNode(int(nodeid))
             }
         self.transitions = {
             int(nodeid) : Transition(int(nodeid),vcir,props)
-            for (nodeid,props) in pnobj['transitions'].items()
+            for (nodeid,props) in pnobj['transitions'].items() if not self.isSimuOnlyNode(int(nodeid))
             }
         self.nodes = {**self.places,**self.transitions}
         self.arcs = []
