@@ -52,7 +52,11 @@ class DPArc(Arc):
 
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
-    def dotprops(self): return [('color','red'),('shape','triangle'),('label',self.label)]
+    def dotprops(self): return [
+        ('color','red'),
+        ('shape','triangle'),
+        ('label',self.idstr() + ':' + self.label)
+        ]
     def isDP(self): return True
     def nodeClass(self): return 'DPNode'
     def optype(self): return self.optyp
