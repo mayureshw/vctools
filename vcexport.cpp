@@ -133,6 +133,18 @@ public:
         moduleDict->push_back( { iwidths_key, iwidthslist } );
         moduleDict->push_back( { owidths_key, owidthslist } );
 
+        for( auto iparamdat:_simmod->iparamV() )
+        {
+            auto iwidth_val = jf.createJsonAtom<unsigned>( iparamdat->width() );
+            iwidthslist->push_back( iwidth_val );
+        }
+
+        for( auto oparamdat:_simmod->oparamV() )
+        {
+            auto owidth_val = jf.createJsonAtom<unsigned>( oparamdat->width() );
+            owidthslist->push_back( owidth_val );
+        }
+
         for( auto simdpe : _simmod->getDPEList() )
         {
             auto dpeid = simdpe->elem()->Get_Root_Index();
