@@ -68,5 +68,27 @@ class Vcir:
             entryplace.owidths = moddescr['iwidths']
             # exit place uses module owidths as its iwidths to collect out parms for return
             exitplace.iwidths = moddescr['owidths']
+
+            for tgtpos,srcinfo in moddescr['dpinps'].items():
+                srcnode = self.dp.nodes[srcinfo['id']]
+                arcobj = DPArc({
+                    'srcnode' : srcnode,
+                    'srcpos' : srcinfo['oppos'],
+                    'tgtnode' : exitplace,
+                    'tgtpos' : tgtpos,
+                    'rel' : 'data'
+                    })
+                exitplace.addIarc(arcobj,False)
+                srcnode.addOarc(arcobj,False)
+            for tgtpos,srcinfo in moddescr['fpinps'].items():
+                arcobj = DPArc({
+                    'srcnode' : entryplace,
+                    'srcpos' : srcinfo['oppos'],
+                    'tgtnode' : exitplace,
+                    'tgtpos' : tgtpos,
+                    'rel' : 'data'
+                    })
+                exitplace.addIarc(arcobj,False)
+                entryplace.addOarc(arcobj,False)
         self.dp.createArcs() # Needs to be done after pn is in place
         self.validate()
