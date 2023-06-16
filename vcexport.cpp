@@ -82,6 +82,7 @@ class ModuleIR
     }
 public:
     PNPlace* entryPlace() { return _simmod->entryPlace(); }
+    PNPlace* exitPlace() { return _simmod->exitPlace(); }
     string name() { return _simmod->name(); }
     void export_prolog(ofstream& pfile)
     {
@@ -117,6 +118,20 @@ public:
 
         auto moduleDict = jf.createJsonMap();
         modulesmap->push_back({ entryPlace_key, moduleDict });
+
+        auto exit_val = jf.createJsonAtom<unsigned>( exitPlace()->_nodeid );
+        moduleDict->push_back( { exit_key, exit_val } );
+
+        auto dpinpsdict = jf.createJsonMap();
+        moduleDict->push_back({ dpinps_key, dpinpsdict});
+        auto constinpdict = jf.createJsonMap();
+        moduleDict->push_back({ constinps_key, constinpdict });
+        auto fpinpdict = jf.createJsonMap();
+        moduleDict->push_back({ fpinps_key, fpinpdict });
+        auto iwidthslist = jf.createJsonList();
+        auto owidthslist = jf.createJsonList();
+        moduleDict->push_back( { iwidths_key, iwidthslist } );
+        moduleDict->push_back( { owidths_key, owidthslist } );
 
         for( auto simdpe : _simmod->getDPEList() )
         {
