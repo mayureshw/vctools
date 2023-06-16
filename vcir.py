@@ -61,5 +61,12 @@ class Vcir:
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
+        for en,moddescr in jsonobj['modules'].items():
+            entryplace = self.pn.nodes[ int(en) ]
+            exitplace = self.pn.nodes[ moddescr['exit'] ]
+            # entry place uses module iwidths as its owidths to supply fp to its users
+            entryplace.owidths = moddescr['iwidths']
+            # exit place uses module owidths as its iwidths to collect out parms for return
+            exitplace.iwidths = moddescr['owidths']
         self.dp.createArcs() # Needs to be done after pn is in place
         self.validate()
