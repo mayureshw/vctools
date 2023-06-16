@@ -92,7 +92,7 @@ public:
         _dppipe.dump(pfile);
         _dpstore.dump(pfile);
     }
-    void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap)
+    void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap, JsonMap* modulesmap)
     {
         auto label_key = jf.createJsonAtom<string>("label");
         auto optyp_key = jf.createJsonAtom<string>("optyp");
@@ -111,6 +111,12 @@ public:
         auto owidths_key = jf.createJsonAtom<string>("owidths");
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
+        auto exit_key = jf.createJsonAtom<string>("exit");
+
+        auto entryPlace_key = jf.createJsonAtom<string>( to_string( entryPlace()->_nodeid ) );
+
+        auto moduleDict = jf.createJsonMap();
+        modulesmap->push_back({ entryPlace_key, moduleDict });
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -263,16 +269,12 @@ public:
         JSONSTR(passive_branches)
         JSONSTR(branches)
         JSONSTR(simu_only)
-        JSONSTR(module_entries)
-        JSONSTR(module_exits)
 
         list<pair<JsonKey*,PNAnnotation>> annkeys {
             { &mutexes_key,          Mutex_         },
             { &passive_branches_key, PassiveBranch_ },
             { &branches_key,         Branch_        },
             { &simu_only_key,        SimuOnly_      },
-            { &module_entries_key,   ModuleEntry_   },
-            { &module_exits_key,     ModuleExit_    },
             };
 
         // 3. Additional vC specific properties for Petri net
@@ -284,13 +286,18 @@ public:
             top.push_back( { p.first, annlist } );
         }
 
-        // 4. vC data path
+        // 4. vC module info
+        JSONSTR(modules)
+        auto modulesmap = jf.createJsonMap();
+        top.push_back( { &modules_key, modulesmap } );
+
+        // 5. vC data path
         JSONSTR(dpes)
         auto dpesmap = jf.createJsonMap();
         top.push_back( { &dpes_key, dpesmap } );
-        for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpesmap);
+        for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpesmap, modulesmap);
 
-        // 5. Write json file
+        // 6. Write json file
         top.print(jsonfile);
         jsonfile.close();
     }
