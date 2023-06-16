@@ -93,27 +93,88 @@ public:
         _dppipe.dump(pfile);
         _dpstore.dump(pfile);
     }
-    void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap, JsonMap* modulesmap)
+    void buildJsonDPEIOWidths(JsonFactory& jf, vector<vcWire*>& iws, vector<vcWire*>& ows, JsonMap* dpedict)
     {
-        auto label_key = jf.createJsonAtom<string>("label");
-        auto optyp_key = jf.createJsonAtom<string>("optyp");
-        auto reqs_key = jf.createJsonAtom<string>("reqs");
-        auto greqs_key = jf.createJsonAtom<string>("greqs");
-        auto acks_key = jf.createJsonAtom<string>("acks");
-        auto gacks_key = jf.createJsonAtom<string>("gacks");
-        auto ftreq_key = jf.createJsonAtom<string>("ftreq");
-        auto ftack_key = jf.createJsonAtom<string>("ftack");
-        auto dpinps_key = jf.createJsonAtom<string>("dpinps");
-        auto fpinps_key = jf.createJsonAtom<string>("fpinps");
-        auto id_key = jf.createJsonAtom<string>("id");
-        auto oppos_key = jf.createJsonAtom<string>("oppos");
-        auto constinps_key = jf.createJsonAtom<string>("constinps");
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
         auto owidths_key = jf.createJsonAtom<string>("owidths");
-        auto callentry_key = jf.createJsonAtom<string>("callentry");
-        auto callexit_key = jf.createJsonAtom<string>("callexit");
-        auto exit_key = jf.createJsonAtom<string>("exit");
+        auto iwidthslist = jf.createJsonList();
+        auto owidthslist = jf.createJsonList();
+        dpedict->push_back({ iwidths_key, iwidthslist });
+        dpedict->push_back({ owidths_key, owidthslist });
+        for(auto iw:iws)
+        {
+            auto width_val = jf.createJsonAtom<unsigned>( iw->Get_Size() );
+            iwidthslist->push_back( width_val );
+        }
+        for(auto ow:ows)
+        {
+            auto width_val = jf.createJsonAtom<unsigned>( ow->Get_Size() );
+            owidthslist->push_back( width_val );
+        }
+    }
+    void buildJsonDPEInputs(JsonFactory& jf, vector<vcWire*>& iws, JsonMap* dpedict)
+    {
+        auto dpinps_key = jf.createJsonAtom<string>("dpinps");
+        auto fpinps_key = jf.createJsonAtom<string>("fpinps");
+        auto constinps_key = jf.createJsonAtom<string>("constinps");
+        auto id_key = jf.createJsonAtom<string>("id");
+        auto oppos_key = jf.createJsonAtom<string>("oppos");
 
+        auto dpinpsdict = jf.createJsonMap();
+        dpedict->push_back({ dpinps_key, dpinpsdict});
+        auto constinpdict = jf.createJsonMap();
+        dpedict->push_back({ constinps_key, constinpdict });
+        auto fpinpdict = jf.createJsonMap();
+        dpedict->push_back({ fpinps_key, fpinpdict });
+
+        for(int i=0; i<iws.size(); i++)
+        {
+            auto w = iws[i];
+            auto i_val = jf.createJsonAtom<string>( to_string(i) );
+            auto driver = w->Get_Driver();
+            if ( driver )
+            {
+                auto dpinpssubdict = jf.createJsonMap();
+                dpinpsdict->push_back({ i_val, dpinpssubdict });
+
+                auto inpid_val = jf.createJsonAtom<unsigned>( driver->Get_Root_Index() );
+                dpinpssubdict->push_back({id_key, inpid_val});
+
+                vector<int> opindices;
+                driver->Get_Output_Wire_Indices(w, opindices);
+                assert(opindices.size() == 1);
+                auto oppos_val = jf.createJsonAtom<unsigned>(opindices[0]);
+                dpinpssubdict->push_back({oppos_key, oppos_val});
+            }
+            else if ( w->Is_Constant() )
+            {
+                auto vcv = ( (vcConstantWire*) w )->Get_Value();
+                string const_str = _sys.valueDatum( vcv )->str();
+                auto const_val = jf.createJsonAtom<string>(const_str);
+                constinpdict->push_back({ i_val, const_val });
+            }
+            else if ( w->Kind() == "vcInputWire" )
+            {
+                auto fpinpssubdict = jf.createJsonMap();
+                fpinpdict->push_back({ i_val, fpinpssubdict });
+
+                auto fpid_val = jf.createJsonAtom<unsigned>( entryPlace()->_nodeid );
+                fpinpssubdict->push_back({id_key, fpid_val});
+
+                auto parampos = _simmod->getInpParamPos( w->Get_Id() );
+                auto oppos_val = jf.createJsonAtom<unsigned>(parampos);
+                fpinpssubdict->push_back({oppos_key, oppos_val});
+            }
+            else
+            {
+                cout << "vcexport: Unhandled wire type " << w->Kind() << endl;
+                exit(1);
+            }
+        }
+    }
+    void buildModuleJsonEntry(JsonFactory& jf, JsonMap* modulesmap)
+    {
+        auto exit_key = jf.createJsonAtom<string>("exit");
         auto entryPlace_key = jf.createJsonAtom<string>( to_string( entryPlace()->_nodeid ) );
 
         auto moduleDict = jf.createJsonMap();
@@ -122,28 +183,29 @@ public:
         auto exit_val = jf.createJsonAtom<unsigned>( exitPlace()->_nodeid );
         moduleDict->push_back( { exit_key, exit_val } );
 
-        auto dpinpsdict = jf.createJsonMap();
-        moduleDict->push_back({ dpinps_key, dpinpsdict});
-        auto constinpdict = jf.createJsonMap();
-        moduleDict->push_back({ constinps_key, constinpdict });
-        auto fpinpdict = jf.createJsonMap();
-        moduleDict->push_back({ fpinps_key, fpinpdict });
-        auto iwidthslist = jf.createJsonList();
-        auto owidthslist = jf.createJsonList();
-        moduleDict->push_back( { iwidths_key, iwidthslist } );
-        moduleDict->push_back( { owidths_key, owidthslist } );
+        vector<vcWire*> iws, ows;
+        for( int i=0; i<_vcm->Get_Number_Of_Input_Arguments(); i++)
+            iws.push_back( _vcm->Get_Input_Wire(i) );
+        for( int i=0; i<_vcm->Get_Number_Of_Output_Arguments(); i++)
+            ows.push_back( _vcm->Get_Output_Wire(i) );
+        buildJsonDPEIOWidths(jf, iws, ows, moduleDict);
+        // Note: we are exporting inputs to the exitPlace, hence we pass ows
+        buildJsonDPEInputs(jf, ows, moduleDict);
+    }
+    void buildJsonDPEList(JsonFactory& jf, JsonMap* dpesmap, JsonMap* modulesmap)
+    {
+        buildModuleJsonEntry(jf, modulesmap);
 
-        for( auto iparamdat:_simmod->iparamV() )
-        {
-            auto iwidth_val = jf.createJsonAtom<unsigned>( iparamdat->width() );
-            iwidthslist->push_back( iwidth_val );
-        }
-
-        for( auto oparamdat:_simmod->oparamV() )
-        {
-            auto owidth_val = jf.createJsonAtom<unsigned>( oparamdat->width() );
-            owidthslist->push_back( owidth_val );
-        }
+        auto label_key = jf.createJsonAtom<string>("label");
+        auto optyp_key = jf.createJsonAtom<string>("optyp");
+        auto reqs_key = jf.createJsonAtom<string>("reqs");
+        auto greqs_key = jf.createJsonAtom<string>("greqs");
+        auto acks_key = jf.createJsonAtom<string>("acks");
+        auto gacks_key = jf.createJsonAtom<string>("gacks");
+        auto ftreq_key = jf.createJsonAtom<string>("ftreq");
+        auto ftack_key = jf.createJsonAtom<string>("ftack");
+        auto callentry_key = jf.createJsonAtom<string>("callentry");
+        auto callexit_key = jf.createJsonAtom<string>("callexit");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -173,18 +235,6 @@ public:
             dpedict->push_back( { ftreq_key, pnv2jsonlist(jf, ftreqv) } );
             dpedict->push_back( { ftack_key, pnv2jsonlist(jf, ftackv) } );
 
-            auto dpinpsdict = jf.createJsonMap();
-            dpedict->push_back({ dpinps_key, dpinpsdict});
-            auto constinpdict = jf.createJsonMap();
-            dpedict->push_back({ constinps_key, constinpdict });
-            auto fpinpdict = jf.createJsonMap();
-            dpedict->push_back({ fpinps_key, fpinpdict });
-
-            auto iwidthslist = jf.createJsonList();
-            auto owidthslist = jf.createJsonList();
-            dpedict->push_back({ iwidths_key, iwidthslist });
-            dpedict->push_back({ owidths_key, owidthslist });
-
             if ( simdpe->isCall() )
             {
                 auto calledVcModule = ((vcCall*)simdpe->elem())->Get_Called_Module();
@@ -200,59 +250,9 @@ public:
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
-            for(int i=0; i<iws.size(); i++)
-            {
-                auto w = iws[i];
-                auto width_val = jf.createJsonAtom<unsigned>( w->Get_Size() );
-                iwidthslist->push_back( width_val );
-                auto i_val = jf.createJsonAtom<string>( to_string(i) );
-                auto driver = w->Get_Driver();
-                if ( driver )
-                {
-                    auto dpinpssubdict = jf.createJsonMap();
-                    dpinpsdict->push_back({ i_val, dpinpssubdict });
-
-                    auto inpid_val = jf.createJsonAtom<unsigned>( driver->Get_Root_Index() );
-                    dpinpssubdict->push_back({id_key, inpid_val});
-
-                    vector<int> opindices;
-                    driver->Get_Output_Wire_Indices(w, opindices);
-                    assert(opindices.size() == 1);
-                    auto oppos_val = jf.createJsonAtom<unsigned>(opindices[0]);
-                    dpinpssubdict->push_back({oppos_key, oppos_val});
-                }
-                else if ( w->Is_Constant() )
-                {
-                    auto vcv = ( (vcConstantWire*) w )->Get_Value();
-                    string const_str = _sys.valueDatum( vcv )->str();
-                    auto const_val = jf.createJsonAtom<string>(const_str);
-                    constinpdict->push_back({ i_val, const_val });
-                }
-                else if ( w->Kind() == "vcInputWire" )
-                {
-                    auto fpinpssubdict = jf.createJsonMap();
-                    fpinpdict->push_back({ i_val, fpinpssubdict });
-
-                    auto fpid_val = jf.createJsonAtom<unsigned>( entryPlace()->_nodeid );
-                    fpinpssubdict->push_back({id_key, fpid_val});
-
-                    auto parampos = _simmod->getInpParamPos( w->Get_Id() );
-                    auto oppos_val = jf.createJsonAtom<unsigned>(parampos);
-                    fpinpssubdict->push_back({oppos_key, oppos_val});
-                }
-                else
-                {
-                    cout << "vcexport: Unhandled wire type " << w->Kind() << endl;
-                    exit(1);
-                }
-            }
-
             auto ows = simdpe->elem()->Get_Output_Wires();
-            for(auto ow:ows)
-            {
-                auto width_val = jf.createJsonAtom<unsigned>( ow->Get_Size() );
-                owidthslist->push_back( width_val );
-            }
+            buildJsonDPEIOWidths(jf, iws, ows, dpedict);
+            buildJsonDPEInputs(jf, iws, dpedict);
         }
     }
     ModuleIR(vcModule* vcm, System& sys) : _vcm(vcm), _sys(sys), _simmod(sys.getModule(vcm))
