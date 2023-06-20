@@ -19,46 +19,28 @@ class NodeClass:
 
 class Node:
     maxdataports = 5
-    _datarels = { 'data', 'bind' }
-    _controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch', 'pndp' }
-    _metricrels = { 'total' }
+    datarels = { 'data', 'bind' }
+    controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch' }
+    metricrels = { 'total' }
     @classmethod
-    def all_arcrels_with_metrics(cls): return cls._controlrels.union(cls._metricrels, cls._datarels)
+    def all_arcrels_with_metrics(cls): return cls.controlrels.union(cls.metricrels, cls.datarels)
     def dotprops(self) : return []
     def isDP(self): return False
     def isPlace(self): return False
     def isTransition(self): return False
     def onreset(self): return 0
-    def iarcsExclMetrics(self): return [ a for r,arcs in self.iarcs.items() if r not in self._metricrels for a in arcs ]
-    def iarcrels(self): return [
-        ( rel, self.idstr(), arc.tgtpos, rel, arc.srcnode.idstr(), arc.srcpos )
-            for rel in self._controlrels for arc in self.iarcs[rel]
-        ] + [
-        ( rel+str(arc.tgtpos), self.idstr(), None, rel+str(arc.srcpos), arc.srcnode.idstr(), None )
-            for rel in self._datarels for arc in self.iarcs[rel]
+    def iarcsExclMetrics(self): return [ a for r,arcs in self.iarcs.items() if r not in self.metricrels for a in arcs ]
+    def controliarcs(self): return [
+        ( rel, self.idstr(), arc.tgtpos, arc.srcnode.idstr(), arc.srcpos )
+            for rel in self.controlrels for arc in self.iarcs[rel]
+        ]
+    def dataiarcs(self): return [
+        ( rel, self.idstr(), int(arc.tgtpos), arc.srcnode.idstr(), int(arc.srcpos) )
+            for rel in self.datarels for arc in self.iarcs[rel]
         ]
     def constvals(self): return [
-        ( self.idstr(), 'data' + str(pos), int(val) )
+        ( self.idstr(), int(pos), int(val) )
         for pos,val in self.constinps.items()
-        ]
-    def portwidths(self): return [
-        ( self.idstr(), rel, 'in', self.fanin(rel) )
-            for rel in self._controlrels if self.fanin(rel) > 0
-        ] + [
-        ( self.idstr(), rel, 'out', self.fanout(rel) )
-            for rel in self._controlrels if self.fanout(rel) > 0
-        ] + [
-        ( self.idstr(), 'data' + str(i), 'in', w )
-            for i,w in enumerate(self.iwidths)
-        ] + [
-        ( self.idstr(), 'data' + str(i), 'out', w )
-            for i,w in enumerate(self.owidths)
-        ] + [
-        ( self.idstr(), 'bind' + str(i), 'in', a.width )
-            for i,a in enumerate(self.iarcs['bind'])
-        ] + [
-        ( self.idstr(), 'bind' + str(i), 'out', a.width )
-            for i,a in enumerate(self.oarcs['bind'])
         ]
     # Note: fanin/out and in/out arc count are in general different properties
     # however in case of Petri nets, this difference is relevant only for forks
@@ -67,6 +49,16 @@ class Node:
     # we treat these notions as different.
     def fanin(self,rel): return len(self.iwidths if rel == 'data' else self.iarcs[rel])
     def fanout(self,rel): return len(self.owidths if rel == 'data' else self.oarcs[rel])
+    def inpwidth(self,rel,index): return (
+            self.iwidths[index] if index < len(self.iwidths) else 0
+        ) if rel == 'data' else (
+            self.iarcs['bind'][index].width if index < len(self.iarcs['bind']) else 0
+        ) if rel == 'bind' else None
+    def opwidth(self,rel,index): return (
+            self.owidths[index] if index < len(self.owidths) else 0
+        ) if rel == 'data' else (
+            self.oarcs['bind'][index].width if index < len(self.oarcs['bind']) else 0
+        ) if rel == 'bind' else None
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
     def addOarc(self,arc,inferSrcpos=True):
