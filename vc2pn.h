@@ -1147,6 +1147,9 @@ class System : public SystemBase
         pn()->createArc(pre2exitTransition, sysExitPlace);
 
         // Only for those not passed to createArc, we have to add
+        pn()->annotatePNNode( _sysPreExitPlace, SimuOnly_ );
+        pn()->annotatePNNode( pre2exitTransition, SimuOnly_ );
+        pn()->annotatePNNode( sysExitPlace, SimuOnly_ );
     }
     void buildPN()
     {
