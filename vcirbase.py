@@ -60,6 +60,9 @@ class Node:
         ) if rel == 'data' else (
             self.oarcs['bind'][index].width if index < len(self.oarcs['bind']) else 0
         ) if rel == 'bind' else None
+    def _widths2offset(self,ws): return [ (l+w-1,l) for i,w in enumerate(ws) for l in [sum(ws[:i])] ]
+    def ioffsets(self): return self._widths2offset(self.iwidths)
+    def ooffsets(self): return self._widths2offset(self.owidths)
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
     def addOarc(self,arc,inferSrcpos=True):
