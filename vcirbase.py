@@ -21,7 +21,7 @@ class Node:
     maxdataports = 5
     datarels = { 'data' }
     fixedWidthDataRels = { 'bind' }
-    controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'rev_mutex', 'rev_passivebranch' }
+    controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'callack', 'rev_mutex', 'rev_passivebranch' }
     metricrels = { 'total' }
     @classmethod
     def all_arcrels_with_metrics(cls): return cls.controlrels.union(cls.metricrels, cls.datarels, cls.fixedWidthDataRels)

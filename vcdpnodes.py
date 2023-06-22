@@ -47,7 +47,8 @@ class ShiftR(OpClass): pass
 class DPArc(Arc):
     def dotprops(self): return \
         [ ('color','red') ] if self.rel == 'data' else \
-        [ ('color','orange') ] if self.rel == 'bind' else []
+        [ ('color','orange') ] if self.rel == 'bind' else \
+        [ ('color','magenta') ] if self.rel == 'callack' else []
     def __init__(self,d):
         super().__init__(d)
 
@@ -126,6 +127,22 @@ class DPNode(Node):
                 })
             self.addIarc(arcobj)
             srcnode.addOarc(arcobj)
+            # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
+            acknode = self.vcir.pn.nodes[self.callack]
+            ack_call_arc = DPArc({
+                'srcnode' : acknode,
+                'tgtnode' : self,
+                'rel' : 'callack'
+                })
+            self.addIarc(ack_call_arc)
+            acknode.addOarc(ack_call_arc)
+            call_ack_arc = DPArc({
+                'srcnode' : self,
+                'tgtnode' : acknode,
+                'rel' : 'callack'
+                })
+            self.addOarc(call_ack_arc)
+            acknode.addIarc(call_ack_arc)
     def __init__(self,nodeid,vcir,props):
         super().__init__(nodeid,vcir,props)
 
