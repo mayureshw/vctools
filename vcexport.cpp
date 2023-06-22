@@ -206,6 +206,7 @@ public:
         auto ftack_key = jf.createJsonAtom<string>("ftack");
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
+        auto callack_key = jf.createJsonAtom<string>("callack");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -247,6 +248,10 @@ public:
                 auto calledExitPlaceId = calledModule->exitPlace()->_nodeid;
                 auto calledExitPlace_val = jf.createJsonAtom<unsigned>( calledExitPlaceId );
                 dpedict->push_back({ callexit_key, calledExitPlace_val });
+
+                auto callUackId = simdpe->getAckTransition(1)->_nodeid;
+                auto callUackId_val = jf.createJsonAtom<unsigned>( callUackId );
+                dpedict->push_back({ callack_key, callUackId_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
