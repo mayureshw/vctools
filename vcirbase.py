@@ -24,7 +24,9 @@ class Node:
     controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'callack', 'rev_mutex', 'rev_passivebranch' }
     metricrels = { 'total' }
     @classmethod
-    def all_arcrels_with_metrics(cls): return cls.controlrels.union(cls.metricrels, cls.datarels, cls.fixedWidthDataRels)
+    def all_arcrels_with_metrics(cls): return cls.all_arcrels_sans_metrics().union(cls.metricrels)
+    @classmethod
+    def all_arcrels_sans_metrics(cls): return cls.controlrels.union(cls.datarels, cls.fixedWidthDataRels)
     def dotprops(self) : return []
     def isDP(self): return False
     def isPlace(self): return False
