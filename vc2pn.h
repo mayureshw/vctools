@@ -49,7 +49,6 @@ class DPElement : public Element
     const bool _isGuarded;
     vector<PNTransition*> _reqs, _acks;
     vector<PNTransition*> _greqs, _gacks;
-    PNTransition *_ftreq, *_ftack;
     Operator *_op;
     BRANCH *_guardBranchOp;
     void indexcheck(int indx)
@@ -58,35 +57,6 @@ class DPElement : public Element
         {
             cout << "vc2pn: indx other than 0, 1 not handled (todo)" << endl;
             exit(1);
-        }
-    }
-    void flowthrDrivers(vector<DPElement*>& ftdrvs)
-    {
-        for(auto w:elem()->Get_Input_Wires())
-        {
-            auto driver = w->Get_Driver();
-            if (driver)
-            {
-                auto driverDPE = _module->getDPE(driver);
-                if( driverDPE->isDeemedFlowThrough() )
-                    ftdrvs.push_back( driverDPE );
-            }
-        }
-    }
-    // Why set: helps a+a like expressions trim unnecessary extra nodes
-    void partitionDrivers(set<DPElement*>& ftdrvs, set<DPElement*>& nonftdrvs)
-    {
-        for(auto w:elem()->Get_Input_Wires())
-        {
-            auto driver = w->Get_Driver();
-            if (driver)
-            {
-                auto driverDPE = _module->getDPE(driver);
-                if( driverDPE->isDeemedFlowThrough() )
-                    ftdrvs.insert( driverDPE );
-                else
-                    nonftdrvs.insert( driverDPE );
-            }
         }
     }
 public:
@@ -128,14 +98,6 @@ public:
     // Can improvise a network (e.g. additional places/transitions) within those boundaries
     void buildPNPhi()
     {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if( ftdrvs.size() != 0 )
-        {
-            // TODO: Check if phi can have ft drivers
-            cout << "vc2pn: flowthrDrivers drivers for phi not handled" << endl;
-            exit(1);
-        }
         auto phplace = pn()->createPlace("DPE:" + _label + "_phplace");
         auto rootindex = elem()->Get_Root_Index();
         for(int i=0; i<_reqs.size(); i++)
@@ -168,29 +130,6 @@ public:
 #       endif
         return brplace;
     }
-    void buildPNBranchFT(vector<DPElement*>& ftdrvs)
-    {
-        auto ftack = ftdrvs[0]->ftack();
-        auto brplace = createBrPlaceAcks();
-        auto brtrans = pn()->createTransition(_label + ".brtrans");
-        pn()->createArc( _reqs[0], brtrans );
-        pn()->createArc( ftack, brtrans );
-        pn()->createArc( brtrans, brplace );
-#       ifdef USECEP
-        auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
-        pn()->vctid.add({ rootindex, "ftack", ftack->_nodeid });
-#       endif
-    }
-    void buildPNBranchConst(vcWire* w)
-    {
-        auto brplace = createBrPlaceAcks();
-        pn()->createArc(_reqs[0], brplace);
-#       ifdef USECEP
-        auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
-#       endif
-    }
     void buildPNBranch()
     {
         auto inpwires = elem()->Get_Input_Wires();
@@ -199,16 +138,12 @@ public:
             cout << "vc2pn: branch has input driver count != 1: " << elem()->Get_Id() << endl;
             exit(1);
         }
-        auto condwire = inpwires[0];
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if( ftdrvs.size() == 1 ) buildPNBranchFT(ftdrvs);
-        else if ( condwire->Is_Constant() ) buildPNBranchConst(condwire);
-        else
-        {
-            cout << "vc2pn: branch has non-flowthrough non-const driver : " << elem()->Get_Id() << endl;
-            exit(1);
-        }
+        auto brplace = createBrPlaceAcks();
+        pn()->createArc(_reqs[0], brplace);
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
+#       endif
     }
     int uackIndx()
     {
@@ -226,17 +161,6 @@ public:
     bool isDeemedGuarded()
     {
         return _isGuarded and not isDeemedFlowThrough();
-    }
-    bool isGuardCondFlowThrough()
-    {
-        if ( isDeemedGuarded() )
-        {
-            auto driver = elem()->Get_Guard_Wire()->Get_Driver();
-            if ( driver == NULL ) return false;
-            auto driverDPE = _module->getDPE(driver);
-            return driverDPE->isDeemedFlowThrough();
-        }
-        else return false;
     }
     bool isSignalInport()
     {
@@ -259,20 +183,7 @@ public:
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
 
-        if ( isGuardCondFlowThrough() )
-        {
-            auto driver = elem()->Get_Guard_Wire()->Get_Driver();
-            assert(driver);
-            auto driverDPE = _module->getDPE(driver);
-            auto driverFtack = driverDPE->ftack();
-            auto gsreq_ftack_join = pn()->createTransition(dpelabel + ".gsreq_ftack_join");
-
-            pn()->createArc(gsreq, gsreq_ftack_join);
-            pn()->createArc(driverFtack, gsreq_ftack_join);
-            pn()->createArc(gsreq_ftack_join, brplace);
-        }
-        else
-            pn()->createArc(gsreq, brplace);
+        pn()->createArc(gsreq, brplace);
 
         if ( elem()->Get_Guard_Complement() )
         {
@@ -297,20 +208,6 @@ public:
         pn()->createArc(gureqplace, ureq);
         pn()->createArc(gureqplace, nogo_ureq);
     }
-    void buildPNFT()
-    {
-        set<DPElement*> ftdrvs, nonftdrvs;
-        partitionDrivers(ftdrvs, nonftdrvs);
-        for(auto ftdrv:ftdrvs)
-            pn()->createArc( ftdrv->ftack(), _ftreq );
-        for(auto nonftdrv:nonftdrvs)
-        {
-            auto ackindx = nonftdrv->isDeemedPhi() ? 0 : 1;
-            pn()->createArc( nonftdrv->getAckTransition(ackindx), _ftreq );
-        }
-        if ( ftdrvs.size() == 0 and nonftdrvs.size() == 0 )
-            pn()->createArc( _module->entryTransition(), _ftreq );
-    }
     // buildPN that suits most DPEs
     void buildPNDefault()
     {
@@ -327,10 +224,6 @@ public:
         pn()->annotatePNNode(sreq_sack_place, SimuOnly_);
         pn()->annotatePNNode(sack_uack_place, SimuOnly_);
         pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
-        set<DPElement*> ftdrvs, nonftdrvs;
-        partitionDrivers(ftdrvs, nonftdrvs);
-        for(auto ftdrv:ftdrvs)
-            pn()->createArc( ftdrv->ftack(), _reqs[0] );
         auto uack2sack = (PNPlace*) pn()->createArc(
             _acks[1], _acks[0],
             "MARKP:" + _acks[0]->_name
@@ -379,23 +272,6 @@ public:
             pn()->createArc(uack, calledMutexPlace);
         }
     }
-    PNTransition* ftreq() { return _ftreq; }
-    PNTransition* ftack() { return _ftack; }
-    PNTransition* createFtreqAck()
-    {
-        _ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
-        _ftack = pn()->createTransition("DPE:" + _label + "_ftack");
-        pn()->createArc(_ftreq, _ftack);
-#       ifdef USECEP
-        auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "ftreq", _ftreq->_nodeid });
-        pn()->vctid.add({ rootindex, "ftack", _ftack->_nodeid });
-#       endif
-        _ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
-        // if this ftreq relates with a pipe, need to connect with pipe's pnet
-        if ( isSignalInport() )
-            ((IOPort*)_op)->_pipe->buildPNIport(_ftreq, _ftack);
-    }
     void createGuardReqs()
     {
         for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
@@ -408,11 +284,8 @@ public:
     }
     void createReqs()
     {
-        if ( isDeemedFlowThrough() )
-            createFtreqAck();
-        else for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
+        for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
             _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
-
     }
     void createAcks()
     {
@@ -421,8 +294,7 @@ public:
     }
     void buildPN()
     {
-        if ( isDeemedFlowThrough() )
-            buildPNFT();
+        if ( isDeemedFlowThrough() );
         else if ( _vctyp == vcBranch_ )
             buildPNBranch();
         else if ( isDeemedPhi() )
@@ -489,8 +361,11 @@ public:
 
         // Some createReqs need _op initialized, so this is before createReqs
         _op = sys()->createOperator(elem);
-        createReqs();
-        createAcks();
+        if ( not isDeemedFlowThrough() )
+        {
+            createReqs();
+            createAcks();
+        }
         if ( isDeemedGuarded() )
         {
             if ( elem->Get_Number_Of_Reqs() != 2 or elem->Get_Number_Of_Acks() != 2 )
@@ -1034,20 +909,6 @@ public:
             _outparamDatum.emplace(oparam.first, datum);
         }
     }
-    void flowthrOpDrivers(set<DPElement*>& ftopdrvs)
-    {
-        for(auto oparam: _vcm->Get_Output_Arguments())
-        {
-            auto *owire = oparam.second;
-            auto driver = owire->Get_Driver();
-            if ( driver )
-            {
-                auto driverDPE = getDPE(driver);
-                if( driverDPE->isDeemedFlowThrough() )
-                    ftopdrvs.insert( driverDPE );
-            }
-        }
-    }
     void buildPN()
     {
         for(auto e:_dpelist) e->buildPN();
@@ -1070,11 +931,6 @@ public:
             pn()->createArc(exitCPE->outPNNode(), exitCPENode);
         }
 
-        set<DPElement*> ftopdrvs;
-        flowthrOpDrivers(ftopdrvs);
-
-        for(auto ftopdrv:ftopdrvs)
-            pn()->createArc( ftopdrv->ftack(), exitCPENode );
         pn()->createArc(exitCPENode, _moduleExitPlace );
 
         if ( _isDaemon )
