@@ -331,7 +331,11 @@ public:
         {
             DatumBase* inpdatum;
             if ( w->Kind() == "vcInputWire" )
+            {
                 inpdatum = _module->inparamDatum( w->Get_Id() );
+                if ( isDeemedFlowThrough() )
+                    _module->registerFTListener( _op );
+            }
             else if ( w->Is_Constant() )
                 inpdatum = sys()->valueDatum( ((vcConstantWire*) w)->Get_Value() );
             else
@@ -753,6 +757,7 @@ class Module : public ModuleBase
     condition_variable _moduleExitedCV;
     mutex _moduleExitedMutex;
     map<string,unsigned> _inpParamPos;
+    vector<Operator*> _ftlisteners;
 public:
     bool _isDaemon;
     SystemBase* sys() { return _sys; }
@@ -856,12 +861,14 @@ public:
         }
         pn()->addtokens(_moduleEntryPlace, 1);
     }
+    void registerFTListener(Operator *op) { _ftlisteners.push_back(op); }
     void moduleEntry()
     {
         cout << "Module " << name() << " invoked with:";
         for(auto ip:_inparamDatum)
             cout << " " << ip.first << "=" << ip.second->str();
         cout << endl;
+        for( auto l : _ftlisteners ) l->flowthrough(0);
     }
     void moduleExit()
     {

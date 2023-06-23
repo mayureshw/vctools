@@ -42,6 +42,7 @@ public:
     virtual DatumBase* opregForWire(vcWire*) = 0;
     virtual bool isVolatile() = 0;
     virtual unsigned getInpParamPos(string) = 0;
+    virtual void registerFTListener(Operator*) = 0;
 };
 
 #endif
