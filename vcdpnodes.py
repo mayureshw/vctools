@@ -86,7 +86,7 @@ class DPNode(Node):
                 })
             self.addIarc(arcobj,False)
             srcnode.addOarc(arcobj,False)
-        for req in self.reqs + self.greqs + self.ftreq:
+        for req in self.reqs + self.greqs:
             srcnode = self.vcir.pn.nodes[req]
             arcobj = DPArc({
                 'srcnode' : srcnode,
@@ -95,7 +95,7 @@ class DPNode(Node):
                 })
             self.addIarc(arcobj)
             srcnode.addOarc(arcobj)
-        for ack in self.acks + self.gacks + self.ftack:
+        for ack in self.acks + self.gacks:
             tgtnode = self.vcir.pn.nodes[ack]
             arcobj = DPArc({
                 'srcnode' : self,

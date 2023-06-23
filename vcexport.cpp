@@ -202,8 +202,8 @@ public:
         auto greqs_key = jf.createJsonAtom<string>("greqs");
         auto acks_key = jf.createJsonAtom<string>("acks");
         auto gacks_key = jf.createJsonAtom<string>("gacks");
-        auto ftreq_key = jf.createJsonAtom<string>("ftreq");
-        auto ftack_key = jf.createJsonAtom<string>("ftack");
+        //auto ftreq_key = jf.createJsonAtom<string>("ftreq");
+        //auto ftack_key = jf.createJsonAtom<string>("ftack");
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
         auto callack_key = jf.createJsonAtom<string>("callack");
@@ -227,14 +227,14 @@ public:
             dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
             dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
             dpedict->push_back({ gacks_key, pnv2jsonlist(jf, simdpe->getGAcks())});
-            vector<PNTransition*> ftreqv, ftackv;
-            if ( simdpe->isDeemedFlowThrough() )
-            {
-                ftreqv.push_back( simdpe->ftreq() );
-                ftackv.push_back( simdpe->ftack() );
-            }
-            dpedict->push_back( { ftreq_key, pnv2jsonlist(jf, ftreqv) } );
-            dpedict->push_back( { ftack_key, pnv2jsonlist(jf, ftackv) } );
+            //vector<PNTransition*> ftreqv, ftackv;
+            //if ( simdpe->isDeemedFlowThrough() )
+            //{
+            //    ftreqv.push_back( simdpe->ftreq() );
+            //    ftackv.push_back( simdpe->ftack() );
+            //}
+            //dpedict->push_back( { ftreq_key, pnv2jsonlist(jf, ftreqv) } );
+            //dpedict->push_back( { ftack_key, pnv2jsonlist(jf, ftackv) } );
 
             if ( simdpe->isCall() )
             {
