@@ -26,6 +26,8 @@ class Operator
 protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
+    vector<Operator*> _ftlisteners;
+    mutex *_ftmutex = NULL;
     template<typename T> T getmask(unsigned width)
     {
         unsigned lead0s;
@@ -33,7 +35,16 @@ protected:
         else lead0s =  ( sizeof(T)*8 - width );
         return ( (T) ~((T)0) ) >> lead0s;
     }
+    void setFTListener(Operator *listener)
+    {
+        _ftlisteners.push_back( listener );
+    }
 public:
+    void setFlowthroughInps(set<Operator*> listenToOps)
+    {
+        _ftmutex = new mutex();
+        for(auto o:listenToOps) o->setFTListener(this);
+    }
     const string _dplabel; // for logging only
 #ifdef OPDBG
     inline static ofstream oplog;
@@ -61,7 +72,13 @@ public:
         exit(1);
     }
     // TODO: flowthrough can do minutely better by skipping _resv
-    virtual void flowthrough(unsigned long eseqno) { sack(eseqno); uack(eseqno); }
+    virtual void flowthrough(unsigned long eseqno)
+    {
+        _ftmutex->lock();
+        sack(eseqno);
+        uack(eseqno);
+        _ftmutex->unlock();
+    }
     string inpvstr()
     {
         string retstr;
@@ -80,9 +97,11 @@ public:
             OPLOG("uack" << i << ":" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
             opv[i]->blindcopy(_resv[i]);
         }
+        for( auto l : _ftlisteners ) l->flowthrough(eseqno);
     }
     void setinpv(const vector<DatumBase*>& ipv) { _ipv = ipv; }
     Operator(string label) : _dplabel(label) {}
+    ~Operator() { if ( _ftmutex ) delete _ftmutex; }
 };
 
 template <typename Tout> class OperatorT : public Operator
@@ -432,7 +451,13 @@ public:
     string oplabel() { return "Inport"; }
     // AHIR does read operations on update events, unlike other operators
     // Hence we implement uack like operations on ureq and customize flowthrough
-    void flowthrough(unsigned long eseqno) { ureq(eseqno); uack(eseqno); }
+    void flowthrough(unsigned long eseqno)
+    {
+        _ftmutex->lock();
+        ureq(eseqno);
+        uack(eseqno);
+        _ftmutex->unlock();
+    }
     void ureq(unsigned long eseqno)
     {
         z = ((Datum<Tout>*) _pipe->pop(eseqno))->val;

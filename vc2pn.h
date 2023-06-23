@@ -91,6 +91,12 @@ class DPElement : public Element
     }
 public:
     Operator *getOp() { return _op; }
+    Operator *getDriverOp( vcWire *w )
+    {
+        auto driver = w->Get_Driver();
+        assert(driver);
+        return _module->getDPE(driver)->getOp();
+    }
     const vector<PNTransition*>& getReqs() { return _reqs; }
     const vector<PNTransition*>& getAcks() { return _acks; }
     const vector<PNTransition*>& getGReqs() { return _greqs; }
@@ -448,6 +454,7 @@ public:
     void setinpv()
     {
         vector<DatumBase*> inpv;
+        set<Operator*> listenToOps;
         for( auto w : elem()->Get_Input_Wires() )
         {
             DatumBase* inpdatum;
@@ -456,10 +463,16 @@ public:
             else if ( w->Is_Constant() )
                 inpdatum = sys()->valueDatum( ((vcConstantWire*) w)->Get_Value() );
             else
+            {
                 inpdatum = _module->opregForWire(w);
+                if ( isDeemedFlowThrough() )
+                    listenToOps.insert( getDriverOp(w) );
+            }
             inpv.push_back(inpdatum);
         }
         _op->setinpv(inpv);
+        if ( isDeemedFlowThrough() )
+            _op->setFlowthroughInps( listenToOps );
 
         if ( isDeemedGuarded() ) setGuardBranchInpv();
     }
