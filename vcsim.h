@@ -53,11 +53,50 @@ void vcsim(
     map<string,vector<DatumBase*>>& collectopmap = emptymap
     );
 
+class DatumPool
+{
+    vector<DatumBase*> _pool;
+public:
+    template <typename T> DatumBase* get(T val, unsigned width=sizeof(T)>>3)
+    {
+        auto *d = new Datum<T>(width);
+        *d = val;
+        _pool.push_back(d);
+        return d;
+    }
+    ~DatumPool() { for(auto d:_pool) delete d; }
+};
+
 // Low level interface to vC simulator, see examples/vcsim04.cpp for usage of this
 class VcsimIf
 {
     System *_sys;
+    DatumPool _dpool;
 public:
+    // Pipe interfaces somewhat similar to Aa testbench
+    // NOTE: For larger simulations, test benches should pass own pool instance which they can free
+    template<typename T> void write(string pipe, T val, unsigned width = sizeof(T)>>3, DatumPool* dpool_ = NULL)
+    {
+        DatumPool *dpool = dpool_ == NULL ? &_dpool : dpool_;
+        feedPipe(pipe, {dpool->get(val,width)});
+    }
+    template<typename T> void write_n(string pipe, T *a, unsigned n, unsigned width = sizeof(T)>>3, DatumPool* dpool_ = NULL)
+    {
+        DatumPool *dpool = dpool_ == NULL ? &_dpool : dpool_;
+        vector<DatumBase*> dv;
+        for(unsigned i=0; i<n; i++) dv.push_back( dpool->get(a[i],width) );
+        feedPipe( pipe, dv );
+    }
+    template<typename T> T read(string pipe)
+    {
+        DatumBase *datum_v = readPipe(pipe,1)[0];
+        return ( (Datum<T>*) datum_v )->val;
+    }
+    template<typename T> void read_n(string pipe, T* arr, unsigned n)
+    {
+        unsigned i=0;
+        for( auto d:readPipe(pipe, n) ) arr[i++] = ( (Datum<T>*) d )->val;
+    }
     void stop();
     void invoke();
     vector<DatumBase*> moduleInvoke(string modulename, const vector<DatumBase*>& inpv = {});
