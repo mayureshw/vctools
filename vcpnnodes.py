@@ -172,8 +172,9 @@ class VcPetriNet:
             for (nodeid,props) in pnobj['transitions'].items() if not self.isSimuOnlyNode(int(nodeid))
             }
         self.nodes = {**self.places,**self.transitions}
-        self.arcs = []
-        for arc in pnobj['arcs']:
+        self.rawarcs = pnobj['arcs']
+        self.arcs = [] # TODO: Not populated, a rule in vcir.py depends on this, search pn.arcs
+        for arc in self.rawarcs:
             srcid = arc['src']
             tgtid = arc['tgt']
             if self.isSimuOnlyArc(srcid,tgtid): continue
