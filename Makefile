@@ -53,8 +53,8 @@ EXCLUDEOPT	=	libahirvc.a
 OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
 ifeq ($(USECEP),y)
-BINS		+=	vc2p.out
-VCTOOLSRCS	+=	vc2p.cpp
+BINS		+=	vcexport.out
+VCTOOLSRCS	+=	vcexport.cpp
 endif
 
 ifeq ($(BUILD_CPR_CHECK),y)
@@ -62,8 +62,8 @@ BINS		+=	cprcheck.out
 VCTOOLSRCS	+=	cprcheck.cpp
 endif
 
-vc2p.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
-$(OPTBINS):CXXFLAGS	+=	-O3
+vcexport.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
+$(OPTBINS):CXXFLAGS		+=	-O3
 
 # Need to touch the file as antlr doesn't change the timestamp if the file wasn't changed
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
@@ -92,7 +92,7 @@ cprcheck.out:	cprcheck.o libahirvc.a
 	$(CXX) $^ $(LDFLAGS) -o $@
 endif
 
-vc2p.out:	vc2p.o libvcsim.so libahirvc.a
+vcexport.out:	vcexport.o libvcsim.so libahirvc.a
 	$(CXX) $< $(LDFLAGS) -o $@
 
 ifdef XSBDIR
@@ -103,7 +103,7 @@ endif
 clean:
 	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES) $(DFILES)
 
-CONFOPTS	=	USECEP USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML
+CONFOPTS	=	USECEP USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML PN_PLACE_CAPACITY_EXCEPTION
 CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
 CXXFLAGS	+=	-DWIDEUINTSZ=$(WIDEUINTSZ)
 

@@ -1,10 +1,20 @@
 $pipe p1 : $uint<8> $depth 1
 $pipe p2 : $uint<8> $depth 1
 
+$storage counter : $uint<8>
+
 // daemon just loops back p1 on p2
 $module [ daemon ]
 $in ( )
 $out ( ) $is
 {
     p2 := p1
+    counter := ( counter + 1 )
+}
+
+$module [ getcounter ]
+$in ( )
+$out ( retval : $uint<8> ) $is
+{
+    retval := counter
 }

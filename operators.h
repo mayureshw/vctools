@@ -26,6 +26,8 @@ class Operator
 protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
+    vector<Operator*> _ftlisteners;
+    mutex *_ftmutex = NULL;
     template<typename T> T getmask(unsigned width)
     {
         unsigned lead0s;
@@ -33,7 +35,16 @@ protected:
         else lead0s =  ( sizeof(T)*8 - width );
         return ( (T) ~((T)0) ) >> lead0s;
     }
+    void setFTListener(Operator *listener)
+    {
+        _ftlisteners.push_back( listener );
+    }
 public:
+    void setFlowthroughInps(set<Operator*> listenToOps)
+    {
+        _ftmutex = new mutex();
+        for(auto o:listenToOps) o->setFTListener(this);
+    }
     const string _dplabel; // for logging only
 #ifdef OPDBG
     inline static ofstream oplog;
@@ -61,7 +72,13 @@ public:
         exit(1);
     }
     // TODO: flowthrough can do minutely better by skipping _resv
-    virtual void flowthrough(unsigned long eseqno) { sack(eseqno); uack(eseqno); }
+    virtual void flowthrough(unsigned long eseqno)
+    {
+        _ftmutex->lock();
+        sack(eseqno);
+        uack(eseqno);
+        _ftmutex->unlock();
+    }
     string inpvstr()
     {
         string retstr;
@@ -80,9 +97,11 @@ public:
             OPLOG("uack" << i << ":" << eseqno << ":" << oplabel() << ":" << _dplabel << ":" << inpvstr() << _resv[i]->str())
             opv[i]->blindcopy(_resv[i]);
         }
+        for( auto l : _ftlisteners ) l->flowthrough(eseqno);
     }
     void setinpv(const vector<DatumBase*>& ipv) { _ipv = ipv; }
     Operator(string label) : _dplabel(label) {}
+    ~Operator() { if ( _ftmutex ) delete _ftmutex; }
 };
 
 template <typename Tout> class OperatorT : public Operator
@@ -126,6 +145,19 @@ template <typename Tout, typename Tin1, typename Tin2> class BinOperator : publi
 {
 using OperatorT<Tout>::OperatorT;
 protected:
+    // By convention msbmask is taken for 0th argument of inpv
+    Tin1 msbmask() { return 1 << ( this->_ipv[0]->width() - 1 ); }
+    bool isNegative(Tout val) { return ( msbmask() & val ) != 0; }
+    bool signedLT(Tout val1, Tout val2)
+    {
+        bool val1Neg = isNegative(val1);
+        bool val2Neg = isNegative(val2);
+        // if both have same sign bit, let unsigned comparison decide
+        if ( val1Neg == val2Neg ) return val1 < val2;
+        // Hereafter both values don't have same sign bit
+        if ( val1Neg ) return true; // i.e. val1 is negative and val2 is non negative
+        return false; // val2 is negative and val1 is non negative
+    }
     virtual Tout eval(Tin1 x, Tin2 y) = 0;
 public:
     void sack(unsigned long eseqno)
@@ -191,6 +223,7 @@ public:
 BINOP( Plus,   x + y  ) 
 BINOP( Minus,  x - y  )
 BINOP( Mult,   x * y  )
+BINOP( Div,    x / y  )
 BINOP( And,    x & y  )
 BINOP( Or,     x | y  )
 BINOP( Xor,    x ^ y  )
@@ -204,6 +237,11 @@ BINOP( Ge,     x >= y )
 BINOP( Ne,     x != y )
 BINOP( Eq,     x == y )
 BINOP( Concat, ( ((Tout) x) << INPWIDTH(1) ) | (Tout) y )
+
+BINOP( SLt, this->signedLT(x,y)             )
+BINOP( SLe, this->signedLT(x,y) || (x == y) )
+BINOP( SGt, this->signedLT(y,x)             )
+BINOP( SGe, this->signedLT(y,x) || (x == y) )
 
 BINOP2( Bitsel, ( ( x >> yint ) & (Tin1) 1 ) != 0 )
 BINOP2( ShiftL, x << yint )
@@ -245,6 +283,19 @@ public:
     Tout eval(Tin1 x, Tin2 y) { return this->swap(x, this->rotateby(y)); }
 };
 
+template <typename Tout, typename Tin1, typename Tin2> class ShiftRA : public BinOperator<Tout, Tin1, Tin2>
+{
+using BinOperator<Tout, Tin1, Tin2>::BinOperator;
+public:
+    string oplabel() { return "ShiftRA"; }
+    Tout eval(Tin1 x, Tin2 y)
+    {
+        if ( not this->isNegative(x) ) return x >> y;
+        Tout retval = x;
+        for(int i=0; i<y; i++) retval = ( retval >> 1 ) | this->msbmask();
+        return retval;
+    }
+};
 
 template <typename Tout, typename Tin> class Not : public UnaryOperator<Tout, Tin>
 {
@@ -252,6 +303,41 @@ using UnaryOperator<Tout, Tin>::UnaryOperator;
 public:
     string oplabel() { return "Not"; }
     Tout eval(Tin x) { return this->mask( ~x ); }
+};
+
+template <typename Tout, typename Tin> class CastOperator : public UnaryOperator<Tout, Tin>
+{
+protected:
+    Tin _imsbmask, _inomsbmask;
+    Tout _omsbmask, _onomsbmask, _replcarrymask;
+public:
+    CastOperator(unsigned owidth, unsigned iwidth, string label="") : UnaryOperator<Tout,Tin>(owidth, label)
+    {
+        _imsbmask = 1 << (iwidth - 1);
+        _omsbmask = 1 << (owidth - 1);
+        _inomsbmask = this->template getmask<Tin>(iwidth - 1);
+        _onomsbmask = this->template getmask<Tout>(owidth - 1);
+        _replcarrymask = ( owidth < iwidth ) ? _omsbmask : this->_mask ^ _inomsbmask;
+    }
+};
+
+template <typename Tout, typename Tin> class S2S : public CastOperator<Tout, Tin>
+{
+using CastOperator<Tout, Tin>::CastOperator;
+public:
+    string oplabel() { return "S2S"; }
+    Tout eval(Tin x)
+    {
+        return ( (this->_imsbmask & x) == 0 ) ? x : this->_replcarrymask | x;
+    }
+};
+
+template <typename Tout, typename Tin> class CCast : public UnaryOperator<Tout, Tin>
+{
+using UnaryOperator<Tout, Tin>::UnaryOperator;
+public:
+    string oplabel() { return "CCast"; }
+    Tout eval(Tin x) { return (Tout) x; }
 };
 
 template <typename Tout, typename Tin1, typename Tin2, typename Tin3> class Select : public TernOperator<Tout, Tin1, Tin2, Tin3>
@@ -271,9 +357,12 @@ public:
     {
         auto x = INPVAL(Tin,0);
         if constexpr ( ISWUINT(Tin) and !ISWUINT(Tout) )
-            this->z = this->mask( ( x >> _l ).to_ulong() );
-        else
-            this->z = this->mask( ( x >> _l ) );
+        {
+            bitset<sizeof(unsigned long)> z1 = 0;
+            for(int i=0, b = _l; i < this->z.width(); i++, b++) z1[i] = x[b];
+            this->z = z1.to_ulong();
+        }
+        else this->z = this->mask( ( x >> _l ) );
     }
     Slice(unsigned width, string label, unsigned l) : _l(l),
         OperatorT<Tout>(width, label) {}
@@ -362,7 +451,13 @@ public:
     string oplabel() { return "Inport"; }
     // AHIR does read operations on update events, unlike other operators
     // Hence we implement uack like operations on ureq and customize flowthrough
-    void flowthrough(unsigned long eseqno) { ureq(eseqno); uack(eseqno); }
+    void flowthrough(unsigned long eseqno)
+    {
+        _ftmutex->lock();
+        ureq(eseqno);
+        uack(eseqno);
+        _ftmutex->unlock();
+    }
     void ureq(unsigned long eseqno)
     {
         z = ((Datum<Tout>*) _pipe->pop(eseqno))->val;

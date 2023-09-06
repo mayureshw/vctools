@@ -150,6 +150,17 @@ class OpFactory
     {
         return new Opcls( dpe->Get_Output_Width(), dpe->Get_Id() );
     }
+    template <typename Opcls> Operator* createCast(vcDatapathElement *dpe)
+    {
+        auto ipwires = dpe->Get_Input_Wires();
+        if ( ipwires.size() != 1 )
+        {
+            cout << "Cast operator input wire count expected: 1, got"
+                << ipwires.size() << endl;
+            exit(1);
+        }
+        return new Opcls( dpe->Get_Output_Width(), ipwires[0]->Get_Size(), dpe->Get_Id() );
+    }
 public:
     vcStorageObject* getStorageObj(vcDatapathElement* dpe)
     {
@@ -182,7 +193,7 @@ public:
         auto it = _opfmap.find( {vcid, opsig} );
         if ( it == _opfmap.end() )
         {
-            cout << "Operator generator not found for element " << dpe->Get_Id() << " vcid " << vcid << " signature";
+            cout << "Operator generator not found for element " << dpe->Get_Id() << " kind " << kind << " vcid " << vcid << " signature";
             for(auto t:opsig) cout << " " << t;
             cout << endl;
             exit(1);
