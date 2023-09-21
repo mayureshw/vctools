@@ -2,6 +2,8 @@
 #define _VC2PN_H
 
 #include <map>
+#include <mutex>
+#include <condition_variable>
 #include <functional>
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
@@ -37,6 +39,7 @@ public:
     string label() { return _label; }
     SystemBase* sys() { return _module->sys(); }
     VcPetriNet* pn() { return _module->pn(); }
+    bool inVolatileModule() { return _module->isVolatile(); }
     Element(vcRoot* elem, ModuleBase* module) : _elem(elem), _module(module) {}
     virtual void buildPN()=0;
 };
@@ -56,44 +59,20 @@ class DPElement : public Element
             exit(1);
         }
     }
-    void flowthrDrivers(vector<DPElement*>& ftdrvs)
-    {
-        for(auto w:elem()->Get_Input_Wires())
-        {
-            auto driver = w->Get_Driver();
-            if (driver)
-            {
-                auto driverDPE = _module->getDPE(driver);
-                if( driverDPE->isDeemedFlowThrough() )
-                    ftdrvs.push_back( driverDPE );
-            }
-        }
-    }
-    void sreq2ack() { buildSreqToAckPath(_reqs[0], _acks[0]); }
 public:
+    Operator *getOp() { return _op; }
+    Operator *getDriverOp( vcWire *w )
+    {
+        auto driver = w->Get_Driver();
+        assert(driver);
+        return _module->getDPE(driver)->getOp();
+    }
+    const vector<PNTransition*>& getReqs() { return _reqs; }
+    const vector<PNTransition*>& getAcks() { return _acks; }
+    const vector<PNTransition*>& getGReqs() { return _greqs; }
+    const vector<PNTransition*>& getGAcks() { return _gacks; }
     vcDatapathElement* elem() { return (vcDatapathElement*) _elem; }
     VCtyp _vctyp;
-    // buildSreqToAckPath handles various flow through scenarios, hence its
-    // name has become a misnomer and should be changed.
-    // Note that strt, curend can be place or transition, further description
-    // is assuming most common scenario of them being a transition.
-    // Call begins with strt=sreq and curend=sack Go backward in flow-through
-    // tree and connect sreq->curend if these is no flow through driver else
-    // transitively insert all ftreq transitions in between and connect strt
-    // with the leaf of the chain
-    void buildSreqToAckPath(PNNode* strt, PNNode* curend)
-    {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if ( ftdrvs.size() == 0 )
-            pn()->createArc(strt, curend);
-        else for(auto ftdrv:ftdrvs)
-        {
-            auto ftreq = ftdrv->ftreq();
-            pn()->createArc(ftreq, curend);
-            ftdrv->buildSreqToAckPath(strt, ftreq);
-        }
-    }
     PNTransition* getReqTransition(int indx)
     {
         vector<PNTransition*>& reqs = isDeemedGuarded() ? _greqs : _reqs;
@@ -119,14 +98,6 @@ public:
     // Can improvise a network (e.g. additional places/transitions) within those boundaries
     void buildPNPhi()
     {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if( ftdrvs.size() != 0 )
-        {
-            // TODO: Check if phi can have ft drivers
-            cout << "vc2pn: flowthrDrivers drivers for phi not handled" << endl;
-            exit(1);
-        }
         auto phplace = pn()->createPlace("DPE:" + _label + "_phplace");
         auto rootindex = elem()->Get_Root_Index();
         for(int i=0; i<_reqs.size(); i++)
@@ -145,54 +116,51 @@ public:
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
-    void buildPNBranch()
+    PNPlace* createBrPlaceAcks()
     {
-        vector<DPElement*> ftdrvs;
-        flowthrDrivers(ftdrvs);
-        if( ftdrvs.size() != 1 )
-        {
-            cout << "vc2pn: branch has flowthrough driver count != 1, unhandled" << endl;
-            exit(1);
-        }
-        auto ftreq = ftdrvs[0]->ftreq();
         auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
+        pn()->annotatePNNode(brplace, Branch_);
         brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
-        // Unlike other users of buildSreqToAckPath, since we want it to end in
-        // a place, we take first step ad hoc and ask the first driver to
-        // invoke buildSreqToAckPath
-        ftdrvs[0]->buildSreqToAckPath(_reqs[0], ftreq);
-        pn()->createArc(ftreq, brplace);
         pn()->createArc(brplace, _acks[0]);
         pn()->createArc(brplace, _acks[1]);
-        auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
-        pn()->vctid.add({ rootindex, "req0", ftreq->_nodeid });
+        auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
+#       endif
+        return brplace;
+    }
+    void buildPNBranch()
+    {
+        auto inpwires = elem()->Get_Input_Wires();
+        if ( inpwires.size() != 1 )
+        {
+            cout << "vc2pn: branch has input driver count != 1: " << elem()->Get_Id() << endl;
+            exit(1);
+        }
+        auto brplace = createBrPlaceAcks();
+        pn()->createArc(_reqs[0], brplace);
+#       ifdef USECEP
+        auto rootindex = elem()->Get_Root_Index();
+        pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
 #       endif
     }
     int uackIndx()
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
     }
+    bool isCall() { return _vctyp == vcCall_; }
+    bool isDeemedPhi()
+    {
+        return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
+    }
     bool isDeemedFlowThrough()
     {
-        return elem()->Get_Flow_Through() or isSignalInport();
+        return elem()->Get_Flow_Through() or isSignalInport() or inVolatileModule();
     }
     bool isDeemedGuarded()
     {
         return _isGuarded and not isDeemedFlowThrough();
-    }
-    bool isGuardCondFlowThrough()
-    {
-        if ( isDeemedGuarded() )
-        {
-            auto driver = elem()->Get_Guard_Wire()->Get_Driver();
-            if ( driver == NULL ) return false;
-            auto driverDPE = _module->getDPE(driver);
-            return driverDPE->isDeemedFlowThrough();
-        }
-        else return false;
     }
     bool isSignalInport()
     {
@@ -205,25 +173,17 @@ public:
         PNTransition *nogo = pn()->createTransition(dpelabel + "nogo");
         PNTransition *nogo_ureq = pn()->createTransition(dpelabel + "nogo_ureq");
         PNPlace *brplace = pn()->createPlace(dpelabel + "brplace");
+        pn()->annotatePNNode(brplace, Branch_);
         brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
         PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");
         PNPlace *gureqplace = pn()->createPlace(dpelabel + "gureqplace");
+        pn()->annotatePNNode(gureqplace, PassiveBranch_);
 
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
 
-        if ( isGuardCondFlowThrough() )
-        {
-            auto driver = elem()->Get_Guard_Wire()->Get_Driver();
-            assert(driver);
-            auto driverDPE = _module->getDPE(driver);
-            auto driverFtreq = driverDPE->ftreq();
-            driverDPE->buildSreqToAckPath(gsreq, driverFtreq);
-            pn()->createArc(driverFtreq, brplace);
-        }
-        else
-            pn()->createArc(gsreq, brplace);
+        pn()->createArc(gsreq, brplace);
 
         if ( elem()->Get_Guard_Complement() )
         {
@@ -258,14 +218,18 @@ public:
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
-        sreq2ack();
-        pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
-        pn()->createArc(_reqs[1], _acks[1]);
+        auto sreq_sack_place = pn()->createArc(_reqs[0], _acks[0]);
+        auto sack_uack_place = pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
+        auto ureq_uack_place = pn()->createArc(_reqs[1], _acks[1]);
+        pn()->annotatePNNode(sreq_sack_place, SimuOnly_);
+        pn()->annotatePNNode(sack_uack_place, SimuOnly_);
+        pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
         auto uack2sack = (PNPlace*) pn()->createArc(
             _acks[1], _acks[0],
             "MARKP:" + _acks[0]->_name
             );
         uack2sack->setMarking(1);
+        pn()->annotatePNNode(uack2sack, SimuOnly_);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
@@ -283,8 +247,9 @@ public:
             if ( isIport ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
             else pipe->buildPNOport(sreq, sack);
         }
-        else if ( _vctyp == vcCall_ )
+        else if ( isCall() )
         {
+            auto sreq = _reqs[0];
             auto sack = _acks[0];
             auto uack = _acks[1];
 
@@ -296,7 +261,7 @@ public:
 
             auto inProgressPlace = pn()->createPlace(_label+".CallInProgress");
             // sack requires called module's mutex token
-            pn()->createArc(calledMutexPlace, sack);
+            pn()->createArc(calledMutexPlace, sreq);
             // and passes token to inProgressPlace and called module's entry
             pn()->createArc(sack, inProgressPlace);
             pn()->createArc(sack, calledEntryPlace);
@@ -306,19 +271,6 @@ public:
             // and releases a token to called module's mutex
             pn()->createArc(uack, calledMutexPlace);
         }
-    }
-    PNTransition* ftreq()
-    {
-        PNTransition *ftreq = pn()->createTransition("DPE:" + _label + "_ftreq");
-#       ifdef USECEP
-        auto rootindex = elem()->Get_Root_Index();
-        pn()->vctid.add({ rootindex, "ftreq", ftreq->_nodeid });
-#       endif
-        ftreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
-        // if this ftreq relates with a pipe, need to connect with pipe's pnet
-        if ( isSignalInport() )
-            ((IOPort*)_op)->_pipe->buildPNIport(ftreq, ftreq);
-        return ftreq;
     }
     void createGuardReqs()
     {
@@ -332,11 +284,8 @@ public:
     }
     void createReqs()
     {
-        // For Flow Through elements reqs are created on demand so that for
-        // each context a separate req is created
-        if ( not elem()->Get_Flow_Through() )
-            for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
-                _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
+        for(int i=0; i<elem()->Get_Number_Of_Reqs(); i++)
+            _reqs.push_back(pn()->createTransition("DPE:" + _label + "_req_" + to_string(i)));
     }
     void createAcks()
     {
@@ -345,16 +294,16 @@ public:
     }
     void buildPN()
     {
-        if ( isDeemedFlowThrough() ); // PN built by consumers / module output for flow throughs
+        if ( isDeemedFlowThrough() );
         else if ( _vctyp == vcBranch_ )
             buildPNBranch();
-        else if ( _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_ )
+        else if ( isDeemedPhi() )
             buildPNPhi();
         else if ( ( _reqs.size() == 2 ) && ( _acks.size() == 2 ) ) // Default handling
             buildPNDefault();
         else
         {
-            cout << "vc2pn: unhandled req-ack pattern reqs=" << _reqs.size() << " acks=" << _acks.size() << " " << _elem->Kind() << " " << endl;
+            cout << "vc2pn: unhandled req-ack pattern reqs=" << _reqs.size() << " acks=" << _acks.size() << " " << _elem->Kind() << " " << _elem->Get_Id()  << endl;
             exit(1);
         }
         if ( isDeemedGuarded() ) wrapPNWithGuard();
@@ -377,18 +326,29 @@ public:
     void setinpv()
     {
         vector<DatumBase*> inpv;
+        set<Operator*> listenToOps;
         for( auto w : elem()->Get_Input_Wires() )
         {
             DatumBase* inpdatum;
             if ( w->Kind() == "vcInputWire" )
+            {
                 inpdatum = _module->inparamDatum( w->Get_Id() );
+                if ( isDeemedFlowThrough() )
+                    _module->registerFTListener( _op );
+            }
             else if ( w->Is_Constant() )
                 inpdatum = sys()->valueDatum( ((vcConstantWire*) w)->Get_Value() );
             else
+            {
                 inpdatum = _module->opregForWire(w);
+                if ( isDeemedFlowThrough() )
+                    listenToOps.insert( getDriverOp(w) );
+            }
             inpv.push_back(inpdatum);
         }
         _op->setinpv(inpv);
+        if ( isDeemedFlowThrough() )
+            _op->setFlowthroughInps( listenToOps );
 
         if ( isDeemedGuarded() ) setGuardBranchInpv();
     }
@@ -405,8 +365,11 @@ public:
 
         // Some createReqs need _op initialized, so this is before createReqs
         _op = sys()->createOperator(elem);
-        createReqs();
-        createAcks();
+        if ( not isDeemedFlowThrough() )
+        {
+            createReqs();
+            createAcks();
+        }
         if ( isDeemedGuarded() )
         {
             if ( elem->Get_Number_Of_Reqs() != 2 or elem->Get_Number_Of_Acks() != 2 )
@@ -621,10 +584,12 @@ public:
 
         auto pnSampleReq = vce2pnnode(elem()->_phi_sample_req);
         auto pnSampleReqPlace = pn()->createPlace("ps_sreqplace");
+        pn()->annotatePNNode(pnSampleReqPlace, PassiveBranch_);
         pn()->createArc(pnSampleReq, pnSampleReqPlace);
 
         auto pnUpdateReq = vce2pnnode(elem()->_phi_update_req);
         auto pnUpdateReqPlace = pn()->createPlace("ps_ureqplace");
+        pn()->annotatePNNode(pnUpdateReqPlace, PassiveBranch_);
         pn()->createArc(pnUpdateReq, pnUpdateReqPlace);
 
         // from architecture Behave of phi_sequencer_v2
@@ -673,6 +638,7 @@ public:
     {
         _depth = depth;
         ((PNPlace*) _pnnode)->setMarking(_depth-1);
+        ((PNPlace*) _pnnode)->setCapacity(_depth);
     }
     void buildPN()
     {
@@ -710,7 +676,10 @@ public:
 
     }
     LoopTerminatorCPElement(vcLoopTerminator* elem, ModuleBase* module) : SoloCPElement(elem, module)
-        { _pnnode = pn()->createPlace("MARKP:LoopDepth"); }
+    {
+        _pnnode = pn()->createPlace("MARKP:LoopDepth");
+        pn()->annotatePNNode( _pnnode, PassiveBranch_ );
+    }
 };
 
 class TransitionMergeCPElement : public SoloCPElement
@@ -784,6 +753,11 @@ class Module : public ModuleBase
     function<void()> _exithook = NULL;
     PNPlace *_moduleEntryPlace, *_moduleExitPlace, *_moduleMutexOrDaemonPlace;
     ElementFactory _ef { ElementFactory(this) };
+    bool _moduleExited = true;
+    condition_variable _moduleExitedCV;
+    mutex _moduleExitedMutex;
+    map<string,unsigned> _inpParamPos;
+    vector<Operator*> _ftlisteners;
 public:
     bool _isDaemon;
     SystemBase* sys() { return _sys; }
@@ -797,7 +771,16 @@ public:
 
     PNPlace* mutexPlace() { return _moduleMutexOrDaemonPlace; }
     PNPlace* entryPlace() { return _moduleEntryPlace; }
+    PNTransition* entryTransition()
+    {
+        vcCPElement* entry = _cp->Get_Entry_Element();
+        vcCPElementGroup* entryGroup = _cp->Get_CPElement_To_Group_Map()[entry];
+        CPElement *entryCPE = getCPE(entryGroup);
+        return (PNTransition*) entryCPE->inPNNode();
+    }
     PNPlace* exitPlace() { return _moduleExitPlace; }
+    bool isVolatile() { return _vcm->Get_Volatile_Flag(); }
+    const list<DPElement*>& getDPEList() { return _dpelist; }
     DatumBase* opregForWire(vcWire *w)
     {
         vcDatapathElement *driver = w->Get_Driver();
@@ -861,6 +844,13 @@ public:
         ofs.open(name()+"_dp.dot");
         _vcm->Get_Data_Path()->Print_Data_Path_As_Dot_File(ofs);
     }
+    void moduleInvoke(const vector<DatumBase*>& inpv)
+    {
+        unique_lock<mutex> ul(_moduleExitedMutex);
+        _moduleExited = false;
+        invoke(inpv);
+        _moduleExitedCV.wait( ul, [this] { return _moduleExited;} );
+    }
     void invoke(const vector<DatumBase*>& inpv)
     {
         for(int i=0; i<inpv.size(); i++)
@@ -871,12 +861,14 @@ public:
         }
         pn()->addtokens(_moduleEntryPlace, 1);
     }
+    void registerFTListener(Operator *op) { _ftlisteners.push_back(op); }
     void moduleEntry()
     {
         cout << "Module " << name() << " invoked with:";
         for(auto ip:_inparamDatum)
             cout << " " << ip.first << "=" << ip.second->str();
         cout << endl;
+        for( auto l : _ftlisteners ) l->flowthrough(0);
     }
     void moduleExit()
     {
@@ -884,8 +876,23 @@ public:
         for(auto op:_outparamDatum)
             cout << " " << op.first << "=" << op.second->str();
         cout << endl;
+        {
+            unique_lock<mutex> ul(_moduleExitedMutex);
+            _moduleExited = true;
+        }
+        _moduleExitedCV.notify_all();
         if ( _exithook != NULL ) _exithook();
         else _exithook = NULL; // Once we exit, reset the hook, it is active only for 1 invocation
+    }
+    unsigned getInpParamPos(string paramname)
+    {
+        auto it = _inpParamPos.find(paramname);
+        if ( it == _inpParamPos.end() )
+        {
+            cout << "vc2pn:getParamPos sought on non-existent param " << name() << " " << paramname << endl;
+            exit(1);
+        }
+        return it->second;
     }
     void setInparamDatum()
     {
@@ -909,30 +916,13 @@ public:
             _outparamDatum.emplace(oparam.first, datum);
         }
     }
-    void flowthrOpDrivers(vector<DPElement*>& ftopdrvs)
-    {
-        for(auto oparam: _vcm->Get_Output_Arguments())
-        {
-            auto *owire = oparam.second;
-            auto driver = owire->Get_Driver();
-            if ( driver )
-            {
-                auto driverDPE = getDPE(driver);
-                if( driverDPE->isDeemedFlowThrough() )
-                    ftopdrvs.push_back( driverDPE );
-            }
-        }
-    }
     void buildPN()
     {
         for(auto e:_dpelist) e->buildPN();
         for(auto e:_dpelist) e->setinpv(); // Need to call this after buildPN of dpe, as datapath is cyclic
         for(auto e:_cpelist) e->buildPN();
 
-        vcCPElement* entry = _cp->Get_Entry_Element();
-        vcCPElementGroup* entryGroup = _cp->Get_CPElement_To_Group_Map()[entry];
-        CPElement *entryCPE = getCPE(entryGroup);
-        pn()->createArc(_moduleEntryPlace, entryCPE->inPNNode());
+        pn()->createArc(_moduleEntryPlace, entryTransition());
 
         vcCPElement* exitElem = _cp->Get_Exit_Element();
         vcCPElementGroup* exitGroup = _cp->Get_CPElement_To_Group_Map()[exitElem];
@@ -948,24 +938,7 @@ public:
             pn()->createArc(exitCPE->outPNNode(), exitCPENode);
         }
 
-        vector<DPElement*> ftopdrvs;
-        flowthrOpDrivers(ftopdrvs);
-
-        // If some flow through operators connect to outputs trigger their ft
-        // transition between exitCPENode and _moduleExitPlace
-        if ( ftopdrvs.size() == 0 )
-            pn()->createArc(exitCPENode, _moduleExitPlace);
-        else
-        {
-            PNTransition *exitCPENode1 = pn()->createTransition("ftcollect");
-            for(auto ftopdrv:ftopdrvs)
-            {
-                auto ftr = ftopdrv->ftreq();
-                ftopdrv->buildSreqToAckPath(exitCPENode, ftr);
-                pn()->createArc(ftr, exitCPENode1);
-            }
-            pn()->createArc(exitCPENode1, _moduleExitPlace);
-        }
+        pn()->createArc(exitCPENode, _moduleExitPlace );
 
         if ( _isDaemon )
         {
@@ -980,6 +953,11 @@ public:
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
+        if ( ! _isDaemon )
+        {
+            pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
+            pn()->annotatePNNode( _moduleExitPlace, PassiveBranch_ );
+        }
         _moduleExitPlace->setAddActions(bind(&Module::moduleExit,this));
         _moduleEntryPlace->setAddActions(bind(&Module::moduleEntry,this));
         for(auto e:_cp->Get_CPElement_Groups())
@@ -997,6 +975,8 @@ public:
         for(auto dpet:_vcm->Get_Data_Path()->Get_DPE_Map())
             _dpelist.push_back(getDPE(dpet.second));
         setOutparamDatum();
+        unsigned i=0;
+        for(auto fp:_vcm->Get_Ordered_Input_Arguments()) _inpParamPos.emplace( fp, i++ );
     }
     ~Module()
     {
@@ -1043,6 +1023,9 @@ class System : public SystemBase
         pn()->createArc(pre2exitTransition, sysExitPlace);
 
         // Only for those not passed to createArc, we have to add
+        pn()->annotatePNNode( _sysPreExitPlace, SimuOnly_ );
+        pn()->annotatePNNode( pre2exitTransition, SimuOnly_ );
+        pn()->annotatePNNode( sysExitPlace, SimuOnly_ );
     }
     void buildPN()
     {
@@ -1056,6 +1039,7 @@ class System : public SystemBase
 #       endif
     }
 public:
+    string name() { return _vcs->Get_Id(); }
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
@@ -1102,7 +1086,6 @@ public:
     }
     void printDPDotFiles() { for(auto m:_modules) m.second->printDPDotFile(); }
     void printPNDotFile() { _pn->printdot(); }
-    void printPNJsonFile() { _pn->printjson(); }
     void printPNPNMLFile() { _pn->printpnml(); }
     void wait() { _pn->wait(); }
     Pipe* pipeMap(vcPipe* pipe)
@@ -1129,6 +1112,16 @@ public:
             vector<DatumBase*>& v = _readermap[c.first]->collect();
             collectopmap.emplace(c.first,v);
         }
+    }
+    void moduleInvoke(string modulename, const vector<DatumBase*>& inpv)
+    {
+        auto it = _modules.find(modulename);
+        if (it == _modules.end())
+        {
+            cout << "vc2pn:moduleInvoke Module not found: " << modulename << endl;
+            exit(1);
+        }
+        else it->second->moduleInvoke(inpv);
     }
     // TODO: We may want to return module output vector and collection pipe vectors
     void invoke(string module, const vector<DatumBase*>& inpv,
@@ -1171,6 +1164,16 @@ public:
         wait();
         fillCollectopmap(collects, collectopmap);
         logSysOp(collectopmap);
+    }
+    vector<DatumBase*> oparamV(string modulename)
+    {
+        auto it = _modules.find(modulename);
+        if (it == _modules.end())
+        {
+            cout << "vc2pn:oparamV: Module not found: " << modulename << endl;
+            exit(1);
+        }
+        else return it->second->oparamV();
     }
     System(vcSystem* vcs, const set<string>& daemons) : _vcs(vcs)
     {

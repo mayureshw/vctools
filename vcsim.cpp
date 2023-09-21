@@ -5,6 +5,27 @@ using namespace std;
 #include "vc2pn.h"
 #include "vcsim.h"
 
+void dbghooks(vcSystem& vcs, System& sys)
+{
+#   ifdef GEN_CPDOT
+    vcs.Print_Reduced_Control_Paths_As_Dot_Files();
+#   endif
+
+#   ifdef GEN_DPDOT
+    sys.printDPDotFiles();
+#   endif
+
+#   ifdef GEN_PETRIDOT
+    sys.printPNDotFile();
+#   endif
+
+#   ifdef GEN_PETRIPNML
+    sys.printPNPNMLFile();
+#   endif
+
+
+}
+
 // TODO: To be extended for multiple files, exit module, top module etc.
 // Currently accepts only single vc filename and invokation modulename
 // besides input vector
@@ -29,27 +50,8 @@ void vcsim(const string vcflnm, const string invoke, const vector<DatumBase*>& i
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
 
-#   ifdef GEN_CPDOT
-    vcs.Print_Reduced_Control_Paths_As_Dot_Files();
-#   endif
-
     System sys(&vcs, daemons);
-#   ifdef GEN_DPDOT
-    sys.printDPDotFiles();
-#   endif
-
-#   ifdef GEN_PETRIDOT
-    sys.printPNDotFile();
-#   endif
-
-#   ifdef GEN_PETRIJSON
-    sys.printPNJsonFile();
-#   endif
-
-#   ifdef GEN_PETRIPNML
-    sys.printPNPNMLFile();
-#   endif
-
+    dbghooks(vcs, sys);
     sys.invoke(invoke, inpv, feeds, collects, collectopmap);
 }
 
@@ -65,9 +67,20 @@ void VcsimIf::feedPipe(const string pipename, const vector<DatumBase*>& feedv)
     _sys->getFeeder(pipename)->feed(feedv);
 }
 
+vector<DatumBase*> VcsimIf::moduleInvoke(string modulename, const vector<DatumBase*>& inpv)
+{
+    _sys->moduleInvoke(modulename, inpv);
+    return _sys->oparamV(modulename);
+}
+
 void VcsimIf::invoke()
 {
     _sys->invoke("", {}, {}, {}, emptymap);
+}
+
+vector<DatumBase*> VcsimIf::oparamV(string modulename)
+{
+    return _sys->oparamV(modulename);
 }
 
 VcsimIf::VcsimIf(string vcflnm, const set<string>& daemons)
@@ -82,6 +95,7 @@ VcsimIf::VcsimIf(string vcflnm, const set<string>& daemons)
     for(auto m:vcs.Get_Modules()) vcs.Set_As_Top_Module(m.second);
     vcs.Elaborate();
     _sys = new System(&vcs, daemons);
+    dbghooks(vcs, *_sys);
 }
 
 VcsimIf::~VcsimIf() { delete _sys; }

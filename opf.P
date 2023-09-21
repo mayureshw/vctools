@@ -35,28 +35,40 @@ extracls( vcBinarySplitOperator ).
 extracls( vcUnarySplitOperator  ).
 
 % operators identified by vC operator
-opop( 'Plus',   '+'  ).
-opop( 'Minus',  '-'  ).
-opop( 'Mult',   '*'  ).
-opop( 'Lt',     '<'  ).
-opop( 'Le',     '<=' ).
-opop( 'Gt',     '>'  ).
-opop( 'Ge',     '>=' ).
-opop( 'Ne',     '!=' ).
-opop( 'Eq',     '==' ).
-opop( 'And',    '&'  ).
-opop( 'Or',     '|'  ).
-opop( 'Xor',    '^'  ).
-opop( 'Nand',   '~&' ).
-opop( 'Nor',    '~|' ).
-opop( 'Xnor',   '~^' ).
-opop( 'Not',    '~'  ).
-opop( 'Bitsel', '[]' ).
-opop( 'Concat', '&&' ).
-opop( 'ShiftL', '<<' ).
-opop( 'ShiftR', '>>' ).
-opop( 'RotateL','<o<').
-opop( 'RotateR','>o>').
+opop( 'Plus',   '+'   ).
+opop( 'Minus',  '-'   ).
+opop( 'Mult',   '*'   ).
+opop( 'Div',    '/'   ).
+opop( 'Lt',     '<'   ).
+opop( 'Le',     '<='  ).
+opop( 'Gt',     '>'   ).
+opop( 'Ge',     '>='  ).
+opop( 'Ne',     '!='  ).
+opop( 'Eq',     '=='  ).
+opop( 'And',    '&'   ).
+opop( 'Or',     '|'   ).
+opop( 'Xor',    '^'   ).
+opop( 'Nand',   '~&'  ).
+opop( 'Nor',    '~|'  ).
+opop( 'Xnor',   '~^'  ).
+opop( 'Not',    '~'   ).
+opop( 'Bitsel', '[]'  ).
+opop( 'Concat', '&&'  ).
+opop( 'ShiftL', '<<'  ).
+opop( 'ShiftR', '>>'  ).
+opop( 'RotateL','<o<' ).
+opop( 'RotateR','>o>' ).
+
+% Signed ones
+opop( 'ShiftRA','$S>>'   ).
+opop( 'SLt',    '$S<$S'  ).
+opop( 'SLe',    '$S<=$S' ).
+opop( 'SGt',    '$S>$S'  ).
+opop( 'SGe',    '$S>=$S' ).
+
+% Typecasts
+opop( 'S2S',    '$S:=$S' ).
+opop( 'CCast',  '$F:=$U' ).
 
 subtyps( bool,    [ uint8_t ] ).
 subtyps( uint,    [ uint8_t, uint16_t, uint32_t, uint64_t ] ).
@@ -65,18 +77,36 @@ subtyps( float,   [ float, double ] ).
 
 nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
-sign(O, [Num,Num,Num] ) :- member( O, ['Plus','Minus','Mult'] ),
+% *Ok predicates are added here based on valid patterns encountered as these rules in general are not known to me
+assignOk( float, uint32_t ).
+
+ccastOk( float, uint32_t ).
+
+
+sign(O, [Num,Num,Num] )   :- member( O, ['Plus','Minus','Mult','Div'] ),
     !, numeric(Num).
-sign(O, [Bool,Num,Num]) :- member( O, ['Lt','Le','Gt','Ge','Ne','Eq'] ),
+sign(O, [Bool,Num,Num])   :- member( O, ['Lt','Le','Gt','Ge','Ne','Eq'] ),
     !, bool(Bool), numeric(Num).
-sign(O, [NF,NF,NF]    ) :- member( O, ['And','Or','Xor','Nand','Nor','Xnor'] ),
+sign(O, [NF,NF,NF]    )   :- member( O, ['And','Or','Xor','Nand','Nor','Xnor'] ),
     !, nofloat(NF).
-sign(O, [Any]         ) :- member( O, ['Inport','Outport'] ),
+sign(O, [Any]         )   :- member( O, ['Inport','Outport'] ),
     !, any(Any).
-sign(O, [NF1,NF1,NF2] ) :- member( O, ['ShiftL','ShiftR','RotateL','RotateR'] ),
+sign(O, [NF1,NF1,NF2] )   :- member( O, ['ShiftL','ShiftR','RotateL','RotateR'] ),
     !, nofloat(NF1), nofloat(NF2).
+sign(O, [UInt,UInt,UInt] ):- member( O, ['ShiftRA','SGt','SLt','SGe','SLe'] ),
+    !, uint(UInt).
+sign(O, [UInt1,UInt2] )   :- member( O, ['S2S'] ),
+    !, uint(UInt1), uint(UInt2).
+sign(O, [T1,T2]       )   :- member( O, ['CCast'] ),
+    !, ( ccastOk(T1,T2); ccastOk(T2,T1) ).
 sign('Not',    [NF,NF]            ):-!, nofloat(NF).
-sign('Assign', [T1,T2]            ):-!, ( nofloat(T1), nofloat(T2) ) ; ( floaT(T1), floaT(T2) ).
+sign('Assign', [T1,T2]            ):-!, (
+    ( nofloat(T1), nofloat(T2) ) ;
+    ( floaT(T1), floaT(T2) ) ;
+    ( floaT(T1), floaT(T2) ) ;
+    ( assignOk(T1,T2) ) ;
+    ( assignOk(T2,T1) )
+    ).
 sign('Phi',    [Any,Any,Any]      ):-!, any(Any).
 sign('Branch', [Bool]             ):-!, bool(Bool).
 sign('Load',   [Any,UInt]         ):-!, any(Any), uint(UInt).
@@ -99,6 +129,7 @@ creator( 'Load',  'createLoad'    ):-!.
 creator( 'Store', 'createStore'   ):-!.
 creator( 'Call',  'createCall'    ):-!.
 creator( 'Slice', 'createSlice'   ):-!.
+creator( 'S2S',   'createCast'    ):-!.
 creator( _,       'createGeneral' ).
 
 %%%%%%%%%% Pipe related %%%%%%%%%%

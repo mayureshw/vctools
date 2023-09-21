@@ -32,14 +32,41 @@
 
 using namespace std;
 
+typedef enum {
+    Mutex_,
+    PassiveBranch_,
+    Branch_,
+    SimuOnly_,
+    } PNAnnotation;
+
 class VcPetriNet : public PetriNetVariant
 {
 using PetriNetVariant::PetriNetVariant;
+
+    map<PNAnnotation,set<PNNode*>> _annotations = {
+        { Mutex_, {} },
+        { PassiveBranch_, {} },
+        { Branch_, {} },
+        { SimuOnly_, {} },
+        };
 public:
 #ifdef USECEP
     Rel<unsigned,string,unsigned> vctid = {"vctid"};
 #endif
-
+    set<PNNode*>& getAnnotatedNodeset(PNAnnotation annotation)
+    {
+        auto it = _annotations.find(annotation);
+        if ( it == _annotations.end() )
+        {
+            cout << "vcpetrinet: annotation set not declared for " << annotation << endl;
+            exit(1);
+        }
+        return it->second;
+    }
+    void annotatePNNode(PNNode *pnnode, PNAnnotation annotation)
+    {
+        getAnnotatedNodeset(annotation).insert(pnnode);
+    }
 #ifdef SIMU_MODE_STPN
 private:
     DistFactory _df;
