@@ -11,6 +11,8 @@
 
     - README.md replaced with manual.pdf due to increase in contents
 
+    - A number of changes to prepare for asynchronous code generation
+
 ## 221011
 
     - Added operators >> << >o> <o< < ^ ~& ~| ~^
