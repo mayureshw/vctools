@@ -5,7 +5,7 @@
 # Testing if everything is ok
 #   cd $VCTOOLSDIR/examples
 #   make -j4
-#   This should produced executables vcsim*.out On running, they should produce
+#   This should produce executables vcsim*.out On running, they should produce
 #   the output and log files as described in the usage
 FROM gcc:12.2.0
 ENV GITHUBHOME=/usr/src
