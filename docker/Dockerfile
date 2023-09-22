@@ -20,7 +20,7 @@ ENV PATH=$PATH:$VCTOOLSDIR
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VCTOOLSDIR
 ENV XSBLIBPATH=$CEPTOOLDIR,$VCTOOLSDIR
 ENV PATH=$PATH:$XSBDIR/bin:$CEPTOOLDIR
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XSBDIR/config/`$XSBDIR/build/config.guess`/bin
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XSBDIR/config/x86_64-pc-linux-gnu/bin
 RUN mkdir -p $GITHUBHOME /usr/local $HOME/.xsb
 RUN apt update && apt install -y g++ make antlr libantlr-dev libboost-dev vim libpcre3-dev wget
 WORKDIR /usr/local
