@@ -1,0 +1,15 @@
+$module [vcsim07]
+$in ()
+$out (j : $uint<32>) $is
+{
+    $branchblock [loop] {
+        $merge $entry loopback
+            $phi i := $zero<32> $on $entry (i + 1) $on loopback
+            // Which value of i will be used here, one after increment or before? race?
+            $phi j := $zero<32> $on $entry (i + 1) $on loopback
+        $endmerge
+        $if ( i < 15 ) $then
+            $place [loopback]
+        $endif
+    }
+}
