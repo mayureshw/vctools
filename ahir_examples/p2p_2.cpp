@@ -50,6 +50,10 @@ int main(int argc, char* argv[])
 	
 	simif.read_n<uint32_t>("out_data",result,ORDER);
 
+    // Expect 3 results here through randomization
+    // 1. Live lock
+    // 2. Result matches expected
+    // 3. Result does not match expected
 	for(idx = 0; idx < ORDER; idx++)
 	{
 		fprintf(stdout,"Result = %x, expected = %x.\n", result[idx],expected_result[idx]);
