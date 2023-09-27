@@ -23,7 +23,7 @@ rewritescep( (iwatch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent
 rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
 
 uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
-uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
+uackevent(V,de(V,ack1)) :- dpe(Vid,V,_,_), vctid(Vid,ack1,_).
 
 :-table statevar/2.
 statevar(*(V),V) :- !.
@@ -58,7 +58,6 @@ storeWrEvent(S,de(Inst,Etyp)) :-
     dpstore(Id,S), dpe(Id,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
 
 pipeOpEvent(vcInport,ack1).
-pipeOpEvent(vcInport,ftreq).
 pipeOpEvent(vcOutport,req1).
 % Notes: storeOpEvent as suitable for 'reaches'
 loadOpEvent(vcLoad,req0).
@@ -103,7 +102,6 @@ eventTyp(req0).
 eventTyp(req1).
 eventTyp(ack0).
 eventTyp(ack1).
-eventTyp(ftreq).
 
 numerizeComplexEvent(E,EN) :- eventmap(E,EN), !.
 numerizeComplexEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).
