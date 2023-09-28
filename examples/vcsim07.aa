@@ -5,7 +5,9 @@ $out (j : $uint<32>) $is
     $branchblock [loop] {
         $merge $entry loopback
             $phi i := $zero<32> $on $entry (i + 1) $on loopback
-            // Which value of i will be used here, one after increment or before? race?
+            // Which value of i will be used below, one after increment or before? Race?
+            // Note the $barrier construct in Aa LRM used to resolve such races.
+            // But do note that $barrier works only for pipelined loops
             $phi j := $zero<32> $on $entry (i + 1) $on loopback
         $endmerge
         $if ( i < 15 ) $then
