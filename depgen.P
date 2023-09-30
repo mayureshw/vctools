@@ -33,7 +33,4 @@ sdep( Dep, Msg ) :- dpe(SO,N,_,_), isSplitOp(SO),
 :-table isSplitOp/1.
 isSplitOp(Did) :- vctid(Did,req0,_), vctid(Did,req1,_), vctid(Did,ack0,_), vctid(Did,ack1,_).
 
-:-table isFlowThrough/1.
-isFlowThrough(Did) :- vctid(Did,ftreq,_).
-
 depgen(Vc):- load(vcir,Vc), store(iprops,Vc,sdep(_,_)).
