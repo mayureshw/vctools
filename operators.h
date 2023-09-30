@@ -27,7 +27,7 @@ protected:
     vector<DatumBase*> _ipv;
     vector<DatumBase*> _resv;
     vector<Operator*> _ftlisteners;
-    mutex *_ftmutex = NULL;
+    mutex _ftmutex;
     template<typename T> T getmask(unsigned width)
     {
         unsigned lead0s;
@@ -42,7 +42,6 @@ protected:
 public:
     void setFlowthroughInps(set<Operator*> listenToOps)
     {
-        _ftmutex = new mutex();
         for(auto o:listenToOps) o->setFTListener(this);
     }
     const string _dplabel; // for logging only
@@ -74,10 +73,10 @@ public:
     // TODO: flowthrough can do minutely better by skipping _resv
     virtual void flowthrough(unsigned long eseqno)
     {
-        _ftmutex->lock();
+        _ftmutex.lock();
         sack(eseqno);
         uack(eseqno);
-        _ftmutex->unlock();
+        _ftmutex.unlock();
     }
     string inpvstr()
     {
@@ -101,7 +100,6 @@ public:
     }
     void setinpv(const vector<DatumBase*>& ipv) { _ipv = ipv; }
     Operator(string label) : _dplabel(label) {}
-    ~Operator() { if ( _ftmutex ) delete _ftmutex; }
 };
 
 template <typename Tout> class OperatorT : public Operator
@@ -453,10 +451,10 @@ public:
     // Hence we implement uack like operations on ureq and customize flowthrough
     void flowthrough(unsigned long eseqno)
     {
-        _ftmutex->lock();
+        _ftmutex.lock();
         ureq(eseqno);
         uack(eseqno);
-        _ftmutex->unlock();
+        _ftmutex.unlock();
     }
     void ureq(unsigned long eseqno)
     {
