@@ -79,6 +79,7 @@ nonFloatOrder([ uint8_t, uint16_t, uint32_t, uint64_t, 'WUINT' ]).
 
 % *Ok predicates are added here based on valid patterns encountered as these rules in general are not known to me
 assignOk( float, uint32_t ).
+assignOk( double, uint64_t ).
 
 ccastOk( float, uint32_t ).
 
