@@ -10,12 +10,12 @@ from vcdpnodes import *
 class VirtNode(Node):
     def dotprops(self): return [ ('color','gray') ]
     def optype(self): return None
+    def nodeClass(self): return 'VirtNode'
     def isVirt(self): return True
     def idstr(self): return 'virt_' + str(self.nodeid)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtCPNode(VirtNode):
-    def nodeClass(self): return 'VirtCPNode'
     def createArcs(self):
         # similar to vcdpnodes handling of if self.optyp == 'Call'
         # But no callacks are needed for virtual CP
@@ -23,6 +23,7 @@ class VirtCPNode(VirtNode):
         # Call -> Entry : bind and Petri arcs
         tgtnode = self.vcir.pn.nodes[self.callentry]
         width = sum(tgtnode.owidths)
+        self.owidths = [ width ]
         arcobj = DPArc({
             'srcnode' : self,
             'tgtnode' : tgtnode,
@@ -46,7 +47,6 @@ class VirtCPNode(VirtNode):
             'srcnode' : self,
             'tgtnode' : tgtnode,
             'rel'     : 'data',
-            'width'   : width
             })
         tgtnode.addIarc(arcobj)
         self.addOarc(arcobj)
@@ -54,6 +54,7 @@ class VirtCPNode(VirtNode):
         # Exit -> Call : bind and Petri arcs
         srcnode = self.vcir.pn.nodes[self.callexit]
         width = sum(srcnode.iwidths)
+        self.iwidths = [ width ]
         arcobj = DPArc({
             'srcnode' : srcnode,
             'tgtnode' : self,
@@ -77,7 +78,6 @@ class VirtCPNode(VirtNode):
             'srcnode' : srcnode,
             'tgtnode' : self,
             'rel' : 'data',
-            'width' : width
             })
         self.addIarc(arcobj)
         srcnode.addOarc(arcobj)
@@ -85,12 +85,10 @@ class VirtCPNode(VirtNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysEntryNode(VirtNode):
-    def nodeClass(self): return 'VirtSysEntryNode'
     def createArcs(self): pass
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysExitNode(VirtNode):
-    def nodeClass(self): return 'VirtSysExitNode'
     def createArcs(self): pass
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
