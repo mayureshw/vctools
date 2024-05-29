@@ -174,11 +174,15 @@ public:
     }
     void buildModuleJsonEntry(JsonFactory& jf, JsonMap* modulesmap)
     {
+        auto name_key = jf.createJsonAtom<string>("name");
         auto exit_key = jf.createJsonAtom<string>("exit");
         auto entryPlace_key = jf.createJsonAtom<string>( to_string( entryPlace()->_nodeid ) );
 
         auto moduleDict = jf.createJsonMap();
         modulesmap->push_back({ entryPlace_key, moduleDict });
+
+        auto name_val = jf.createJsonAtom<string>( _vcm->Get_Id() );
+        moduleDict->push_back( { name_key, name_val } );
 
         auto exit_val = jf.createJsonAtom<unsigned>( exitPlace()->_nodeid );
         moduleDict->push_back( { exit_key, exit_val } );
