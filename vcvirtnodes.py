@@ -84,20 +84,28 @@ class VirtCPNode(VirtNode):
 
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
-class VirtSysEntryNode(VirtNode):
+class VirtSysIfNode(VirtNode):
     def createArcs(self): pass
+    def addParams(self,modulename,paramnames,widths):
+        self.module_params[modulename] = zip(paramnames,widths)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
-class VirtSysExitNode(VirtNode):
-    def createArcs(self): pass
+class VirtSysEntryNode(VirtSysIfNode):
+    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
+
+class VirtSysExitNode(VirtSysIfNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VCVirtDP:
     def createArcs(self):
         for n in self.nodes.values(): n.createArcs()
     def __init__(self,vcir):
-        self.sysEntryNode = VirtSysEntryNode(0,vcir,{})
-        self.sysExitNode = VirtSysExitNode(1,vcir,{})
+        self.sysEntryNode = VirtSysEntryNode(0,vcir,{
+            'module_params' : {}
+            })
+        self.sysExitNode = VirtSysExitNode(1,vcir,{
+            'module_params' : {}
+            })
         self.nodes = {
             0 : self.sysEntryNode,
             1 : self.sysExitNode,
@@ -105,9 +113,12 @@ class VCVirtDP:
         nodeid = 2
         # create virtual calls for non-daemon non-called modules
         for en in vcir.nonCalledNonDaemonEns():
+            moduledict = vcir.module_entries[en]
             node = VirtCPNode( nodeid, vcir, {
                 'callentry' : en,
-                'callexit' : vcir.module_entries[en]['exit'],
+                'callexit' : moduledict['exit'],
                 } )
             self.nodes[nodeid] = node
             nodeid = nodeid + 1
+            self.sysEntryNode.addParams( moduledict['name'], moduledict['inames'], moduledict['iwidths'] )
+            self.sysExitNode.addParams( moduledict['name'], moduledict['onames'], moduledict['owidths'] )
