@@ -93,6 +93,25 @@ public:
         _dppipe.dump(pfile);
         _dpstore.dump(pfile);
     }
+    void buildJsonParamNames(JsonFactory& jf, JsonMap* moduledict)
+    {
+        auto inames_key = jf.createJsonAtom<string>("inames");
+        auto onames_key = jf.createJsonAtom<string>("onames");
+        auto inameslist = jf.createJsonList();
+        auto onameslist = jf.createJsonList();
+        moduledict->push_back({ inames_key, inameslist });
+        moduledict->push_back({ onames_key, onameslist });
+        for(auto arg:_vcm->Get_Ordered_Input_Arguments())
+        {
+            auto iname_val = jf.createJsonAtom<string>(arg);
+            inameslist->push_back( iname_val );
+        }
+        for(auto arg:_vcm->Get_Ordered_Output_Arguments())
+        {
+            auto oname_val = jf.createJsonAtom<string>(arg);
+            onameslist->push_back( oname_val );
+        }
+    }
     void buildJsonDPEIOWidths(JsonFactory& jf, vector<vcWire*>& iws, vector<vcWire*>& ows, JsonMap* dpedict)
     {
         auto iwidths_key = jf.createJsonAtom<string>("iwidths");
@@ -186,6 +205,8 @@ public:
 
         auto exit_val = jf.createJsonAtom<unsigned>( exitPlace()->_nodeid );
         moduleDict->push_back( { exit_key, exit_val } );
+
+        buildJsonParamNames(jf, moduleDict);
 
         vector<vcWire*> iws, ows;
         for( int i=0; i<_vcm->Get_Number_Of_Input_Arguments(); i++)
