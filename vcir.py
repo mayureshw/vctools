@@ -47,6 +47,8 @@ class Vcir:
             sys.exit(1)
     def nodes(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values())
         if n.fanout('total') > 0 ]
+    def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
+        if self.pn.nodes[en].fanin('total') == 0 ]
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'
