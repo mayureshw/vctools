@@ -3,6 +3,7 @@ from itertools import chain
 from operator import *
 from vcpnnodes import *
 from vcdpnodes import *
+from vcvirtnodes import *
 from vcnodeprops import *
 
 class Vcir:
@@ -57,10 +58,11 @@ class Vcir:
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
         self.simu_only = set(jsonobj['simu_only'])
-        self.module_entries = { int(en) for en in jsonobj['modules'] }
+        self.module_entries = { int(en) : d for en,d in jsonobj['modules'].items() }
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
+        self.virtdp = VCVirtDP(self)
         for en,moddescr in jsonobj['modules'].items():
             entryplace = self.pn.nodes[ int(en) ]
             exitplace = self.pn.nodes[ moddescr['exit'] ]
