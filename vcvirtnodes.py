@@ -21,6 +21,7 @@ class VirtSysIfNode(VirtNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysEntryNode(VirtSysIfNode):
+    def ithEntry(self,i): return self.oarcs['petri'][i].tgtnode
     def createArcs(self):
         for en in self.vcir.virtdp.nonCalledNonDaemonEns:
             entrynode = self.vcir.pn.nodes[en]
@@ -43,6 +44,7 @@ class VirtSysEntryNode(VirtSysIfNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysExitNode(VirtSysIfNode):
+    def ithExit(self,i): return self.iarcs['petri'][i].srcnode
     def createArcs(self):
         for en in self.vcir.virtdp.nonCalledNonDaemonEns:
             ex = self.vcir.module_entries[en]['exit']
