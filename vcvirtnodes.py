@@ -17,7 +17,7 @@ class VirtNode(Node):
 
 class VirtSysIfNode(VirtNode):
     def addParams(self,modulename,paramnames,widths):
-        self.module_params[modulename] = zip(paramnames,widths)
+        self.module_params[modulename] = list(zip(paramnames,widths))
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysEntryNode(VirtSysIfNode):
