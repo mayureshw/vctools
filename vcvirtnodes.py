@@ -22,7 +22,7 @@ class VirtSysIfNode(VirtNode):
 
 class VirtSysEntryNode(VirtSysIfNode):
     def createArcs(self):
-        for en in self.vcir.nonCalledNonDaemonEns():
+        for en in self.vcir.virtdp.nonCalledNonDaemonEns:
             entrynode = self.vcir.pn.nodes[en]
             width = sum(entrynode.owidths)
             arcobj = PNArc({
@@ -44,7 +44,7 @@ class VirtSysEntryNode(VirtSysIfNode):
 
 class VirtSysExitNode(VirtSysIfNode):
     def createArcs(self):
-        for en in self.vcir.nonCalledNonDaemonEns():
+        for en in self.vcir.virtdp.nonCalledNonDaemonEns:
             ex = self.vcir.module_entries[en]['exit']
             exitnode = self.vcir.pn.nodes[ex]
             width = sum(exitnode.iwidths)
@@ -79,8 +79,10 @@ class VCVirtDP:
             0 : self.sysEntryNode,
             1 : self.sysExitNode,
             }
+        # They cease to meet the fanin criteria as virtual nodes get added, so keep a copy
+        self.nonCalledNonDaemonEns = vcir.nonCalledNonDaemonEns()
         # create virtual calls for non-daemon non-called modules
-        for en in vcir.nonCalledNonDaemonEns():
+        for en in self.nonCalledNonDaemonEns:
             moduledict = vcir.module_entries[en]
             self.sysEntryNode.addParams( moduledict['name'], moduledict['inames'], moduledict['iwidths'] )
             self.sysExitNode.addParams( moduledict['name'], moduledict['onames'], moduledict['owidths'] )
