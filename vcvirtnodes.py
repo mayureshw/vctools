@@ -15,85 +15,54 @@ class VirtNode(Node):
     def idstr(self): return 'virt_' + str(self.nodeid)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
-class VirtCPNode(VirtNode):
-    def createArcs(self):
-        # similar to vcdpnodes handling of if self.optyp == 'Call'
-        # But no callacks are needed for virtual CP
-
-        # Call -> Entry : bind and Petri arcs
-        tgtnode = self.vcir.pn.nodes[self.callentry]
-        width = sum(tgtnode.owidths)
-        self.owidths = [ width ]
-        arcobj = DPArc({
-            'srcnode' : self,
-            'tgtnode' : tgtnode,
-            'rel'     : 'bind',
-            'width'   : width
-            })
-        tgtnode.addIarc(arcobj)
-        self.addOarc(arcobj)
-
-        arcobj = PNArc({
-            'srcnode'   : self,
-            'tgtnode'   : tgtnode,
-            'wt'        : 1,
-            })
-        tgtnode.addIarc(arcobj)
-        self.addOarc(arcobj)
-
-        # Call -> SysExit data and Petri arc # TODO check if tgtpos/srcpos is needed (compare with real CP)
-        tgtnode = self.vcir.virtdp.sysExitNode
-        arcobj = DPArc({
-            'srcnode' : self,
-            'tgtnode' : tgtnode,
-            'rel'     : 'data',
-            })
-        tgtnode.addIarc(arcobj)
-        self.addOarc(arcobj)
-
-        # Exit -> Call : bind and Petri arcs
-        srcnode = self.vcir.pn.nodes[self.callexit]
-        width = sum(srcnode.iwidths)
-        self.iwidths = [ width ]
-        arcobj = DPArc({
-            'srcnode' : srcnode,
-            'tgtnode' : self,
-            'rel' : 'bind',
-            'width' : width
-            })
-        self.addIarc(arcobj)
-        srcnode.addOarc(arcobj)
-
-        arcobj = PNArc({
-            'srcnode'   : srcnode,
-            'tgtnode'   : self,
-            'wt'        : 1,
-            })
-        self.addIarc(arcobj)
-        srcnode.addOarc(arcobj)
-
-        # SysEntry -> Call data and Petri arc # TODO check if tgtpos/srcpos is needed (compare with real CP)
-        srcnode = self.vcir.virtdp.sysEntryNode
-        arcobj = DPArc({
-            'srcnode' : srcnode,
-            'tgtnode' : self,
-            'rel' : 'data',
-            })
-        self.addIarc(arcobj)
-        srcnode.addOarc(arcobj)
-
-    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
-
 class VirtSysIfNode(VirtNode):
-    def createArcs(self): pass
     def addParams(self,modulename,paramnames,widths):
         self.module_params[modulename] = zip(paramnames,widths)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysEntryNode(VirtSysIfNode):
+    def createArcs(self):
+        for en in self.vcir.nonCalledNonDaemonEns():
+            entrynode = self.vcir.pn.nodes[en]
+            width = sum(entrynode.owidths)
+            arcobj = PNArc({
+                'srcnode'   : self,
+                'tgtnode'   : entrynode,
+                'wt'        : 1,
+                })
+            self.addOarc(arcobj)
+            entrynode.addIarc(arcobj)
+            arcobj = DPArc({
+                'srcnode' : self,
+                'tgtnode' : entrynode,
+                'rel' : 'bind',
+                'width' : width
+                })
+            self.addOarc(arcobj)
+            entrynode.addIarc(arcobj)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VirtSysExitNode(VirtSysIfNode):
+    def createArcs(self):
+        for en in self.vcir.nonCalledNonDaemonEns():
+            ex = self.vcir.module_entries[en]['exit']
+            exitnode = self.vcir.pn.nodes[ex]
+            width = sum(exitnode.iwidths)
+            arcobj = PNArc({
+                'srcnode'   : exitnode,
+                'tgtnode'   : self,
+                'wt'        : 1,
+                })
+            self.addIarc(arcobj)
+            exitnode.addOarc(arcobj)
+            arcobj = DPArc({
+                'srcnode' : exitnode,
+                'tgtnode' : self,
+                'rel' : 'bind',
+                'width' : width
+                })
+            self.addIarc(arcobj)
+            exitnode.addOarc(arcobj)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VCVirtDP:
@@ -110,15 +79,8 @@ class VCVirtDP:
             0 : self.sysEntryNode,
             1 : self.sysExitNode,
             }
-        nodeid = 2
         # create virtual calls for non-daemon non-called modules
         for en in vcir.nonCalledNonDaemonEns():
             moduledict = vcir.module_entries[en]
-            node = VirtCPNode( nodeid, vcir, {
-                'callentry' : en,
-                'callexit' : moduledict['exit'],
-                } )
-            self.nodes[nodeid] = node
-            nodeid = nodeid + 1
             self.sysEntryNode.addParams( moduledict['name'], moduledict['inames'], moduledict['iwidths'] )
             self.sysExitNode.addParams( moduledict['name'], moduledict['onames'], moduledict['owidths'] )
