@@ -30,8 +30,6 @@ lambda n: f(n,'isPassiveBranch'),
         ]
     props = [
 lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
-lambda n: e( v(n,'total','fanin'),             eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
-lambda n: e( v(n,'total','fanout'),            eq, v(n,'passivebranch','fanout') ),
         ]
 
 class BranchPlace(NodeClass):
@@ -61,8 +59,6 @@ lambda n: e( v(n,'total','fanout'), eq, c(1) ),
 class PassThroughPlace(NodeClass):
     sign = [
 lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
 lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
 lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
 lambda n: e( not_, f(n,'isEntryPlace') ),
@@ -161,6 +157,9 @@ class Place(PNNode):
 class VcPetriNet:
     def isSimuOnlyArc(self,srcid,tgtid): return self.isSimuOnlyNode(srcid) or self.isSimuOnlyNode(tgtid)
     def isSimuOnlyNode(self,nodeid): return nodeid in self.vcir.simu_only
+    # classify should be called after all layers of vcir are built
+    def classify(self):
+        for node in self.nodes.values(): node.classify()
     def __init__(self,pnobj,vcir):
         self.vcir = vcir
         self.places = {
@@ -191,5 +190,4 @@ class VcPetriNet:
                 revarc = arcobj.reversedArc()
                 srcnode.addIarc(revarc)
                 tgtnode.addOarc(revarc)
-        for node in self.nodes.values(): node.classify()
 
