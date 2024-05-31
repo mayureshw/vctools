@@ -97,4 +97,5 @@ class Vcir:
                 entryplace.addOarc(arcobj,False)
         self.dp.createArcs() # Needs to be done after pn is in place
         self.virtdp.createArcs() # Needs to be done after pn and dp are in place
+        self.pn.classify() # Needs to be called after pn,dp,virt - all are in place
         self.validate()
