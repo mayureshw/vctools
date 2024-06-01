@@ -147,7 +147,20 @@ class DPNode(Node):
         super().__init__(nodeid,vcir,props)
 
 class VcDP:
+    def sysInPipes(self): return [ p for p in self.pipereads if p not in self.pipefeeds ]
+    def sysOutPipes(self): return [ p for p in self.pipefeeds if p not in self.pipereads ]
     def createArcs(self):
-        for n in self.nodes.values(): n.createArcs()
+        self.pipereads = {}
+        self.pipefeeds = {}
+        for n in self.nodes.values():
+            n.createArcs()
+            feedspipe = getattr( n, 'feedspipe', None )
+            if feedspipe != None:
+                self.pipefeeds[feedspipe] = self.pipefeeds.get(feedspipe,0) + 1
+            readspipe = getattr( n, 'readspipe', None )
+            if readspipe != None:
+                self.pipereads[readspipe] = self.pipefeeds.get(readspipe,0) + 1
+        print('pipereads',self.pipereads)
+        print('pipefeeds',self.pipefeeds)
     def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
