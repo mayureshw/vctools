@@ -287,36 +287,34 @@ class SysIR
     list<ModuleIR*> _moduleirs;
     Rel<long,string> _m = {"m"};
     System& _sys;
-    void buildJsonPipeMap( JsonFactory& jf, JsonMap* pipemap, string pipename, vcPipe* pipe, PipeIf *pipeif )
-    {
-        auto pipename_key = jf.createJsonAtom<string>( pipename );
-        auto pipedict = jf.createJsonMap();
-        pipemap->push_back({ pipename_key, pipedict });
-
-        auto width_key = jf.createJsonAtom<string>("width");
-        auto width_val = jf.createJsonAtom<unsigned>(pipe->Get_Width());
-        pipedict->push_back({ width_key, width_val });
-
-        auto depth_key = jf.createJsonAtom<string>("depth");
-        auto depth_val = jf.createJsonAtom<unsigned>(pipe->Get_Depth());
-        pipedict->push_back({ depth_key, depth_val });
-
-        auto node_key = jf.createJsonAtom<string>("node");
-        auto node_val = jf.createJsonAtom<unsigned>(pipeif->triggerPlace()->_nodeid);
-        pipedict->push_back({ node_key, node_val });
-    }
-    void buildJsonPipeMaps( JsonFactory& jf, JsonMap* inpipemap, JsonMap* outpipemap )
+    void buildJsonPipesMap( JsonFactory& jf, JsonMap* pipesmap)
     {
         for( auto pipetup : _sys.getPipeMap() )
         {
             auto pipename = pipetup.first;
             auto pipe = pipetup.second;
-            auto nReaders = pipe->Get_Pipe_Read_Count();
-            auto nWriters = pipe->Get_Pipe_Write_Count();
-            if ( nReaders > 0 and nWriters == 0 )
-                buildJsonPipeMap( jf, inpipemap, pipename, pipe, _sys.getFeeder(pipename));
-            else if ( nWriters > 0 and nReaders == 0 )
-                buildJsonPipeMap( jf, outpipemap, pipename, pipe, _sys.getReader(pipename));
+
+            auto pipename_key = jf.createJsonAtom<string>( pipename );
+            auto pipedict = jf.createJsonMap();
+            pipesmap->push_back({ pipename_key, pipedict });
+
+            auto width_key = jf.createJsonAtom<string>("width");
+            auto width_val = jf.createJsonAtom<unsigned>(pipe->Get_Width());
+            pipedict->push_back({ width_key, width_val });
+
+            auto depth_key = jf.createJsonAtom<string>("depth");
+            auto depth_val = jf.createJsonAtom<unsigned>(pipe->Get_Depth());
+            pipedict->push_back({ depth_key, depth_val });
+
+            auto readtrig_key = jf.createJsonAtom<string>("readtrig");
+            auto readtrig_val = jf.createJsonAtom<unsigned>(
+                _sys.getReader(pipename)->triggerPlace()->_nodeid);
+            pipedict->push_back({ readtrig_key, readtrig_val });
+
+            auto feedtrig_key = jf.createJsonAtom<string>("feedtrig");
+            auto feedtrig_val = jf.createJsonAtom<unsigned>(
+                _sys.getFeeder(pipename)->triggerPlace()->_nodeid);
+            pipedict->push_back({ feedtrig_key, feedtrig_val });
         }
     }
 public:
@@ -376,14 +374,11 @@ public:
         top.push_back( { &dpes_key, dpesmap } );
         for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpesmap, modulesmap);
 
-        // 6. System pipes
-        JSONSTR(inpipes)
-        JSONSTR(outpipes)
-        auto inpipemap = jf.createJsonMap();
-        auto outpipemap = jf.createJsonMap();
-        top.push_back( { &inpipes_key, inpipemap } );
-        top.push_back( { &outpipes_key, outpipemap } );
-        buildJsonPipeMaps( jf, inpipemap, outpipemap );
+        // 6. pipes
+        JSONSTR(pipes)
+        auto pipesmap = jf.createJsonMap();
+        top.push_back( { &pipes_key, pipesmap } );
+        buildJsonPipesMap( jf, pipesmap );
 
         // 7. Write json file
         top.print(jsonfile);
