@@ -268,6 +268,12 @@ public:
                 auto callUackId_val = jf.createJsonAtom<unsigned>( callUackId );
                 dpedict->push_back({ callack_key, callUackId_val });
             }
+            else if ( simdpe->isIport() )
+            {
+            }
+            else if ( simdpe->isOport() )
+            {
+            }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
             auto ows = simdpe->elem()->Get_Output_Wires();
@@ -289,6 +295,11 @@ class SysIR
     System& _sys;
     void buildJsonPipesMap( JsonFactory& jf, JsonMap* pipesmap)
     {
+        auto width_key = jf.createJsonAtom<string>("width");
+        auto depth_key = jf.createJsonAtom<string>("depth");
+        auto readtrig_key = jf.createJsonAtom<string>("readtrig");
+        auto feedtrig_key = jf.createJsonAtom<string>("feedtrig");
+
         for( auto pipetup : _sys.getPipeMap() )
         {
             auto pipename = pipetup.first;
@@ -298,20 +309,16 @@ class SysIR
             auto pipedict = jf.createJsonMap();
             pipesmap->push_back({ pipename_key, pipedict });
 
-            auto width_key = jf.createJsonAtom<string>("width");
             auto width_val = jf.createJsonAtom<unsigned>(pipe->Get_Width());
             pipedict->push_back({ width_key, width_val });
 
-            auto depth_key = jf.createJsonAtom<string>("depth");
             auto depth_val = jf.createJsonAtom<unsigned>(pipe->Get_Depth());
             pipedict->push_back({ depth_key, depth_val });
 
-            auto readtrig_key = jf.createJsonAtom<string>("readtrig");
             auto readtrig_val = jf.createJsonAtom<unsigned>(
                 _sys.getReader(pipename)->triggerPlace()->_nodeid);
             pipedict->push_back({ readtrig_key, readtrig_val });
 
-            auto feedtrig_key = jf.createJsonAtom<string>("feedtrig");
             auto feedtrig_val = jf.createJsonAtom<unsigned>(
                 _sys.getFeeder(pipename)->triggerPlace()->_nodeid);
             pipedict->push_back({ feedtrig_key, feedtrig_val });
