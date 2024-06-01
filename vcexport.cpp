@@ -297,7 +297,7 @@ class SysIR
     list<ModuleIR*> _moduleirs;
     Rel<long,string> _m = {"m"};
     System& _sys;
-    void buildJsonPipeMap( JsonFactory& jf, JsonMap* pipemap, string pipename, vcPipe* pipe )
+    void buildJsonPipeMap( JsonFactory& jf, JsonMap* pipemap, string pipename, vcPipe* pipe, PipeIf *pipeif )
     {
         auto pipename_key = jf.createJsonAtom<string>( pipename );
         auto pipedict = jf.createJsonMap();
@@ -312,7 +312,7 @@ class SysIR
         pipedict->push_back({ depth_key, depth_val });
 
         auto node_key = jf.createJsonAtom<string>("node");
-        auto node_val = jf.createJsonAtom<unsigned>(0);
+        auto node_val = jf.createJsonAtom<unsigned>(pipeif->triggerPlace()->_nodeid);
         pipedict->push_back({ node_key, node_val });
     }
     void buildJsonPipeMaps( JsonFactory& jf, JsonMap* inpipemap, JsonMap* outpipemap )
@@ -324,9 +324,9 @@ class SysIR
             auto nReaders = pipe->Get_Pipe_Read_Count();
             auto nWriters = pipe->Get_Pipe_Write_Count();
             if ( nReaders > 0 and nWriters == 0 )
-                buildJsonPipeMap( jf, inpipemap, pipename, pipe);
+                buildJsonPipeMap( jf, inpipemap, pipename, pipe, _sys.getFeeder(pipename));
             else if ( nWriters > 0 and nReaders == 0 )
-                buildJsonPipeMap( jf, outpipemap, pipename, pipe);
+                buildJsonPipeMap( jf, outpipemap, pipename, pipe, _sys.getReader(pipename));
         }
     }
 public:

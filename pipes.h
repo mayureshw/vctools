@@ -283,6 +283,7 @@ protected:
 public:
     virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN() = 0;
+    PNPlace* triggerPlace() { return _triggerPlace; }
     void buildPN()
     {
         pn()->createArc(_triggerPlace, _sreq);
