@@ -68,6 +68,7 @@ class SysExitNode(SysIfNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class SysPipeNode(SysNode):
+    def optype(self): return 'Pipe'
     def dotprops(self): return [
         ('color','gray'),
         ('label','pipe:'+self.name),
@@ -101,7 +102,7 @@ class VCSysDP:
         # pipe nodes
         for p in vcir.pipes:
             n = SysPipeNode(nodeid,vcir,{
-                'name' : p
+                'name' : p,
                 })
             self.nodes[nodeid] = n
             nodeid = nodeid + 1
