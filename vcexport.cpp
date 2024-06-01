@@ -230,6 +230,8 @@ public:
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
         auto callack_key = jf.createJsonAtom<string>("callack");
+        auto readspipe_key = jf.createJsonAtom<string>("readspipe");
+        auto feedspipe_key = jf.createJsonAtom<string>("feedspipe");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -268,11 +270,12 @@ public:
                 auto callUackId_val = jf.createJsonAtom<unsigned>( callUackId );
                 dpedict->push_back({ callack_key, callUackId_val });
             }
-            else if ( simdpe->isIport() )
+            else if ( simdpe->isIport() or simdpe->isOport() )
             {
-            }
-            else if ( simdpe->isOport() )
-            {
+                auto pipename = ( (IOPort*)simdpe->getOp() )->_pipe->_label;
+                auto pipe_val = jf.createJsonAtom<string>(pipename);
+                auto pipe_key = simdpe->isIport() ? readspipe_key : feedspipe_key;
+                dpedict->push_back({ pipe_key, pipe_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
