@@ -975,7 +975,7 @@ public:
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
-        if ( ! _isDaemon )
+        if ( _vcm->Get_Num_Calls() > 1 )
         {
             pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
             pn()->annotatePNNode( _moduleExitPlace, PassiveBranch_ );
@@ -1062,6 +1062,7 @@ class System : public SystemBase
     }
 public:
     string name() { return _vcs->Get_Id(); }
+    map<string,vcPipe*> getPipeMap() { return _vcs->Get_Pipe_Map(); }
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
