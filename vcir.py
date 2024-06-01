@@ -45,9 +45,7 @@ class Vcir:
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
-    def nonSysNodesWFanout(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values()) if n.fanout('total') > 0 ]
-    def sysNodes(self): return list( self.sysdp.nodes.values() )
-    def allNodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
+    def nodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
     def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
         if self.pn.nodes[en].fanin('total') == 0 ]
     def __init__(self,stem):
