@@ -29,7 +29,7 @@ class Node:
     def all_arcrels_sans_metrics(cls): return cls.controlrels.union(cls.datarels, cls.fixedWidthDataRels)
     def dotprops(self) : return []
     def isDP(self): return False
-    def isVirt(self): return False
+    def isSys(self): return False
     def isPlace(self): return False
     def isTransition(self): return False
     def onreset(self): return 0

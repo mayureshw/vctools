@@ -3,7 +3,7 @@ from itertools import chain
 from operator import *
 from vcpnnodes import *
 from vcdpnodes import *
-from vcvirtnodes import *
+from vcsysnodes import *
 from vcnodeprops import *
 
 class Vcir:
@@ -45,9 +45,9 @@ class Vcir:
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
-    def nonVirtualNodesWFanout(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values()) if n.fanout('total') > 0 ]
-    def virtualNodes(self): return list( self.virtdp.nodes.values() )
-    def allNodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.virtdp.nodes.values() ) ]
+    def nonSysNodesWFanout(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values()) if n.fanout('total') > 0 ]
+    def sysNodes(self): return list( self.sysdp.nodes.values() )
+    def allNodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
     def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
         if self.pn.nodes[en].fanin('total') == 0 ]
     def __init__(self,stem):
@@ -66,7 +66,7 @@ class Vcir:
         self.pipes = jsonobj['pipes']
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
-        self.virtdp = VCVirtDP(self)
+        self.sysdp = VCSysDP(self)
         for en,moddescr in jsonobj['modules'].items():
             entryplace = self.pn.nodes[ int(en) ]
             exitplace = self.pn.nodes[ moddescr['exit'] ]
@@ -97,6 +97,6 @@ class Vcir:
                 exitplace.addIarc(arcobj,False)
                 entryplace.addOarc(arcobj,False)
         self.dp.createArcs() # Needs to be done after pn is in place
-        self.virtdp.createArcs() # Needs to be done after pn and dp are in place
-        self.pn.classify() # Needs to be called after pn,dp,virt - all are in place
+        self.sysdp.createArcs() # Needs to be done after pn and dp are in place
+        self.pn.classify() # Needs to be called after pn,dp,sys - all are in place
         self.validate()
