@@ -149,6 +149,8 @@ public:
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
     }
+    bool isIport() { return _vctyp == vcInport_; }
+    bool isOport() { return _vctyp == vcOutport_; }
     bool isCall() { return _vctyp == vcCall_; }
     bool isDeemedPhi()
     {
@@ -211,9 +213,7 @@ public:
     // buildPN that suits most DPEs
     void buildPNDefault()
     {
-        bool isIport = _vctyp == vcInport_;
-        bool isOport = _vctyp == vcOutport_;
-        if ( isIport ) // In AHIR Inport reads on ureq, not on sreq
+        if ( isIport() ) // In AHIR Inport reads on ureq, not on sreq
             _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
@@ -237,14 +237,14 @@ public:
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
-        if ( isIport or isOport )
+        if ( isIport() or isOport() )
         {
             auto sreq = _reqs[0];
             auto sack = _acks[0];
             auto ureq = _reqs[1];
             auto uack = _acks[1];
             auto pipe = ((IOPort*)_op)->_pipe;
-            if ( isIport ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
+            if ( isIport() ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
             else pipe->buildPNOport(sreq, sack);
         }
         else if ( isCall() )
