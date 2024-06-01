@@ -295,7 +295,7 @@ public:
         _sreq = pn()->createTransition("PipeIf_sreq");
         _sack = pn()->createTransition("PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
-        _triggerPlace = pn()->createPlace("PipeIf_trigger",0,0);
+        _triggerPlace = pn()->createPlace("PipeIf_trigger",0,1);
     }
 };
 
