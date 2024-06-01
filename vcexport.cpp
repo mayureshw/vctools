@@ -297,6 +297,38 @@ class SysIR
     list<ModuleIR*> _moduleirs;
     Rel<long,string> _m = {"m"};
     System& _sys;
+    void buildJsonPipeMap( JsonFactory& jf, JsonMap* pipemap, string pipename, vcPipe* pipe )
+    {
+        auto pipename_key = jf.createJsonAtom<string>( pipename );
+        auto pipedict = jf.createJsonMap();
+        pipemap->push_back({ pipename_key, pipedict });
+
+        auto width_key = jf.createJsonAtom<string>("width");
+        auto width_val = jf.createJsonAtom<unsigned>(pipe->Get_Width());
+        pipedict->push_back({ width_key, width_val });
+
+        auto depth_key = jf.createJsonAtom<string>("depth");
+        auto depth_val = jf.createJsonAtom<unsigned>(pipe->Get_Depth());
+        pipedict->push_back({ depth_key, depth_val });
+
+        auto node_key = jf.createJsonAtom<string>("node");
+        auto node_val = jf.createJsonAtom<unsigned>(0);
+        pipedict->push_back({ node_key, node_val });
+    }
+    void buildJsonPipeMaps( JsonFactory& jf, JsonMap* inpipemap, JsonMap* outpipemap )
+    {
+        for( auto pipetup : _sys.getPipeMap() )
+        {
+            auto pipename = pipetup.first;
+            auto pipe = pipetup.second;
+            auto nReaders = pipe->Get_Pipe_Read_Count();
+            auto nWriters = pipe->Get_Pipe_Write_Count();
+            if ( nReaders > 0 and nWriters == 0 )
+                buildJsonPipeMap( jf, inpipemap, pipename, pipe);
+            else if ( nWriters > 0 and nReaders == 0 )
+                buildJsonPipeMap( jf, outpipemap, pipename, pipe);
+        }
+    }
 public:
     void export_prolog()
     {
@@ -354,7 +386,16 @@ public:
         top.push_back( { &dpes_key, dpesmap } );
         for(auto mir:_moduleirs) mir->buildJsonDPEList(jf, dpesmap, modulesmap);
 
-        // 6. Write json file
+        // 6. System pipes
+        JSONSTR(inpipes)
+        JSONSTR(outpipes)
+        auto inpipemap = jf.createJsonMap();
+        auto outpipemap = jf.createJsonMap();
+        top.push_back( { &inpipes_key, inpipemap } );
+        top.push_back( { &outpipes_key, outpipemap } );
+        buildJsonPipeMaps( jf, inpipemap, outpipemap );
+
+        // 7. Write json file
         top.print(jsonfile);
         jsonfile.close();
     }
