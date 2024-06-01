@@ -67,6 +67,15 @@ class SysExitNode(SysIfNode):
             exitnode.addOarc(arcobj)
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
+class SysPipeNode(SysNode):
+    def dotprops(self): return [
+        ('color','gray'),
+        ('label','pipe:'+self.name),
+        ]
+    def createArcs(self):
+        pass
+    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
+
 class VCSysDP:
     def createArcs(self):
         for n in self.nodes.values(): n.createArcs()
@@ -81,10 +90,18 @@ class VCSysDP:
             0 : self.sysEntryNode,
             1 : self.sysExitNode,
             }
+        nodeid = 2
         # They cease to meet the fanin criteria as sys nodes get added, so keep a copy
         self.nonCalledNonDaemonEns = vcir.nonCalledNonDaemonEns()
-        # create sys calls for non-daemon non-called modules
+        # add param info to sysEntry and exit nodes
         for en in self.nonCalledNonDaemonEns:
             moduledict = vcir.module_entries[en]
             self.sysEntryNode.addParams( moduledict['name'], moduledict['inames'], moduledict['iwidths'] )
             self.sysExitNode.addParams( moduledict['name'], moduledict['onames'], moduledict['owidths'] )
+        # pipe nodes
+        for p in vcir.pipes:
+            n = SysPipeNode(nodeid,vcir,{
+                'name' : p
+                })
+            self.nodes[nodeid] = n
+            nodeid = nodeid + 1
