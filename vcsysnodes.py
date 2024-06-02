@@ -73,8 +73,69 @@ class SysPipeNode(SysNode):
         ('color','gray'),
         ('label','pipe:'+self.name),
         ]
+    def createInternalReadArcs(self):
+        for dpe in self.vcir.dp.pipereads[self.name]:
+            # dpe <-> pipe bi-directional PN arcs
+            arcobj = PNArc({
+                'srcnode'   : self,
+                'tgtnode'   : dpe,
+                'wt'        : 1,
+                })
+            self.addIarc(arcobj)
+            dpe.addOarc(arcobj)
+
+            arcobj = PNArc({
+                'srcnode'   : dpe,
+                'tgtnode'   : self,
+                'wt'        : 1,
+                })
+            dpe.addIarc(arcobj)
+            self.addOarc(arcobj)
+
+            # pipe -> dpe data arc
+            arcobj = DPArc({
+                'srcnode' : self,
+                'tgtnode' : dpe,
+                'rel'     : 'data',
+                'width'   : self.width
+                })
+            dpe.addIarc(arcobj)
+            self.addOarc(arcobj)
+    def createInternalFeedArcs(self):
+        for dpe in self.vcir.dp.pipefeeds[self.name]:
+            # dpe <-> pipe bi-directional PN arcs
+            arcobj = PNArc({
+                'srcnode'   : self,
+                'tgtnode'   : dpe,
+                'wt'        : 1,
+                })
+            self.addIarc(arcobj)
+            dpe.addOarc(arcobj)
+
+            arcobj = PNArc({
+                'srcnode'   : dpe,
+                'tgtnode'   : self,
+                'wt'        : 1,
+                })
+            dpe.addIarc(arcobj)
+            self.addOarc(arcobj)
+
+            # dpe -> pipe data arc
+            arcobj = DPArc({
+                'srcnode' : dpe,
+                'tgtnode' : self,
+                'rel'     : 'data',
+                'width'   : self.width
+                })
+            self.addIarc(arcobj)
+            dpe.addOarc(arcobj)
+    def createSysReadArcs(self): pass
+    def createSysFeedArcs(self): pass
     def createArcs(self):
-        pass
+        if self.name in self.vcir.dp.pipereads: self.createInternalReadArcs()
+        else: self.createSysReadArcs()
+        if self.name in self.vcir.dp.pipefeeds: self.createInternalFeedArcs()
+        else: self.createSysFeedArcs()
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VCSysDP:
@@ -100,9 +161,9 @@ class VCSysDP:
             self.sysEntryNode.addParams( moduledict['name'], moduledict['inames'], moduledict['iwidths'] )
             self.sysExitNode.addParams( moduledict['name'], moduledict['onames'], moduledict['owidths'] )
         # pipe nodes
-        for p in vcir.pipes:
-            n = SysPipeNode(nodeid,vcir,{
+        for p,props in vcir.pipes.items():
+            n = SysPipeNode(nodeid,vcir,{**props,**{
                 'name' : p,
-                })
+                }})
             self.nodes[nodeid] = n
             nodeid = nodeid + 1
