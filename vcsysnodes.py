@@ -101,6 +101,34 @@ class SysPipeNode(SysNode):
                 })
             dpe.addIarc(arcobj)
             self.addOarc(arcobj)
+    def createSysReadArcs(self):
+        sysExitNode = self.vcir.sysdp.sysExitNode
+        # pipe -> sysExit data bi-directional PN arcs
+        arcobj = PNArc({
+            'srcnode'   : self,
+            'tgtnode'   : sysExitNode,
+            'wt'        : 1,
+            })
+        self.addOarc(arcobj)
+        sysExitNode.addIarc(arcobj)
+
+        arcobj = PNArc({
+            'srcnode'   : sysExitNode,
+            'tgtnode'   : self,
+            'wt'        : 1,
+            })
+        sysExitNode.addOarc(arcobj)
+        self.addIarc(arcobj)
+
+        # pipe -> sysExit data
+        arcobj = DPArc({
+            'srcnode' : self,
+            'tgtnode' : sysExitNode,
+            'rel'     : 'data',
+            'width'   : self.width
+            })
+        self.addOarc(arcobj)
+        sysExitNode.addIarc(arcobj)
     def createInternalFeedArcs(self):
         for dpe in self.vcir.dp.pipefeeds[self.name]:
             # dpe <-> pipe bi-directional PN arcs
@@ -129,8 +157,34 @@ class SysPipeNode(SysNode):
                 })
             self.addIarc(arcobj)
             dpe.addOarc(arcobj)
-    def createSysReadArcs(self): pass
-    def createSysFeedArcs(self): pass
+    def createSysFeedArcs(self):
+        sysEntryNode = self.vcir.sysdp.sysEntryNode
+        # sysEntry -> pipe data bi-directional PN arcs
+        arcobj = PNArc({
+            'srcnode'   : sysEntryNode,
+            'tgtnode'   : self,
+            'wt'        : 1,
+            })
+        sysEntryNode.addOarc(arcobj)
+        self.addIarc(arcobj)
+
+        arcobj = PNArc({
+            'srcnode'   : self,
+            'tgtnode'   : sysEntryNode,
+            'wt'        : 1,
+            })
+        self.addOarc(arcobj)
+        sysEntryNode.addIarc(arcobj)
+
+        # sysEntry -> pipe data
+        arcobj = DPArc({
+            'srcnode' : sysEntryNode,
+            'tgtnode' : self,
+            'rel'     : 'data',
+            'width'   : self.width
+            })
+        sysEntryNode.addOarc(arcobj)
+        self.addIarc(arcobj)
     def createArcs(self):
         if self.name in self.vcir.dp.pipereads: self.createInternalReadArcs()
         else: self.createSysReadArcs()
