@@ -129,6 +129,7 @@ class SysPipeNode(SysNode):
             })
         self.addOarc(arcobj)
         sysExitNode.addIarc(arcobj)
+        sysExitNode.iwidths.append(self.width)
     def createInternalFeedArcs(self):
         for dpe in self.vcir.dp.pipefeeds[self.name]:
             # dpe <-> pipe bi-directional PN arcs
@@ -141,9 +142,9 @@ class SysPipeNode(SysNode):
             dpe.addOarc(arcobj)
 
             arcobj = PNArc({
-                'srcnode'   : dpe,
-                'tgtnode'   : self,
-                'wt'        : 1,
+                'srcnode' : dpe,
+                'tgtnode' : self,
+                'wt'      : 1,
                 })
             dpe.addIarc(arcobj)
             self.addOarc(arcobj)
@@ -161,17 +162,17 @@ class SysPipeNode(SysNode):
         sysEntryNode = self.vcir.sysdp.sysEntryNode
         # sysEntry -> pipe data bi-directional PN arcs
         arcobj = PNArc({
-            'srcnode'   : sysEntryNode,
-            'tgtnode'   : self,
-            'wt'        : 1,
+            'srcnode' : sysEntryNode,
+            'tgtnode' : self,
+            'wt'      : 1,
             })
         sysEntryNode.addOarc(arcobj)
         self.addIarc(arcobj)
 
         arcobj = PNArc({
-            'srcnode'   : self,
-            'tgtnode'   : sysEntryNode,
-            'wt'        : 1,
+            'srcnode' : self,
+            'tgtnode' : sysEntryNode,
+            'wt'      : 1,
             })
         self.addOarc(arcobj)
         sysEntryNode.addIarc(arcobj)
@@ -185,6 +186,7 @@ class SysPipeNode(SysNode):
             })
         sysEntryNode.addOarc(arcobj)
         self.addIarc(arcobj)
+        sysEntryNode.owidths.append(self.width)
     def createArcs(self):
         if self.name in self.vcir.dp.pipereads: self.createInternalReadArcs()
         else: self.createSysReadArcs()
