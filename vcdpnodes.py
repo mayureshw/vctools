@@ -159,6 +159,6 @@ class VcDP:
                 self.pipefeeds[feedspipe] = self.pipefeeds.get(feedspipe,[]) + [n]
             readspipe = getattr( n, 'readspipe', None )
             if readspipe != None:
-                self.pipereads[readspipe] = self.pipefeeds.get(readspipe,[]) + [n]
+                self.pipereads[readspipe] = self.pipereads.get(readspipe,[]) + [n]
     def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
