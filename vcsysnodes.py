@@ -27,17 +27,17 @@ class SysEntryNode(SysIfNode):
             entrynode = self.vcir.pn.nodes[en]
             width = sum(entrynode.owidths)
             arcobj = PNArc({
-                'srcnode'   : self,
-                'tgtnode'   : entrynode,
-                'wt'        : 1,
+                'srcnode' : self,
+                'tgtnode' : entrynode,
+                'wt'      : 1,
                 })
             self.addOarc(arcobj)
             entrynode.addIarc(arcobj)
             arcobj = DPArc({
                 'srcnode' : self,
                 'tgtnode' : entrynode,
-                'rel' : 'bind',
-                'width' : width
+                'rel'     : 'bind',
+                'width'   : width
                 })
             self.addOarc(arcobj)
             entrynode.addIarc(arcobj)
@@ -51,17 +51,17 @@ class SysExitNode(SysIfNode):
             exitnode = self.vcir.pn.nodes[ex]
             width = sum(exitnode.iwidths)
             arcobj = PNArc({
-                'srcnode'   : exitnode,
-                'tgtnode'   : self,
-                'wt'        : 1,
+                'srcnode' : exitnode,
+                'tgtnode' : self,
+                'wt'      : 1,
                 })
             self.addIarc(arcobj)
             exitnode.addOarc(arcobj)
             arcobj = DPArc({
                 'srcnode' : exitnode,
                 'tgtnode' : self,
-                'rel' : 'bind',
-                'width' : width
+                'rel'     : 'bind',
+                'width'   : width
                 })
             self.addIarc(arcobj)
             exitnode.addOarc(arcobj)
@@ -77,17 +77,17 @@ class SysPipeNode(SysNode):
         for dpe in self.vcir.dp.pipereads[self.name]:
             # dpe <-> pipe bi-directional PN arcs
             arcobj = PNArc({
-                'srcnode'   : self,
-                'tgtnode'   : dpe,
-                'wt'        : 1,
+                'srcnode' : self,
+                'tgtnode' : dpe,
+                'wt'      : 1,
                 })
             self.addIarc(arcobj)
             dpe.addOarc(arcobj)
 
             arcobj = PNArc({
-                'srcnode'   : dpe,
-                'tgtnode'   : self,
-                'wt'        : 1,
+                'srcnode' : dpe,
+                'tgtnode' : self,
+                'wt'      : 1,
                 })
             dpe.addIarc(arcobj)
             self.addOarc(arcobj)
@@ -107,17 +107,17 @@ class SysPipeNode(SysNode):
         sysExitNode = self.vcir.sysdp.sysExitNode
         # pipe -> sysExit data bi-directional PN arcs
         arcobj = PNArc({
-            'srcnode'   : self,
-            'tgtnode'   : sysExitNode,
-            'wt'        : 1,
+            'srcnode' : self,
+            'tgtnode' : sysExitNode,
+            'wt'      : 1,
             })
         self.addOarc(arcobj)
         sysExitNode.addIarc(arcobj)
 
         arcobj = PNArc({
-            'srcnode'   : sysExitNode,
-            'tgtnode'   : self,
-            'wt'        : 1,
+            'srcnode' : sysExitNode,
+            'tgtnode' : self,
+            'wt'      : 1,
             })
         sysExitNode.addOarc(arcobj)
         self.addIarc(arcobj)
@@ -137,9 +137,9 @@ class SysPipeNode(SysNode):
         for dpe in self.vcir.dp.pipefeeds[self.name]:
             # dpe <-> pipe bi-directional PN arcs
             arcobj = PNArc({
-                'srcnode'   : self,
-                'tgtnode'   : dpe,
-                'wt'        : 1,
+                'srcnode' : self,
+                'tgtnode' : dpe,
+                'wt'      : 1,
                 })
             self.addIarc(arcobj)
             dpe.addOarc(arcobj)
