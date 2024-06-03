@@ -180,9 +180,9 @@ class VcPetriNet:
             srcnode = self.nodes[ srcid ]
             tgtnode = self.nodes[ tgtid ]
             arcobj = PNArc({
-                'srcnode'   : srcnode,
-                'tgtnode'   : tgtnode,
-                'wt'        : arc['wt'],
+                'srcnode' : srcnode,
+                'tgtnode' : tgtnode,
+                'wt'      : arc['wt'],
                 })
             srcnode.addOarc(arcobj)
             tgtnode.addIarc(arcobj)
