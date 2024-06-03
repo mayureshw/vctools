@@ -68,10 +68,10 @@ class DPNode(Node):
             srcnode = self.vcir.dp.nodes[srcinfo['id']]
             arcobj = DPArc({
                 'srcnode' : srcnode,
-                'srcpos' : srcinfo['oppos'],
+                'srcpos'  : srcinfo['oppos'],
                 'tgtnode' : self,
-                'tgtpos' : tgtpos,
-                'rel' : 'data'
+                'tgtpos'  : tgtpos,
+                'rel'     : 'data'
                 })
             self.addIarc(arcobj,False)
             srcnode.addOarc(arcobj,False)
@@ -79,10 +79,10 @@ class DPNode(Node):
             srcnode = self.vcir.pn.nodes[srcinfo['id']]
             arcobj = DPArc({
                 'srcnode' : srcnode,
-                'srcpos' : srcinfo['oppos'],
+                'srcpos'  : srcinfo['oppos'],
                 'tgtnode' : self,
-                'tgtpos' : tgtpos,
-                'rel' : 'data'
+                'tgtpos'  : tgtpos,
+                'rel'     : 'data'
                 })
             self.addIarc(arcobj,False)
             srcnode.addOarc(arcobj,False)
@@ -91,7 +91,7 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : srcnode,
                 'tgtnode' : self,
-                'rel' : 'petri'
+                'rel'     : 'petri'
                 })
             self.addIarc(arcobj)
             srcnode.addOarc(arcobj)
@@ -100,7 +100,7 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : self,
                 'tgtnode' : tgtnode,
-                'rel' : 'petri'
+                'rel'     : 'petri'
                 })
             tgtnode.addIarc(arcobj)
             self.addOarc(arcobj)
@@ -111,8 +111,8 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : self,
                 'tgtnode' : tgtnode,
-                'rel' : 'bind',
-                'width' : width
+                'rel'     : 'bind',
+                'width'   : width
                 })
             tgtnode.addIarc(arcobj)
             self.addOarc(arcobj)
@@ -122,8 +122,8 @@ class DPNode(Node):
             arcobj = DPArc({
                 'srcnode' : srcnode,
                 'tgtnode' : self,
-                'rel' : 'bind',
-                'width' : width
+                'rel'     : 'bind',
+                'width'   : width
                 })
             self.addIarc(arcobj)
             srcnode.addOarc(arcobj)
@@ -132,14 +132,14 @@ class DPNode(Node):
             ack_call_arc = DPArc({
                 'srcnode' : acknode,
                 'tgtnode' : self,
-                'rel' : 'callack'
+                'rel'     : 'callack'
                 })
             self.addIarc(ack_call_arc)
             acknode.addOarc(ack_call_arc)
             call_ack_arc = DPArc({
                 'srcnode' : self,
                 'tgtnode' : acknode,
-                'rel' : 'callack'
+                'rel'     : 'callack'
                 })
             self.addOarc(call_ack_arc)
             acknode.addIarc(call_ack_arc)
