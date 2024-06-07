@@ -33,7 +33,7 @@ class Node:
     def isPlace(self): return False
     def isTransition(self): return False
     def onreset(self): return 0
-    def iarcsExclMetrics(self): return [ a for r,arcs in self.iarcs.items() if r not in self.metricrels for a in arcs ]
+    def iArcs(self): return [ a for r,arcs in self.iarcs.items() if r not in self.metricrels for a in arcs ]
     def nonDataIarcs(self): return [
         ( rel, self.idstr(), arc.tgtpos, arc.srcnode.idstr(), arc.srcpos )
             for rel in self.controlrels.union(self.fixedWidthDataRels) for arc in self.iarcs[rel]
