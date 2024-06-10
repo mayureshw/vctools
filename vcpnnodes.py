@@ -88,22 +88,20 @@ class PNArc(Arc):
         [ ('color','green'), ('style','dotted') ] if self.rel == 'rev_mutex' else \
         [ ('color','lightblue') ] if self.rel == 'passivebranch' else \
         [ ('color','lightblue'), ('style','dotted') ] if self.rel == 'rev_passivebranch' else []
-    def reversedArc(self): return PNArc({
-        'srcnode'   : self.tgtnode,
-        'tgtnode'   : self.srcnode,
-        'wt'        : self.wt,
-        'rel'       : 'rev_' + self.rel,
+    def reversedArc(self): return PNArc(self.tgtnode,self.srcnode,{
+        'wt'  : self.wt,
+        'rel' : 'rev_' + self.rel,
         })
-    def _inferRel(self): return (
-        'mutex' if self.srcnode.isMutex() else \
-        'passivebranch' if self.srcnode.isPassiveBranch() else \
-        'branch' if self.srcnode.isBranch() else \
+    def _inferRel(self,srcnode): return (
+        'mutex' if srcnode.isMutex() else \
+        'passivebranch' if srcnode.isPassiveBranch() else \
+        'branch' if srcnode.isBranch() else \
         'petri'
-        ) if self.srcnode.isPlace() else \
+        ) if srcnode.isPlace() else \
         'petri'
-    def __init__(self,d):
-        super().__init__(d)
-        if 'rel' not in self.__dict__: self.rel = self._inferRel()
+    def __init__(self,srcnode,tgtnode,props):
+        if 'rel' not in props: props['rel'] = self._inferRel(srcnode)
+        super().__init__(srcnode,tgtnode,props)
 
 class PNNode(Node):
     def onreset(self): return self.marking if self.isPlace() else 0
@@ -179,15 +177,6 @@ class VcPetriNet:
             if self.isSimuOnlyArc(srcid,tgtid): continue
             srcnode = self.nodes[ srcid ]
             tgtnode = self.nodes[ tgtid ]
-            arcobj = PNArc({
-                'srcnode' : srcnode,
-                'tgtnode' : tgtnode,
-                'wt'      : arc['wt'],
-                })
-            srcnode.addOarc(arcobj)
-            tgtnode.addIarc(arcobj)
-            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
-                revarc = arcobj.reversedArc()
-                srcnode.addIarc(revarc)
-                tgtnode.addOarc(revarc)
+            arcobj = PNArc(srcnode,tgtnode, { 'wt': arc['wt'] })
+            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} : arcobj.reversedArc()
 
