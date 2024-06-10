@@ -49,8 +49,8 @@ class DPArc(Arc):
         [ ('color','red') ] if self.rel == 'data' else \
         [ ('color','orange') ] if self.rel == 'bind' else \
         [ ('color','magenta') ] if self.rel == 'callack' else []
-    def __init__(self,d):
-        super().__init__(d)
+    def __init__(self,srcnode,tgtnode,props):
+        super().__init__(srcnode,tgtnode,props)
 
 class DPNode(Node):
     opclss = { c.__name__ for c in OpClass.__subclasses__() }
@@ -64,101 +64,52 @@ class DPNode(Node):
     def optype(self): return self.optyp
     def idstr(self): return 'dp_' + str(self.nodeid)
     def createArcs(self):
+        feedspipe = getattr(self,'feedspipe',None)
+        if feedspipe != None: self.vcir.dp.addPipeFeed(feedspipe,self)
+        readspipe = getattr(self,'readspipe',None)
+        if readspipe != None: self.vcir.dp.addPipeRead(readspipe,self)
+
         for tgtpos,srcinfo in self.dpinps.items():
             srcnode = self.vcir.dp.nodes[srcinfo['id']]
-            arcobj = DPArc({
-                'srcnode' : srcnode,
+            DPArc(srcnode,self,{
                 'srcpos'  : srcinfo['oppos'],
-                'tgtnode' : self,
                 'tgtpos'  : tgtpos,
                 'rel'     : 'data'
                 })
-            self.addIarc(arcobj,False)
-            srcnode.addOarc(arcobj,False)
         for tgtpos,srcinfo in self.fpinps.items():
             srcnode = self.vcir.pn.nodes[srcinfo['id']]
-            arcobj = DPArc({
-                'srcnode' : srcnode,
+            DPArc(srcnode,self,{
                 'srcpos'  : srcinfo['oppos'],
-                'tgtnode' : self,
                 'tgtpos'  : tgtpos,
                 'rel'     : 'data'
                 })
-            self.addIarc(arcobj,False)
-            srcnode.addOarc(arcobj,False)
         for req in self.reqs + self.greqs:
             srcnode = self.vcir.pn.nodes[req]
-            arcobj = DPArc({
-                'srcnode' : srcnode,
-                'tgtnode' : self,
-                'rel'     : 'petri'
-                })
-            self.addIarc(arcobj)
-            srcnode.addOarc(arcobj)
+            DPArc(srcnode,self,{'rel' : 'petri'})
         for ack in self.acks + self.gacks:
             tgtnode = self.vcir.pn.nodes[ack]
-            arcobj = DPArc({
-                'srcnode' : self,
-                'tgtnode' : tgtnode,
-                'rel'     : 'petri'
-                })
-            tgtnode.addIarc(arcobj)
-            self.addOarc(arcobj)
+            DPArc(self,tgtnode,{'rel' : 'petri'})
         if self.optyp == 'Call':
             # Call -> Entry : single bind for all inpparams
             tgtnode = self.vcir.pn.nodes[self.callentry]
-            width = sum(self.iwidths)
-            arcobj = DPArc({
-                'srcnode' : self,
-                'tgtnode' : tgtnode,
-                'rel'     : 'bind',
-                'width'   : width
-                })
-            tgtnode.addIarc(arcobj)
-            self.addOarc(arcobj)
+            DPArc(self,tgtnode,{ 'rel': 'bind', 'width': sum(self.iwidths) })
             # Exit -> Call : single bind for all opparams
             srcnode = self.vcir.pn.nodes[self.callexit]
-            width = sum(self.owidths)
-            arcobj = DPArc({
-                'srcnode' : srcnode,
-                'tgtnode' : self,
-                'rel'     : 'bind',
-                'width'   : width
-                })
-            self.addIarc(arcobj)
-            srcnode.addOarc(arcobj)
+            DPArc(srcnode,self,{ 'rel': 'bind', 'width': sum(self.owidths) })
             # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
             acknode = self.vcir.pn.nodes[self.callack]
-            ack_call_arc = DPArc({
-                'srcnode' : acknode,
-                'tgtnode' : self,
-                'rel'     : 'callack'
-                })
-            self.addIarc(ack_call_arc)
-            acknode.addOarc(ack_call_arc)
-            call_ack_arc = DPArc({
-                'srcnode' : self,
-                'tgtnode' : acknode,
-                'rel'     : 'callack'
-                })
-            self.addOarc(call_ack_arc)
-            acknode.addIarc(call_ack_arc)
-    def __init__(self,nodeid,vcir,props):
-        super().__init__(nodeid,vcir,props)
+            DPArc(acknode,self,{ 'rel': 'callack' })
+            DPArc(self,acknode,{ 'rel': 'callack' })
+    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcDP:
+    def addPipeFeed(self,pipe,node): self.pipefeeds.setdefault(pipe,[]).append(node)
+    def addPipeRead(self,pipe,node): self.pipereads.setdefault(pipe,[]).append(node)
     def sysInPipes(self): return [ p for p in self.pipereads if p not in self.pipefeeds ]
     def sysOutPipes(self): return [ p for p in self.pipefeeds if p not in self.pipereads ]
     def createArcs(self):
+        for n in self.nodes.values(): n.createArcs()
+    def __init__(self,dpes,vcir):
         self.pipereads = {}
         self.pipefeeds = {}
-        for n in self.nodes.values():
-            n.createArcs()
-            feedspipe = getattr( n, 'feedspipe', None )
-            if feedspipe != None:
-                self.pipefeeds[feedspipe] = self.pipefeeds.get(feedspipe,[]) + [n]
-            readspipe = getattr( n, 'readspipe', None )
-            if readspipe != None:
-                self.pipereads[readspipe] = self.pipereads.get(readspipe,[]) + [n]
-    def __init__(self,dpes,vcir):
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
