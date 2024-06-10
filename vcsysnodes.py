@@ -62,12 +62,29 @@ def createPort(sysdp, ClsArgsList):
     sysdp.ports.append(Port())
 
 class SysPipeNode(SysNode):
+    def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
+    def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
     def optype(self): return 'Pipe'
     def dotprops(self): return [
         ('color','gray'),
         ('label','pipe:'+self.name),
         ]
-    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+    def __init__(self,sysdp,vcir,props):
+        super().__init__(sysdp,vcir,props)
+        print('SysPipeNode',props,self.isSysOutPipe(),self.isSysInPipe())
+        if self.isSysOutPipe(): createPort(sysdp, [
+            (OutPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        if self.isSysInPipe(): createPort(sysdp, [
+            (InPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        if self.isSysInPipe() or self.isSysOutPipe():
+            createPort(sysdp, [ (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
+            createPort(sysdp, [ (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):

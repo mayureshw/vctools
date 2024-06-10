@@ -64,7 +64,6 @@ class Vcir:
         self.pipes = jsonobj['pipes']
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
-        self.sysdp = VCSysDP(self)
         for en,moddescr in jsonobj['modules'].items():
             entryplace = self.pn.nodes[ int(en) ]
             exitplace = self.pn.nodes[ moddescr['exit'] ]
@@ -87,5 +86,6 @@ class Vcir:
                     'rel' : 'data'
                     })
         self.dp.createArcs() # Needs to be done after pn is in place
+        self.sysdp = VCSysDP(self)
         self.pn.classify() # Needs to be called after pn,dp,sys - all are in place
         self.validate()
