@@ -51,8 +51,14 @@ class Node:
     # Hence, for simplicity we treat fanin/out and arc in/out count as same and we
     # replicate output singal on all ports for fork transitions. However for data path
     # we treat these notions as different.
-    def fanin(self,rel): return len(self.iwidths if rel == 'data' else self.iarcs.get(rel,[]))
-    def fanout(self,rel): return len(self.owidths if rel == 'data' else self.oarcs.get(rel,[]))
+    def fanin(self,rel): return sum( len(a) for a in self.iarcs.values() ) \
+        if rel == 'total' else len(
+            self.iwidths if rel == 'data' else
+            self.iarcs.get(rel,[]))
+    def fanout(self,rel): return sum( len(a) for a in self.oarcs.values() ) \
+        if rel == 'total' else len(
+            self.owidths if rel == 'data' else
+            self.oarcs.get(rel,[]))
     def inpwidth(self,rel,index): return (
             self.iwidths[index] if index < len(self.iwidths) else 0
         ) if rel == 'data' else (
@@ -66,6 +72,8 @@ class Node:
     def _widths2offset(self,ws): return [ (l+w-1,l) for i,w in enumerate(ws) for l in [sum(ws[:i])] ]
     def ioffsets(self): return self._widths2offset(self.iwidths)
     def ooffsets(self): return self._widths2offset(self.owidths)
+    def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
+    def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         self.oarcs = {}
