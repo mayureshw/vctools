@@ -14,10 +14,10 @@ class SysNode(Node):
     def nodeClass(self): return 'SysNode'
     def isSys(self): return True
     def idstr(self): return 'sys_' + str(self.nodeid)
-    def __init__(self,vcir,props):
-        super().__init__(vcir,props)
+    def __init__(self,sysdp,vcir,props):
         self.nodeid = SysNode.cntr
-        vcir.sysdp.nodes[self.nodeid] = self
+        super().__init__(self.nodeid,vcir,props)
+        sysdp.nodes[self.nodeid] = self
         SysNode.cntr = SysNode.cntr + 1
 
 class SysPortNode(SysNode):
@@ -67,7 +67,7 @@ class SysPipeNode(SysNode):
         ('color','gray'),
         ('label','pipe:'+self.name),
         ]
-    def __init__(self,vcir,props): super().__init__(vcir,props)
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
@@ -96,7 +96,7 @@ class VCSysDP:
         self.nonCalledNonDaemonEns = vcir.nonCalledNonDaemonEns()
         for en in self.nonCalledNonDaemonEns: self.processModuleInterface(vcir,en)
         ## pipe nodes
-        #for p,props in vcir.pipes.items():
-        #    n = SysPipeNode(vcir,{**props,**{
-        #        'name' : p,
-        #        }})
+        for p,props in vcir.pipes.items():
+            SysPipeNode(self,vcir,{**props,**{
+                'name' : p,
+                }})
