@@ -75,26 +75,17 @@ class Vcir:
 
             for tgtpos,srcinfo in moddescr['dpinps'].items():
                 srcnode = self.dp.nodes[srcinfo['id']]
-                arcobj = DPArc({
-                    'srcnode' : srcnode,
+                DPArc(srcnode,exitplace,{
                     'srcpos' : srcinfo['oppos'],
-                    'tgtnode' : exitplace,
                     'tgtpos' : tgtpos,
                     'rel' : 'data'
                     })
-                exitplace.addIarc(arcobj,False)
-                srcnode.addOarc(arcobj,False)
             for tgtpos,srcinfo in moddescr['fpinps'].items():
-                arcobj = DPArc({
-                    'srcnode' : entryplace,
+                DPArc(entryplace,exitplace,{
                     'srcpos' : srcinfo['oppos'],
-                    'tgtnode' : exitplace,
                     'tgtpos' : tgtpos,
                     'rel' : 'data'
                     })
-                exitplace.addIarc(arcobj,False)
-                entryplace.addOarc(arcobj,False)
         self.dp.createArcs() # Needs to be done after pn is in place
-        self.sysdp.createArcs() # Needs to be done after pn and dp are in place
         self.pn.classify() # Needs to be called after pn,dp,sys - all are in place
         self.validate()
