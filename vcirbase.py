@@ -39,6 +39,7 @@ class Node:
     def isSys(self): return False
     def isPlace(self): return False
     def isTransition(self): return False
+    def isPort(self): return False
     def onreset(self): return 0
     def iArcs(self): return [ a for r,arcs in self.iarcs.items() for a in arcs ]
     def constvals(self): return [ (int(pos),int(val))
