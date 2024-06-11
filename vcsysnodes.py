@@ -21,6 +21,9 @@ class SysNode(Node):
         SysNode.cntr = SysNode.cntr + 1
 
 class SysPortNode(SysNode):
+    def dotprops(self): return [
+        ('label',self.direction+'param:'+self.name()),
+        ]
     def isPort(self): return True
     def isControlPort(self): return False
     def istr(self,rel,pos): return self.name()
