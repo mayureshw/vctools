@@ -287,7 +287,8 @@ public:
     void buildPN()
     {
         pn()->createArc(_triggerPlace, _sreq);
-        pn()->createArc(_sreq, _sack);
+        auto sreq2sack = pn()->createArc(_sreq, _sack);
+        pn()->annotatePNNode(sreq2sack, SimuOnly_);
         _buildPN();
     }
     PipeIf(Pipe *p) : _p(p)
@@ -296,6 +297,9 @@ public:
         _sack = pn()->createTransition("PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
         _triggerPlace = pn()->createPlace("PipeIf_trigger",0,1);
+        pn()->annotatePNNode(_sreq, SimuOnly_);
+        pn()->annotatePNNode(_sack, SimuOnly_);
+        pn()->annotatePNNode(_triggerPlace, SimuOnly_);
     }
 };
 
