@@ -97,28 +97,32 @@ class SysPipeNode(SysNode):
         if dataport != None:
             reqport = createPort(sysdp, vcir, [
                 (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
-            PNArc( reqport, self, { 'wt' : 1 } )
+            PNArc( reqport, self, {} )
             ackport = createPort(sysdp, vcir, [
                 (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
-            PNArc( self, ackport, { 'wt' : 1 } )
+            PNArc( self, ackport, {} )
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
         moduledict = vcir.module_entries[en]
         modulename = moduledict['name']
         ex = moduledict['exit']
-        createPort(self, vcir, [
+        entryplace = vcir.pn.nodes[en]
+        exitplace = vcir.pn.nodes[ex]
+        reqport = createPort(self, vcir, [
             (InPort, []), (ModulePort,[modulename]), (ReqPort,[]) ])
-        createPort(self, vcir, [
+        PNArc( reqport, entryplace, {} )
+        ackport = createPort(self, vcir, [
             (OutPort,[]), (ModulePort,[modulename]), (AckPort,[]) ])
+        PNArc( exitplace, ackport, {} )
         for paramname,width in zip( moduledict['inames'], moduledict['iwidths'] ):
-            createPort(self, vcir, [
+            iparamport = createPort(self, vcir, [
                 (InPort,[]),
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
                 ])
         for paramname,width in zip( moduledict['onames'], moduledict['owidths'] ):
-            createPort(self, vcir, [
+            oparamport = createPort(self, vcir, [
                 (OutPort,[]),
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
