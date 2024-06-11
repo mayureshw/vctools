@@ -71,7 +71,6 @@ class SysPipeNode(SysNode):
         ]
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
-        print('SysPipeNode',props,self.isSysOutPipe(),self.isSysInPipe())
         if self.isSysOutPipe(): createPort(sysdp, [
             (OutPort,[]),
             (PipePort,[self.name]),
