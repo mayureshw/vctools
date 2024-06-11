@@ -55,6 +55,12 @@ class Node:
     # Hence, for simplicity we treat fanin/out and arc in/out count as same and we
     # replicate output singal on all ports for fork transitions. However for data path
     # we treat these notions as different.
+    # When can fanin and arcnt results be different
+    #  e.g. when one of the inputs to a 2 iinput dp connects to a constant, it
+    #  will have 1 less arc. So fanin = 2 and arcnt = 1 in this case
+    # We do not record iwidths/owidths for system ports, but they have arcs
+    # For entry-places: oarcs represent every use of a formal parameter while
+    #  owidths represents the count of input parameters
     def fanin(self,rel): return sum( len(a) for a in self.iarcs.values() ) \
         if rel == 'total' else len(
             self.iwidths if rel == 'data' else

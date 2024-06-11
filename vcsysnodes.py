@@ -12,7 +12,7 @@ class SysNode(Node):
     cntr = 0
     def dotprops(self): return [ ('color','gray') ]
     def optype(self): return None
-    def nodeClass(self): return 'SysNode'
+    def nodeClass(self): return None
     def isSys(self): return True
     def idstr(self): return 'sys_' + str(self.nodeid)
     def __init__(self,sysdp,vcir,props):
