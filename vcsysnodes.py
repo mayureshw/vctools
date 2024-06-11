@@ -7,6 +7,7 @@ from vcdpnodes import *
 
 # This module does not need custom arc type. It reuses PN and DP arcs
 
+# During construction of sysdp, can't extract it from vcir, hence stored separately
 class SysNode(Node):
     cntr = 0
     def dotprops(self): return [ ('color','gray') ]
@@ -61,7 +62,9 @@ class ReqPort(ControlPort):
 class AckPort(ControlPort):
     suffix = '_ack'
 
-# During construction of sysdp, can't extract it from vcir, hence separate args
+# ClsArgsList: a list of tuples in Cls,Args form where Cls is a Port class and
+# Args is a list of its constructor arguments in positional order.
+# The list should contain 1 direction class, 1 source class and 1 role class
 def createPort(sysdp, vcir, ClsArgsList):
     ClsList,ArgsList = list(zip(*ClsArgsList))
     class Port(*ClsList,SysPortNode):
@@ -103,8 +106,26 @@ class SysPipeNode(SysNode):
             ])
         DPArc( dataport, self, { 'rel':'data' } )
         self.createSysReqAck()
-    def createInternalReadArcs(self): pass
-    def createInternalFeedArcs(self): pass
+    def createInternalReadArcs(self):
+        for dpe in self.vcir.dp.pipereads[self.name]:
+            # dpe <-> pipe bi-directional PN arcs
+            PNArc(self,dpe,{})
+            PNArc(dpe,self,{})
+
+            # pipe -> dpe data arc
+            DPArc(self,dpe,{'rel': 'data', 'width': self.width})
+            dpe.iwidths.append(self.width)
+            self.owidths.append(self.width)
+    def createInternalFeedArcs(self):
+        for dpe in self.vcir.dp.pipefeeds[self.name]:
+            # dpe <-> pipe bi-directional PN arcs
+            PNArc(self,dpe,{})
+            PNArc(dpe,self,{})
+
+            # dpe -> pipe data arc
+            DPArc(dpe,self,{'rel': 'data', 'width': self.width})
+            dpe.owidths.append(self.width)
+            self.iwidths.append(self.width)
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
         self.iwidths = [ self.width ]
