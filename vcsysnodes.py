@@ -19,6 +19,7 @@ class SysNode(Node):
         super().__init__(self.nodeid,vcir,props)
         sysdp.nodes[self.nodeid] = self
         SysNode.cntr = SysNode.cntr + 1
+        self.sysdp = sysdp
 
 class SysPortNode(SysNode):
     def dotprops(self): return [
@@ -79,31 +80,41 @@ class SysPipeNode(SysNode):
         ('color','gray'),
         ('label','pipe:'+self.name),
         ]
+    def createSysReqAck(self):
+        reqport = createPort(self.sysdp, self.vcir, [
+            (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
+        PNArc( reqport, self, {} )
+        ackport = createPort(self.sysdp, self.vcir, [
+            (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
+        PNArc( self, ackport, {} )
+    def createSysReadArcs(self):
+        dataport = createPort(self.sysdp, self.vcir, [
+            (OutPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        DPArc( self, dataport, { 'rel':'data' } )
+        self.createSysReqAck()
+    def createSysFeedArcs(self):
+        dataport = createPort(self.sysdp, self.vcir, [
+            (InPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        DPArc( dataport, self, { 'rel':'data' } )
+        self.createSysReqAck()
+    def createInternalReadArcs(self): pass
+    def createInternalFeedArcs(self): pass
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
         self.iwidths = [ self.width ]
         self.owidths = [ self.width ]
-        if self.isSysOutPipe():
-            dataport = createPort(sysdp, vcir, [
-                (OutPort,[]),
-                (PipePort,[self.name]),
-                (DataPort,[self.width]),
-                ])
-            DPArc( self, dataport, { 'rel':'data' } )
-        if self.isSysInPipe():
-            dataport = createPort(sysdp, vcir, [
-                (InPort,[]),
-                (PipePort,[self.name]),
-                (DataPort,[self.width]),
-                ])
-            DPArc( dataport, self, { 'rel':'data' } )
-        if dataport != None:
-            reqport = createPort(sysdp, vcir, [
-                (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
-            PNArc( reqport, self, {} )
-            ackport = createPort(sysdp, vcir, [
-                (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
-            PNArc( self, ackport, {} )
+
+        if self.isSysOutPipe(): self.createSysReadArcs()
+        else: self.createInternalReadArcs()
+
+        if self.isSysInPipe():  self.createSysFeedArcs()
+        else: self.createInternalFeedArcs()
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
