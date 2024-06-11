@@ -61,6 +61,10 @@ class Node:
     # We do not record iwidths/owidths for system ports, but they have arcs
     # For entry-places: oarcs represent every use of a formal parameter while
     #  owidths represents the count of input parameters
+    # Data arcs connecting with fp-inp do not get confused because of this
+    #  because they use srcpos on the basis of parameter position, no matter
+    #  what is the ordinal position of the arc that represents such connection
+
     def fanin(self,rel): return sum( len(a) for a in self.iarcs.values() ) \
         if rel == 'total' else len(
             self.iwidths if rel == 'data' else
