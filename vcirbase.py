@@ -20,12 +20,15 @@ class NodeClass:
 class Node:
     maxdataports = 5
     controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'callack', 'rev_mutex', 'rev_passivebranch' }
-    def imapstr(self,i):
-        mapstr = self.idstr() + '_imap(' + str(i) + ')'
+    def _mapstr(self,io,pos):
+        mapstr = self.idstr()+'_'+io+'map('+str(pos)+')'
         return mapstr + '(0) downto ' + mapstr + '(1)'
-    def omapstr(self,i):
-        mapstr = self.idstr() + '_omap(' + str(i) + ')'
-        return mapstr + '(0) downto ' + mapstr + '(1)'
+    def _sliceStr(self,io,rel,pos): return self._mapstr(io,pos) \
+        if rel == 'data' else str(pos)
+    def _iostr(self,io,rel,pos): return self.idstr()+'_' +io+'.'+rel+'('+\
+        self._sliceStr(io,rel,pos)+')'
+    def istr(self,rel,pos): return self._iostr('i',rel,pos)
+    def ostr(self,rel,pos): return self._iostr('o',rel,pos)
     def dotprops(self) : return []
     def nodeinfo(self): return str({
         **{
@@ -90,14 +93,8 @@ class Node:
 # Note: rel identifies the arc type, but it does not reflect in the class
 # hierarchy, because in most cases rel needs to be inferred
 class Arc:
-    def tgtSliceStr(self): return self.tgtnode.imapstr(self.tgtpos) \
-        if self.rel == 'data' else str(self.tgtpos)
-    def srcSliceStr(self): return self.srcnode.omapstr(self.srcpos) \
-        if self.rel == 'data' else str(self.srcpos)
-    def conn(self):
-        tgtlbl = self.tgtnode.idstr()+'_i.'+self.rel+'('+self.tgtSliceStr()+')'
-        srclbl = self.srcnode.idstr()+'_o.'+self.rel+'('+self.srcSliceStr()+')'
-        return (tgtlbl,srclbl)
+    def conn(self): return (self.tgtnode.istr(self.rel,self.tgtpos),
+        self.srcnode.ostr(self.rel,self.srcpos))
     def __init__(self,srcnode,tgtnode,props):
         self.srcnode = srcnode
         self.tgtnode = tgtnode
