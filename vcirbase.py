@@ -63,6 +63,8 @@ class Node:
         if rel == 'total' else len(
             self.owidths if rel == 'data' else
             self.oarcs.get(rel,[]))
+    def iarcnt(self,rel): return len( self.iarcs.get(rel,[]) )
+    def oarcnt(self,rel): return len( self.oarcs.get(rel,[]) )
     def inpwidth(self,rel,index): return (
             self.iwidths[index] if index < len(self.iwidths) else 0
         ) if rel == 'data' else (
@@ -99,8 +101,8 @@ class Arc:
         self.srcnode = srcnode
         self.tgtnode = tgtnode
         # Default props (overridden by props if present in props)
-        self.srcpos = srcnode.fanout(props['rel'])
-        self.tgtpos = tgtnode.fanin(props['rel'])
+        self.srcpos = srcnode.oarcnt(props['rel'])
+        self.tgtpos = tgtnode.iarcnt(props['rel'])
         self.wt = 1
         self.__dict__.update(props)
         srcnode.addOarc(self)
