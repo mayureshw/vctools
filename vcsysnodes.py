@@ -23,6 +23,7 @@ class SysNode(Node):
 class SysPortNode(SysNode):
     def isPort(self): return True
     def isControlPort(self): return False
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 # Port directions
 class InPort:
@@ -54,12 +55,16 @@ class ReqPort(ControlPort):
 class AckPort(ControlPort):
     suffix = '_ack'
 
-def createPort(sysdp, ClsArgsList):
+# During construction of sysdp, can't extract it from vcir, hence separate args
+def createPort(sysdp, vcir, ClsArgsList):
     ClsList,ArgsList = list(zip(*ClsArgsList))
     class Port(*ClsList,SysPortNode):
         def __init__(self):
             for cls,args in ClsArgsList: cls.__init__(self,*args)
-    sysdp.ports.append(Port())
+            SysPortNode.__init__(self,sysdp,vcir,{})
+    port = Port()
+    sysdp.ports.append(port)
+    return port
 
 class SysPipeNode(SysNode):
     def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
@@ -71,35 +76,47 @@ class SysPipeNode(SysNode):
         ]
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
-        if self.isSysOutPipe(): createPort(sysdp, [
-            (OutPort,[]),
-            (PipePort,[self.name]),
-            (DataPort,[self.width]),
-            ])
-        if self.isSysInPipe(): createPort(sysdp, [
-            (InPort,[]),
-            (PipePort,[self.name]),
-            (DataPort,[self.width]),
-            ])
-        if self.isSysInPipe() or self.isSysOutPipe():
-            createPort(sysdp, [ (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
-            createPort(sysdp, [ (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
+        self.iwidths = [ self.width ]
+        self.owidths = [ self.width ]
+        if self.isSysOutPipe():
+            dataport = createPort(sysdp, vcir, [
+                (OutPort,[]),
+                (PipePort,[self.name]),
+                (DataPort,[self.width]),
+                ])
+            DPArc( self, dataport, { 'rel':'data' } )
+        if self.isSysInPipe():
+            dataport = createPort(sysdp, vcir, [
+                (InPort,[]),
+                (PipePort,[self.name]),
+                (DataPort,[self.width]),
+                ])
+            DPArc( dataport, self, { 'rel':'data' } )
+        if dataport != None:
+            reqport = createPort(sysdp, vcir, [
+                (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
+            PNArc( reqport, self, { 'wt' : 1 } )
+            ackport = createPort(sysdp, vcir, [
+                (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
+            PNArc( self, ackport, { 'wt' : 1 } )
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
         moduledict = vcir.module_entries[en]
         modulename = moduledict['name']
         ex = moduledict['exit']
-        createPort(self, [ (InPort, []), (ModulePort,[modulename]), (ReqPort,[]) ])
-        createPort(self, [ (OutPort,[]), (ModulePort,[modulename]), (AckPort,[]) ])
+        createPort(self, vcir, [
+            (InPort, []), (ModulePort,[modulename]), (ReqPort,[]) ])
+        createPort(self, vcir, [
+            (OutPort,[]), (ModulePort,[modulename]), (AckPort,[]) ])
         for paramname,width in zip( moduledict['inames'], moduledict['iwidths'] ):
-            createPort(self, [
+            createPort(self, vcir, [
                 (InPort,[]),
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
                 ])
         for paramname,width in zip( moduledict['onames'], moduledict['owidths'] ):
-            createPort(self, [
+            createPort(self, vcir, [
                 (OutPort,[]),
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
