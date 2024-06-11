@@ -61,7 +61,7 @@ class Vcir:
         self.simu_only = set(jsonobj['simu_only'])
         self.module_entries = { int(en) : d for en,d in jsonobj['modules'].items() }
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
-        self.pipes = jsonobj['pipes']
+        self.pipes = jsonobj.get('pipes',{})
         self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
         for en,moddescr in jsonobj['modules'].items():
