@@ -122,6 +122,7 @@ class VCSysDP:
                 (DataPort,[width]),
                 ])
             DPArc( iparamport, entryplace, {'rel':'data'} )
+            entryplace.iwidths.append(width)
         for paramname,width in zip( moduledict['onames'], moduledict['owidths'] ):
             oparamport = createPort(self, vcir, [
                 (OutPort,[]),
@@ -129,6 +130,7 @@ class VCSysDP:
                 (DataPort,[width]),
                 ])
             DPArc( exitplace, oparamport, {'rel':'data'} )
+            exitplace.owidths.append(width)
     def __init__(self,vcir):
         self.nodes = {}
         self.ports = []
