@@ -24,7 +24,8 @@ class SysNode(Node):
 
 class SysPortNode(SysNode):
     def dotprops(self): return [
-        ('label',self.direction+'param:'+self.name()),
+        ('label',self.direction+'port:'+self.name()),
+        ('shape','trapezium'),
         ]
     def isPort(self): return True
     def isControlPort(self): return False
@@ -80,7 +81,8 @@ class SysPipeNode(SysNode):
     def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
     def optype(self): return 'Pipe'
     def dotprops(self): return [
-        ('color','gray'),
+        ('color','blue'),
+        ('shape','cds'),
         ('label','pipe:'+self.name),
         ]
     def createSysReqAck(self):
