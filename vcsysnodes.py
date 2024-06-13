@@ -79,12 +79,13 @@ def createPort(sysdp, vcir, ClsArgsList):
 # Note Aggreg Nodes are not arbiters, arbitration is handled by Petri net
 
 class AggrNode(SysNode):
-    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+    def nodeClass(self): return 'DPNode'
     def dotprops(self): return [
         ('color','blue'),
         ('shape','rectangle'),
         ('label',self.optype()+':'+self.name),
         ]
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 class WriteAggrNode(AggrNode):
     def optype(self): return 'WriteAggr'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
@@ -96,6 +97,7 @@ class ReadAggrNode(AggrNode):
 class PipeNode(SysNode):
     def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
     def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
+    def nodeClass(self): return 'DPNode'
     def optype(self): return 'Pipe'
     def dotprops(self): return [
         ('color','blue'),
@@ -129,6 +131,7 @@ class PipeNode(SysNode):
         readpoints = self.vcir.dp.pipereads[self.name]
         if len(readpoints) > 1:
             raggr = ReadAggrNode(self.sysdp,self.vcir,{'name':self.name})
+            raggr.iwidths.append(self.width)
             PNArc(raggr, self, {})
             PNArc(self, raggr, {})
             DPArc(self, raggr, {'rel':'data','width':self.width})
@@ -141,11 +144,12 @@ class PipeNode(SysNode):
             # pipe -> dpe data arc
             DPArc(raggr,dpe,{'rel': 'data', 'width': self.width})
             dpe.iwidths.append(self.width)
-            self.owidths.append(self.width)
+            raggr.owidths.append(self.width)
     def createInternalFeedArcs(self):
         writepoints = self.vcir.dp.pipefeeds[self.name]
         if len(writepoints) > 1:
             waggr = WriteAggrNode(self.sysdp,self.vcir,{'name':self.name})
+            waggr.owidths.append(self.width)
             PNArc(waggr, self, {})
             PNArc(self, waggr, {})
             DPArc(waggr, self, {'rel':'data','width':self.width})
@@ -158,7 +162,7 @@ class PipeNode(SysNode):
             # dpe -> pipe data arc
             DPArc(dpe,waggr,{'rel': 'data', 'width': self.width})
             dpe.owidths.append(self.width)
-            self.iwidths.append(self.width)
+            waggr.iwidths.append(self.width)
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
         self.iwidths = [ self.width ]
