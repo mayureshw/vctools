@@ -134,6 +134,7 @@ class PipeNode(SysNode):
         if len(readpoints) > 1:
             raggr = ReadAggrNode(self.sysdp,self.vcir,{'name':self.name})
             raggr.iwidths.append(self.width)
+            # Ensure that arcs with pipe come before those with DPE
             PNArc(raggr, self, {})
             PNArc(self, raggr, {})
             DPArc(self, raggr, {'rel':'data','width':self.width})
@@ -152,6 +153,7 @@ class PipeNode(SysNode):
         if len(writepoints) > 1:
             waggr = WriteAggrNode(self.sysdp,self.vcir,{'name':self.name})
             waggr.owidths.append(self.width)
+            # Ensure that arcs with pipe come before those with DPE
             PNArc(waggr, self, {})
             PNArc(self, waggr, {})
             DPArc(waggr, self, {'rel':'data','width':self.width})
