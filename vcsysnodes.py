@@ -79,26 +79,28 @@ def createPort(sysdp, vcir, ClsArgsList):
 # Note Aggreg Nodes are not arbiters, arbitration is handled by Petri net
 
 class AggrNode(SysNode):
-    def nodeClass(self): return 'DPNode'
     def dotprops(self): return [
         ('color','blue'),
         ('shape','rectangle'),
-        ('label',self.optype()+':'+self.name),
+        ('label',self.nodeClass()+':'+self.name),
         ]
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 class WriteAggrNode(AggrNode):
-    def optype(self): return 'WriteAggr'
+    def nodeClass(self): return 'WriteAggr'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 class ReadAggrNode(AggrNode):
-    def optype(self): return 'ReadAggr'
+    def nodeClass(self): return 'ReadAggr'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
+# nodeClass = DPNode gives a vcInterconnect wrapper automatically, which suits
+# most operators with combinational implementation. Such wrapper is not needed
+# for some system nodes such as Pipe, ReadAggr, WriteAggr etc. So we use their
+# own name as nodeClass. They get a separate handler in vcNode vhdl
 class PipeNode(SysNode):
     def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
     def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
-    def nodeClass(self): return 'DPNode'
-    def optype(self): return 'Pipe'
+    def nodeClass(self): return 'Pipe'
     def dotprops(self): return [
         ('color','blue'),
         ('shape','cds'),
@@ -160,9 +162,7 @@ class PipeNode(SysNode):
             PNArc(dpe,waggr,{})
 
             # dpe -> pipe data arc
-            DPArc(dpe,waggr,{'rel': 'data', 'width': self.width})
-            dpe.owidths.append(self.width)
-            waggr.iwidths.append(self.width)
+            DPArc(dpe,waggr,{'rel': 'bind', 'width': self.width})
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
         self.iwidths = [ self.width ]
