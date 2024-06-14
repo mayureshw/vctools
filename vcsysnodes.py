@@ -145,9 +145,7 @@ class PipeNode(SysNode):
             PNArc(dpe,raggr,{})
 
             # pipe -> dpe data arc
-            DPArc(raggr,dpe,{'rel': 'data', 'width': self.width})
-            dpe.iwidths.append(self.width)
-            raggr.owidths.append(self.width)
+            DPArc(raggr,dpe,{'rel': 'bind', 'width': self.width})
     def createInternalFeedArcs(self):
         writepoints = self.vcir.dp.pipefeeds[self.name]
         if len(writepoints) > 1:
