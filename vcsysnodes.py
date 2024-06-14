@@ -86,11 +86,11 @@ class AggrNode(SysNode):
         ]
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 class WriteAggrNode(AggrNode):
-    def nodeClass(self): return 'WriteAggr'
+    def nodeClass(self): return 'WriteAggrNode'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 class ReadAggrNode(AggrNode):
-    def nodeClass(self): return 'ReadAggr'
+    def nodeClass(self): return 'ReadAggrNode'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 # nodeClass = DPNode gives a vcInterconnect wrapper automatically, which suits
@@ -100,7 +100,7 @@ class ReadAggrNode(AggrNode):
 class PipeNode(SysNode):
     def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
     def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
-    def nodeClass(self): return 'Pipe'
+    def nodeClass(self): return 'PipeNode'
     def dotprops(self): return [
         ('color','blue'),
         ('shape','cds'),
