@@ -107,12 +107,14 @@ class PipeNode(SysNode):
         ('label','pipe:'+self.name),
         ]
     def createSysReqAck(self):
+        trigplace = self.vcir.pn.nodes[self.trigplace]
+        trigack = self.vcir.pn.nodes[self.trigack]
         reqport = createPort(self.sysdp, self.vcir, [
             (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
-        PNArc( reqport, self, {} )
+        PNArc( reqport, trigplace, {} )
         ackport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
-        PNArc( self, ackport, {} )
+        PNArc( trigack, ackport, {} )
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]),
