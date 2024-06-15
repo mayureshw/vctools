@@ -302,6 +302,7 @@ class SysIR
         auto depth_key = jf.createJsonAtom<string>("depth");
         auto readtrig_key = jf.createJsonAtom<string>("readtrig");
         auto feedtrig_key = jf.createJsonAtom<string>("feedtrig");
+        auto trigack_key = jf.createJsonAtom<string>("trigack");
 
         for( auto pipetup : _sys.getPipeMap() )
         {
@@ -326,6 +327,10 @@ class SysIR
                 auto readtrig_val = jf.createJsonAtom<unsigned>(
                     reader->triggerPlace()->_nodeid);
                 pipedict->push_back({ readtrig_key, readtrig_val });
+
+                auto trigack_val = jf.createJsonAtom<unsigned>(
+                    reader->triggerSack()->_nodeid);
+                pipedict->push_back({ trigack_key, trigack_val });
             }
 
             if ( feeder != NULL )
@@ -333,6 +338,10 @@ class SysIR
                 auto feedtrig_val = jf.createJsonAtom<unsigned>(
                     feeder->triggerPlace()->_nodeid);
                 pipedict->push_back({ feedtrig_key, feedtrig_val });
+
+                auto trigack_val = jf.createJsonAtom<unsigned>(
+                    feeder->triggerSack()->_nodeid);
+                pipedict->push_back({ trigack_key, trigack_val });
             }
         }
     }
