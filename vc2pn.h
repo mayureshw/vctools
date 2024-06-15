@@ -1066,21 +1066,23 @@ public:
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
-    PipeFeeder* getFeeder(string pipename)
+    PipeFeeder* getFeeder(string pipename, bool noError = false)
     {
         auto it = _feedermap.find(pipename);
         if ( it == _feedermap.end() )
         {
+            if ( noError ) return NULL;
             cout << "No such pipe : " << pipename << endl;
             exit(1);
         }
         return it->second;
     }
-    PipeReader* getReader(string pipename)
+    PipeReader* getReader(string pipename, bool noError = false)
     {
         auto it = _readermap.find(pipename);
         if ( it == _readermap.end() )
         {
+            if ( noError ) return NULL;
             cout << "No such pipe : " << pipename << endl;
             exit(1);
         }
@@ -1220,11 +1222,21 @@ public:
         {
             vcPipe* vcp = pm.first;
             Pipe* p = pm.second;
+            auto nReads = vcp->Get_Pipe_Read_Count();
+            auto nWrites = vcp->Get_Pipe_Write_Count();
+            bool isSysIn = nReads > 0 and nWrites == 0;
+            bool isSysOut = nReads == 0 and nWrites > 0;
             string pname = vcp->Get_Id();
-            auto feeder = new PipeFeeder(p);
-            auto reader = new PipeReader(p);
-            _feedermap.emplace(pname,feeder);
-            _readermap.emplace(pname,reader);
+            if ( isSysIn )
+            {
+                auto feeder = new PipeFeeder(p);
+                _feedermap.emplace(pname,feeder);
+            }
+            if ( isSysOut )
+            {
+                auto reader = new PipeReader(p);
+                _readermap.emplace(pname,reader);
+            }
         }
         buildPN();
 #ifdef USECEP

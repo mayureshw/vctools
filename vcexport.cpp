@@ -318,13 +318,22 @@ class SysIR
             auto depth_val = jf.createJsonAtom<unsigned>(pipe->Get_Depth());
             pipedict->push_back({ depth_key, depth_val });
 
-            auto readtrig_val = jf.createJsonAtom<unsigned>(
-                _sys.getReader(pipename)->triggerPlace()->_nodeid);
-            pipedict->push_back({ readtrig_key, readtrig_val });
+            auto reader = _sys.getReader(pipename,true);
+            auto feeder = _sys.getFeeder(pipename,true);
 
-            auto feedtrig_val = jf.createJsonAtom<unsigned>(
-                _sys.getFeeder(pipename)->triggerPlace()->_nodeid);
-            pipedict->push_back({ feedtrig_key, feedtrig_val });
+            if ( reader != NULL )
+            {
+                auto readtrig_val = jf.createJsonAtom<unsigned>(
+                    reader->triggerPlace()->_nodeid);
+                pipedict->push_back({ readtrig_key, readtrig_val });
+            }
+
+            if ( feeder != NULL )
+            {
+                auto feedtrig_val = jf.createJsonAtom<unsigned>(
+                    feeder->triggerPlace()->_nodeid);
+                pipedict->push_back({ feedtrig_key, feedtrig_val });
+            }
         }
     }
 public:
