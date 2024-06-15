@@ -40,8 +40,8 @@ public:
 class Pipe
 {
     VcPetriNet *_pn;
-    vcPipe *_vcp;
 protected:
+    vcPipe *_vcp;
     unsigned _depth;
     unsigned _nElems = 0;
     vector<DatumBase*> _store;
@@ -175,6 +175,8 @@ protected:
     {
         // out port sreq should seek token from freePlace
         pn()->createArc(_freePlace, sreq);
+        if ( _freePlace->_oarcs.size() == 2 )
+            pn()->annotatePNNode(_freePlace, PassiveBranch_);
         // out port sack should release a token to filledPlace
         pn()->createArc(sreq, _filledPlace);
     }
@@ -182,17 +184,20 @@ protected:
     {
         // in port ureq should need a token in filledPlace
         pn()->createArc(_filledPlace, ureq);
+        if ( _filledPlace->_oarcs.size() == 2 )
+            pn()->annotatePNNode(_filledPlace, PassiveBranch_);
         // in port should release a token to freePlace on uack
         pn()->createArc(uack, _freePlace);
     }
     BlockingPipe(unsigned depth, string label, VcPetriNet *pn, vcPipe *vcp) : Pipe(depth,label,pn,vcp)
     {
-        // if multiple write points, then _freePlace is PassiveBranch_
+        // Note: We could do annotatePNNode here by checking read and write
+        // count of pipes, but it was observed that the Get_Pipe_Read_Count and
+        // Get_Pipe_Write_Count do not exactly provide the count of read and
+        // write points. Hence we do the annotation when the output arcs size
+        // reaches 2.
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
-        pn->annotatePNNode(_freePlace, PassiveBranch_);
-        // if multiple read points, then _filledPlace is PassiveBranch_
         _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
-        pn->annotatePNNode(_filledPlace, PassiveBranch_);
     }
 };
 
@@ -229,7 +234,6 @@ public:
     NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn, vcPipe *vcp) : BlockingPipe(depth,label,pn,vcp)
     {
         _popPlace = pn->createPlace(_label+".pop");
-        // if multiple read points, then _popPlace is PassiveBranch_
         pn->annotatePNNode(_popPlace, PassiveBranch_);
     }
 };
