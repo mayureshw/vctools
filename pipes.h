@@ -272,14 +272,18 @@ public:
     }
 };
 
+typedef enum { Feeder_, Reader_ } t_PipeIf;
 class PipeIf
 {
 protected:
     Pipe *_p;
+    t_PipeIf _iftyp;
     // Could do with single transition here, but just keeping it uniform with the rest
     PNTransition *_sreq, *_sack;
     PNPlace *_triggerPlace;
     VcPetriNet* pn() { return _p->pn(); }
+    string ifname()
+    { return _p->_label + ( _iftyp == Feeder_ ? ":Feeder" : ":Reader" ); }
 public:
     virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN() = 0;
@@ -287,19 +291,16 @@ public:
     void buildPN()
     {
         pn()->createArc(_triggerPlace, _sreq);
-        auto sreq2sack = pn()->createArc(_sreq, _sack);
-        pn()->annotatePNNode(sreq2sack, SimuOnly_);
+        pn()->createArc(_sreq, _sack);
         _buildPN();
     }
-    PipeIf(Pipe *p) : _p(p)
+    PipeIf(Pipe *p, t_PipeIf iftyp) : _p(p), _iftyp(iftyp)
     {
-        _sreq = pn()->createTransition("PipeIf_sreq");
-        _sack = pn()->createTransition("PipeIf_sack");
+        string prefix = ifname();
+        _sreq = pn()->createTransition(prefix+":PipeIf_sreq");
+        _sack = pn()->createTransition(prefix+":PipeIf_sack");
         _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
-        _triggerPlace = pn()->createPlace("PipeIf_trigger",0,1);
-        pn()->annotatePNNode(_sreq, SimuOnly_);
-        pn()->annotatePNNode(_sack, SimuOnly_);
-        pn()->annotatePNNode(_triggerPlace, SimuOnly_);
+        _triggerPlace = pn()->createPlace(prefix+":PipeIf_trigger",0,1);
     }
 };
 
@@ -307,7 +308,6 @@ class PipeFeeder : public PipeIf
 {
     mutex _qlock;
     queue<DatumBase*> _payloadq;
-using PipeIf::PipeIf;
     void _buildPN() { _p->buildPNOport(_sreq, _sack); }
     void sack(unsigned long eseqno)
     {
@@ -324,11 +324,11 @@ public:
         _qlock.unlock();
         pn()->addtokens(_triggerPlace, payload.size());
     }
+    PipeFeeder(Pipe *p) : PipeIf(p,Feeder_) {}
 };
 
 class PipeReader : public PipeIf
 {
-using PipeIf::PipeIf;
     mutex _recd_mutex;
     condition_variable _recd_cvar;
     vector<DatumBase*> _retv;
@@ -384,5 +384,6 @@ public:
         // There is no need to reset any attributes as next read cycle can
         // begin only after next receive call which would set fresh attributes
     }
+    PipeReader(Pipe *p) : PipeIf(p,Reader_) {}
 };
 #endif
