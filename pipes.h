@@ -40,6 +40,7 @@ public:
 class Pipe
 {
     VcPetriNet *_pn;
+    vcPipe *_vcp;
 protected:
     unsigned _depth;
     unsigned _nElems = 0;
@@ -144,7 +145,7 @@ public:
         buildPNMutexDepOport(sreq, sack);
         buildPNOport1(sreq, sack);
     }
-    Pipe(unsigned depth, string label, VcPetriNet* pn) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn)
+    Pipe(unsigned depth, string label, VcPetriNet* pn, vcPipe* vcp) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn), _vcp(vcp)
     {
         _mutexPlace = _pn->createPlace("MARKP:"+_label+".Mutex",1);
         pn->annotatePNNode(_mutexPlace, Mutex_);
@@ -184,10 +185,12 @@ protected:
         // in port should release a token to freePlace on uack
         pn()->createArc(uack, _freePlace);
     }
-    BlockingPipe(unsigned depth, string label, VcPetriNet *pn) : Pipe(depth,label,pn)
+    BlockingPipe(unsigned depth, string label, VcPetriNet *pn, vcPipe *vcp) : Pipe(depth,label,pn,vcp)
     {
+        // if multiple write points, then _freePlace is PassiveBranch_
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
         pn->annotatePNNode(_freePlace, PassiveBranch_);
+        // if multiple read points, then _filledPlace is PassiveBranch_
         _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
         pn->annotatePNNode(_filledPlace, PassiveBranch_);
     }
@@ -223,9 +226,10 @@ public:
         pn()->createArc(popEmpty, _freePlace, "", _depth);
         pn()->createArc(_freePlace, popEmpty, "", _depth);
     }
-    NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn) : BlockingPipe(depth,label,pn)
+    NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn, vcPipe *vcp) : BlockingPipe(depth,label,pn,vcp)
     {
         _popPlace = pn->createPlace(_label+".pop");
+        // if multiple read points, then _popPlace is PassiveBranch_
         pn->annotatePNNode(_popPlace, PassiveBranch_);
     }
 };
@@ -253,7 +257,7 @@ protected:
     unsigned poppos() { return _rpos++; }
     unsigned lastPopPosOnEmpty() { return _rpos.prev(); }
 public:
-    Fifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : _rpos(ModCntr(depth)), Base(depth,label,pn)
+    Fifo(unsigned depth, unsigned width, string label, VcPetriNet* pn, vcPipe *vcp) : _rpos(ModCntr(depth)), Base(depth,label,pn,vcp)
     {
         Pipe::initStore<T>(depth, width);
     }
@@ -266,7 +270,7 @@ protected:
     unsigned poppos() { return --(this->_wpos); }
     unsigned lastPopPosOnEmpty() { return 0; }
 public:
-    Lifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : Base(depth,label,pn)
+    Lifo(unsigned depth, unsigned width, string label, VcPetriNet* pn, vcPipe *vcp) : Base(depth,label,pn,vcp)
     {
         Pipe::initStore<T>(depth, width);
     }

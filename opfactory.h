@@ -63,7 +63,7 @@ class OpFactory
     typedef enum PIFOENUM Pifotyp;
     typedef enum PBLKENUM Pblktyp;
     typedef tuple< Ctyp, Pifotyp, Pblktyp > Pfkey;
-    typedef function< Pipe*(int, int, string, VcPetriNet*) > Pfval;
+    typedef function< Pipe*(int, int, string, VcPetriNet*, vcPipe*) > Pfval;
     const map<Pfkey, Pfval> _pfmap = PFMAP;
 
     internmap<vcValue*,DatumBase*> _valueDatum {bind(&OpFactory::vcv2datum,this,_1)};
@@ -218,7 +218,7 @@ public:
         // TODO: For strange reasons, we get depth as 2 from the parser level
         // For signals AHIR semantics require that the depth be restricted to 1
         auto depth = pblk == SignalPipe_ ? 1 : vcp->Get_Depth();
-        return it->second( depth, vcp->Get_Width(), vcp->Get_Id(), pn );
+        return it->second( depth, vcp->Get_Width(), vcp->Get_Id(), pn, vcp );
     }
     template < typename T > DatumBase* createDatum(unsigned width)
     {
