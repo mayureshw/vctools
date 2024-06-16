@@ -174,8 +174,8 @@ opfmapkv( br( [ K, V ] ) ) :- opfmapk(O, Sig, K), opfmapv(O, Sig, V).
 opfmap(br(L)) :- findall(V, opfmapkv(V), L).
 
 pfmapv(C, F, B, lambda( [], 'Pipe*', Params, Stmts ) ) :-
-    Params = [ tv(int,[depth]), tv(int,[width]), tv(string,[label]), tv('VcPetriNet*',[pn]) ],
-    Stmts = [ stmt( ret( new( typ(F,[C,B],''), [depth, width, label, pn] ) ) ) ].
+    Params = [ tv(int,[depth]), tv(int,[width]), tv(string,[label]), tv('VcPetriNet*',[pn]), tv('vcPipe*',[vcp]) ],
+    Stmts = [ stmt( ret( new( typ(F,[C,B],''), [depth, width, label, pn, vcp] ) ) ) ].
 pfmapk(C, F, B, br(L)) :- suf_L([C,F,B],L).
 pfmapkv( br( [K, V] ) ) :- nofloat(C), pifotyp(F), pblktyp(B), pfmapk(C,F,B,K), pfmapv(C,F,B,V).
 pfmap(br(L)) :- findall(V, pfmapkv(V), L).
