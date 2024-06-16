@@ -126,7 +126,7 @@ class PipeNode(SysNode):
             (PipePort,[self.name]),
             (DataPort,[self.width]),
             ])
-        DPArc( self.raggr, dataport, { 'rel':'data' } )
+        DPArc( self.raggr, dataport, { 'rel':'bind', 'width':self.width } )
         self.createSysReqAck(self.raggr)
     def createSysFeedArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
@@ -134,7 +134,7 @@ class PipeNode(SysNode):
             (PipePort,[self.name]),
             (DataPort,[self.width]),
             ])
-        DPArc( dataport, self.waggr, { 'rel':'data' } )
+        DPArc( dataport, self.waggr, { 'rel':'bind', 'width':self.width } )
         self.createSysReqAck(self.waggr)
     def createInternalReadArcs(self):
         for dpe in self.vcir.dp.pipereads[self.name]:
