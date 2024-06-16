@@ -82,9 +82,11 @@ class AggrNode(SysNode):
     def dotprops(self): return [
         ('color','blue'),
         ('shape','rectangle'),
-        ('label',self.nodeClass()+':'+self.name),
+        ('label', self.label),
         ]
-    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+    def __init__(self,sysdp,vcir,props):
+        super().__init__(sysdp,vcir,props)
+        self.label = self.nodeClass()+':'+self.name
 class WriteAggrNode(AggrNode):
     def nodeClass(self): return 'WriteAggrNode'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
@@ -106,8 +108,9 @@ class PipeNode(SysNode):
         ('shape','cds'),
         ('label','pipe:'+self.name),
         ]
-    def createSysReqAck(self):
+    def createSysReqAck(self,aggr):
         trigplace = self.vcir.pn.nodes[self.trigplace]
+        trigreq = self.vcir.pn.nodes[self.trigreq]
         trigack = self.vcir.pn.nodes[self.trigack]
         reqport = createPort(self.sysdp, self.vcir, [
             (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
@@ -115,60 +118,57 @@ class PipeNode(SysNode):
         ackport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
         PNArc( trigack, ackport, {} )
+        PNArc( trigreq, aggr, {} )
+        PNArc( aggr, trigack, {} )
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]),
             (PipePort,[self.name]),
             (DataPort,[self.width]),
             ])
-        DPArc( self, dataport, { 'rel':'data' } )
-        self.createSysReqAck()
+        DPArc( self.raggr, dataport, { 'rel':'data' } )
+        self.createSysReqAck(self.raggr)
     def createSysFeedArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
             (InPort,[]),
             (PipePort,[self.name]),
             (DataPort,[self.width]),
             ])
-        DPArc( dataport, self, { 'rel':'data' } )
-        self.createSysReqAck()
+        DPArc( dataport, self.waggr, { 'rel':'data' } )
+        self.createSysReqAck(self.waggr)
     def createInternalReadArcs(self):
-        readpoints = self.vcir.dp.pipereads[self.name]
-        if len(readpoints) > 1:
-            raggr = ReadAggrNode(self.sysdp,self.vcir,{'name':self.name})
-            raggr.iwidths.append(self.width)
-            # Ensure that arcs with pipe come before those with DPE
-            PNArc(raggr, self, {})
-            PNArc(self, raggr, {})
-            DPArc(self, raggr, {'rel':'data','width':self.width})
-        else: raggr = self
-        for dpe in readpoints:
+        for dpe in self.vcir.dp.pipereads[self.name]:
             # dpe <-> pipe bi-directional PN arcs
-            PNArc(raggr,dpe,{})
-            PNArc(dpe,raggr,{})
-
+            PNArc(self.raggr,dpe,{})
+            PNArc(dpe,self.raggr,{})
             # pipe -> dpe data arc
-            DPArc(raggr,dpe,{'rel': 'bind', 'width': self.width})
+            DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
     def createInternalFeedArcs(self):
-        writepoints = self.vcir.dp.pipefeeds[self.name]
-        if len(writepoints) > 1:
-            waggr = WriteAggrNode(self.sysdp,self.vcir,{'name':self.name})
-            waggr.owidths.append(self.width)
-            # Ensure that arcs with pipe come before those with DPE
-            PNArc(waggr, self, {})
-            PNArc(self, waggr, {})
-            DPArc(waggr, self, {'rel':'data','width':self.width})
-        else: waggr = self
-        for dpe in writepoints:
+        for dpe in self.vcir.dp.pipefeeds[self.name]:
             # dpe <-> pipe bi-directional PN arcs
-            PNArc(waggr,dpe,{})
-            PNArc(dpe,waggr,{})
-
+            PNArc(self.waggr,dpe,{})
+            PNArc(dpe,self.waggr,{})
             # dpe -> pipe data arc
-            DPArc(dpe,waggr,{'rel': 'bind', 'width': self.width})
+            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
         self.iwidths = [ self.width ]
         self.owidths = [ self.width ]
+
+        self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
+        self.raggr.iwidths.append(self.width)
+
+        self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
+        self.waggr.owidths.append(self.width)
+
+        # Ensure that arcs with pipe come before those with DPE
+        PNArc(self.raggr, self, {})
+        PNArc(self, self.raggr, {})
+        DPArc(self, self.raggr, {'rel':'data','width':self.width})
+
+        PNArc(self.waggr, self, {})
+        PNArc(self, self.waggr, {})
+        DPArc(self.waggr, self, {'rel':'data','width':self.width})
 
         if self.isSysOutPipe(): self.createSysReadArcs()
         else: self.createInternalReadArcs()
