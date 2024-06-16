@@ -152,23 +152,23 @@ class PipeNode(SysNode):
             DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
-        self.iwidths = [ self.width ]
-        self.owidths = [ self.width ]
-
         self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
-        self.raggr.iwidths.append(self.width)
-
         self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
-        self.waggr.owidths.append(self.width)
+
+        # Why use bind instead of data? bind does not require map, does not
+        # require separate population of iwidths and owidths on both-sides.
+        # data makes sens only when multiple ports are clubbed
 
         # Ensure that arcs with pipe come before those with DPE
-        PNArc(self.raggr, self, {})
-        PNArc(self, self.raggr, {})
-        DPArc(self, self.raggr, {'rel':'data','width':self.width})
-
+        # First write then read aggr arcs
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
-        DPArc(self.waggr, self, {'rel':'data','width':self.width})
+        DPArc(self.waggr, self, {'rel':'bind','width':self.width})
+
+        PNArc(self.raggr, self, {})
+        PNArc(self, self.raggr, {})
+        DPArc(self, self.raggr, {'rel':'bind','width':self.width})
+
 
         if self.isSysOutPipe(): self.createSysReadArcs()
         else: self.createInternalReadArcs()
