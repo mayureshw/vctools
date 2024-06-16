@@ -296,7 +296,8 @@ public:
     virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN() = 0;
     PNPlace* triggerPlace() { return _triggerPlace; }
-    PNTransition* triggerSack() { return _sack; }
+    PNTransition* triggerAck() { return _sack; }
+    PNTransition* triggerReq() { return _sreq; }
     void buildPN()
     {
         pn()->createArc(_triggerPlace, _sreq);
