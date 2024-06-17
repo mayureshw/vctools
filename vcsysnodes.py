@@ -10,7 +10,10 @@ from vcdpnodes import *
 # During construction of sysdp, can't extract it from vcir, hence stored separately
 class SysNode(Node):
     cntr = 0
-    def dotprops(self): return [ ('color','gray') ]
+    def dotprops(self): return [
+        ('label',self.idstr()),
+        ('color','gray')
+        ]
     def optype(self): return None
     def nodeClass(self): return None
     def isSys(self): return True
@@ -24,7 +27,7 @@ class SysNode(Node):
 
 class PortNode(SysNode):
     def dotprops(self): return [
-        ('label',self.direction+'port:'+self.name()),
+        ('label',self.idstr()+':'+self.direction+'port:'+self.name()),
         ('shape','trapezium'),
         ]
     def isPort(self): return True
@@ -82,7 +85,7 @@ class AggrNode(SysNode):
     def dotprops(self): return [
         ('color','blue'),
         ('shape','rectangle'),
-        ('label', self.label),
+        ('label', self.idstr()+':'+self.label),
         ]
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
@@ -106,7 +109,7 @@ class PipeNode(SysNode):
     def dotprops(self): return [
         ('color','blue'),
         ('shape','cds'),
-        ('label','pipe:'+self.name),
+        ('label',self.idstr()+':pipe:'+self.name),
         ]
     def createSysReqAck(self,aggr):
         trigplace = self.vcir.pn.nodes[self.trigplace]
