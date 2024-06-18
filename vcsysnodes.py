@@ -179,6 +179,16 @@ class PipeNode(SysNode):
         if self.isSysInPipe():  self.createSysFeedArcs()
         else: self.createInternalFeedArcs()
 
+class StorageNode(SysNode):
+    def nodeClass(self): return 'StorageNode'
+    def dotprops(self): return [
+        ('color','blue'),
+        ('shape','cylinder'),
+        ('label',self.idstr()+':storage:'+self.name),
+        ]
+    def __init__(self,sysdp,vcir,props):
+        super().__init__(sysdp,vcir,props)
+
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
         moduledict = vcir.module_entries[en]
@@ -219,4 +229,8 @@ class VCSysDP:
         for p,props in vcir.pipes.items():
             PipeNode(self,vcir,{**props,**{
                 'name' : p,
+                }})
+        for s,props in vcir.storage.items():
+            StorageNode(self,vcir,{**props,**{
+                'name' : s,
                 }})
