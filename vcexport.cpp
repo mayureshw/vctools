@@ -296,7 +296,28 @@ class SysIR
     list<ModuleIR*> _moduleirs;
     Rel<long,string> _m = {"m"};
     System& _sys;
-    void buildJsonPipesMap( JsonFactory& jf, JsonMap* pipesmap)
+    void buildJsonStorageMap( JsonFactory& jf, JsonMap* storagemap )
+    {
+        auto width_key = jf.createJsonAtom<string>("width");
+        auto size_key = jf.createJsonAtom<string>("size");
+
+        for( auto stup : _sys.getStorageDatums() )
+        {
+            auto sobj = stup.first;
+            auto& datumv = stup.second;
+
+            auto storename_key = jf.createJsonAtom<string>( sobj->Get_Id() );
+            auto storedict = jf.createJsonMap();
+            storagemap->push_back({ storename_key, storedict });
+
+            auto width_val = jf.createJsonAtom<unsigned>(datumv[0]->width());
+            storedict->push_back({ width_key, width_val });
+
+            auto size_val = jf.createJsonAtom<unsigned>(datumv.size());
+            storedict->push_back({ size_key, size_val });
+        }
+    }
+    void buildJsonPipesMap( JsonFactory& jf, JsonMap* pipesmap )
     {
         auto width_key = jf.createJsonAtom<string>("width");
         auto depth_key = jf.createJsonAtom<string>("depth");
@@ -416,7 +437,13 @@ public:
         top.push_back( { &pipes_key, pipesmap } );
         buildJsonPipesMap( jf, pipesmap );
 
-        // 7. Write json file
+        // 7. storage
+        JSONSTR(storage)
+        auto storagemap = jf.createJsonMap();
+        top.push_back( {&storage_key, storagemap } );
+        buildJsonStorageMap( jf, storagemap );
+
+        // 8. Write json file
         top.print(jsonfile);
         jsonfile.close();
     }

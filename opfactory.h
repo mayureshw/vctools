@@ -162,6 +162,7 @@ class OpFactory
         return new Opcls( dpe->Get_Output_Width(), ipwires[0]->Get_Size(), dpe->Get_Id() );
     }
 public:
+    map<vcStorageObject*,vector<DatumBase*>>& getStorageDatums() { return _storageDatums; }
     vcStorageObject* getStorageObj(vcDatapathElement* dpe)
     {
         auto objmap = ( (vcLoadStore*) dpe )->Get_Memory_Space()->Get_Object_Map();

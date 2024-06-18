@@ -1066,6 +1066,7 @@ public:
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
+    map<vcStorageObject*,vector<DatumBase*>>& getStorageDatums() { return _opfactory.getStorageDatums(); }
     PipeFeeder* getFeeder(string pipename, bool noError = false)
     {
         auto it = _feedermap.find(pipename);
