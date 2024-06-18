@@ -188,6 +188,30 @@ class StorageNode(SysNode):
         ]
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
+        self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
+        self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
+
+        PNArc(self.waggr, self, {})
+        PNArc(self, self.waggr, {})
+        DPArc(self.waggr, self, {'rel':'bind','width':self.width})
+
+        PNArc(self.raggr, self, {})
+        PNArc(self, self.raggr, {})
+        DPArc(self, self.raggr, {'rel':'bind','width':self.width})
+
+        for dpe in self.vcir.dp.storeloads[self.name]:
+            # dpe <-> store bi-directional PN arcs
+            PNArc(self.raggr,dpe,{})
+            PNArc(dpe,self.raggr,{})
+            # store -> dpe data arc
+            DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
+
+        for dpe in self.vcir.dp.storestores[self.name]:
+            # dpe <-> store bi-directional PN arcs
+            PNArc(self.waggr,dpe,{})
+            PNArc(dpe,self.waggr,{})
+            # dpe -> store data arc
+            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
