@@ -308,7 +308,7 @@ class SysIR
     void buildJsonStorageMap( JsonFactory& jf, JsonMap* storagemap )
     {
         auto width_key = jf.createJsonAtom<string>("width");
-        auto size_key = jf.createJsonAtom<string>("size");
+        auto depth_key = jf.createJsonAtom<string>("depth");
 
         for( auto stup : _sys.getStorageDatums() )
         {
@@ -323,7 +323,7 @@ class SysIR
             storedict->push_back({ width_key, width_val });
 
             auto size_val = jf.createJsonAtom<unsigned>(datumv.size());
-            storedict->push_back({ size_key, size_val });
+            storedict->push_back({ depth_key, size_val });
         }
     }
     void buildJsonPipesMap( JsonFactory& jf, JsonMap* pipesmap )
