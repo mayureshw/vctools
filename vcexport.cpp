@@ -232,6 +232,8 @@ public:
         auto callack_key = jf.createJsonAtom<string>("callack");
         auto readspipe_key = jf.createJsonAtom<string>("readspipe");
         auto feedspipe_key = jf.createJsonAtom<string>("feedspipe");
+        auto loads_key = jf.createJsonAtom<string>("loads");
+        auto stores_key = jf.createJsonAtom<string>("stores");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -276,6 +278,13 @@ public:
                 auto pipe_val = jf.createJsonAtom<string>(pipename);
                 auto pipe_key = simdpe->isIport() ? readspipe_key : feedspipe_key;
                 dpedict->push_back({ pipe_key, pipe_val });
+            }
+            else if ( simdpe->isLoad() or simdpe->isStore() )
+            {
+                auto storename = _sys.getStorageObj((vcLoadStore*)simdpe->elem())->Get_Id();
+                auto store_val = jf.createJsonAtom<string>(storename);
+                auto store_key = simdpe->isLoad() ? loads_key : stores_key;
+                dpedict->push_back({ store_key, store_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();

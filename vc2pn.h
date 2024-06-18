@@ -152,6 +152,8 @@ public:
     bool isIport() { return _vctyp == vcInport_; }
     bool isOport() { return _vctyp == vcOutport_; }
     bool isCall() { return _vctyp == vcCall_; }
+    bool isLoad() { return _vctyp == vcLoad_; }
+    bool isStore() { return _vctyp == vcStore_; }
     bool isDeemedPhi()
     {
         return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
