@@ -194,13 +194,26 @@ class StorageNode(SysNode):
         ('shape','cylinder'),
         ('label',self.idstr()+':storage:'+self.name),
         ]
+    def inferAWidth(self):
+        if len( self.vcir.dp.storeloads[self.name] ) ==  0:
+            print('Store has no Load operations. This is not handled.',self.name)
+            sys.exit(1)
+        return self.vcir.dp.storeloads[self.name][0].iwidths[0]
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
+
+        self.awidth = self.inferAWidth()
+
         self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
         self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
 
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
+        # waggr -> storage address port arc
+        DPArc(self.waggr, self, {'rel':'data'})
+        self.waggr.owidths.append(self.awidth)
+        self.iwidths.append(self.awidth)
+        # waggr -> storage data port arc
         DPArc(self.waggr, self, {'rel':'data'})
         self.waggr.owidths.append(self.width)
         self.iwidths.append(self.width)
