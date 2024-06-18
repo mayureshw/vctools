@@ -100,6 +100,7 @@ class Node:
         self.iwidths = []
         self.owidths = []
         self.constinps = {}
+        self.depth = 0
         self.__dict__.update(props)
 
 # Note: rel identifies the arc type, but it does not reflect in the class
