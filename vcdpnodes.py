@@ -72,6 +72,10 @@ class DPNode(Node):
         if feedspipe != None: self.vcir.dp.addPipeFeed(feedspipe,self)
         readspipe = getattr(self,'readspipe',None)
         if readspipe != None: self.vcir.dp.addPipeRead(readspipe,self)
+        loads = getattr(self,'loads',None)
+        if loads != None: self.vcir.dp.addLoads(loads,self)
+        stores = getattr(self,'stores',None)
+        if stores != None: self.vcir.dp.addStores(stores,self)
 
         for tgtpos,srcinfo in self.dpinps.items():
             srcnode = self.vcir.dp.nodes[srcinfo['id']]
@@ -109,6 +113,8 @@ class DPNode(Node):
 class VcDP:
     def addPipeFeed(self,pipe,node): self.pipefeeds.setdefault(pipe,[]).append(node)
     def addPipeRead(self,pipe,node): self.pipereads.setdefault(pipe,[]).append(node)
+    def addLoads(self,store,node): self.storeloads.setdefault(store,[]).append(node)
+    def addStores(self,store,node): self.storestores.setdefault(store,[]).append(node)
     def sysInPipes(self): return [ p for p in self.pipereads if p not in self.pipefeeds ]
     def sysOutPipes(self): return [ p for p in self.pipefeeds if p not in self.pipereads ]
     def createArcs(self):
@@ -116,4 +122,6 @@ class VcDP:
     def __init__(self,dpes,vcir):
         self.pipereads = {}
         self.pipefeeds = {}
+        self.storeloads = {}
+        self.storestores = {}
         self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
