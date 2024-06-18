@@ -221,7 +221,7 @@ class StorageNode(SysNode):
             PNArc(self.waggr,dpe,{})
             PNArc(dpe,self.waggr,{})
             # dpe -> store data arc
-            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
+            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': sum(dpe.iwidths) })
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
