@@ -79,7 +79,13 @@ def createPort(sysdp, vcir, ClsArgsList):
     sysdp.ports.append(port)
     return port
 
-# Note Aggreg Nodes are not arbiters, arbitration is handled by Petri net
+# Note: Aggreg Nodes are not arbiters, arbitration is handled by Petri net
+# Note: bind vs data choice for aggreg arcs:
+#   - Both raggr and aggr require 'bind' at inputs as it is call-entry like scenario
+#   - waggr output must be data since it has 2 argumets (addr and data) and
+#   needs to use map
+#   - raggr output arc could be either data or bind, we used bind as it can
+#   save map usage (just simplicity)
 
 class AggrNode(SysNode):
     def dotprops(self): return [
@@ -166,7 +172,9 @@ class PipeNode(SysNode):
         # First write then read aggr arcs
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
-        DPArc(self.waggr, self, {'rel':'bind','width':self.width})
+        DPArc(self.waggr, self, {'rel':'data'})
+        self.waggr.owidths.append(self.width)
+        self.iwidths.append(self.width)
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
@@ -193,7 +201,9 @@ class StorageNode(SysNode):
 
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
-        DPArc(self.waggr, self, {'rel':'bind','width':self.width})
+        DPArc(self.waggr, self, {'rel':'data'})
+        self.waggr.owidths.append(self.width)
+        self.iwidths.append(self.width)
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
