@@ -51,6 +51,12 @@ class DPArc(Arc):
         [ ('color','magenta') ] if self.rel == 'callack' else []
     def __init__(self,srcnode,tgtnode,props):
         super().__init__(srcnode,tgtnode,props)
+        # if either src or tgt node is a SysNode, the arc doesn't originate
+        # from json input and is not represented by iwidths and owidths of the
+        # node, so we add it here.
+        if srcnode.isSys() or tgtnode.isSys():
+            srcnode.owidths.append(self.width)
+            tgtnode.iwidths.append(self.width)
 
 class DPNode(Node):
     # Operators that do not need AHIR split protocol interconnect

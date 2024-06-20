@@ -147,17 +147,17 @@ class PipeNode(SysNode):
         self.createSysReqAck(self.waggr)
     def createInternalReadArcs(self):
         for dpe in self.vcir.dp.pipereads[self.name]:
-            # dpe <-> pipe bi-directional PN arcs
+            # dpe <-> raggr bi-directional PN arcs
             PNArc(self.raggr,dpe,{})
             PNArc(dpe,self.raggr,{})
-            # pipe -> dpe data arc
+            # raggr -> dpe data arc
             DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
     def createInternalFeedArcs(self):
         for dpe in self.vcir.dp.pipefeeds[self.name]:
-            # dpe <-> pipe bi-directional PN arcs
+            # dpe <-> waggr bi-directional PN arcs
             PNArc(self.waggr,dpe,{})
             PNArc(dpe,self.waggr,{})
-            # dpe -> pipe data arc
+            # dpe -> waggr data arc
             DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
@@ -172,9 +172,7 @@ class PipeNode(SysNode):
         # First write then read aggr arcs
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
-        DPArc(self.waggr, self, {'rel':'data'})
-        self.waggr.owidths.append(self.width)
-        self.iwidths.append(self.width)
+        DPArc(self.waggr, self, {'rel':'data','width':self.width})
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
@@ -210,30 +208,28 @@ class StorageNode(SysNode):
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
         # waggr -> storage address port arc
-        DPArc(self.waggr, self, {'rel':'data'})
-        self.waggr.owidths.append(self.awidth)
-        self.iwidths.append(self.awidth)
+        DPArc(self.waggr, self, {'rel':'data','width':self.width})
         # waggr -> storage data port arc
-        DPArc(self.waggr, self, {'rel':'data'})
-        self.waggr.owidths.append(self.width)
-        self.iwidths.append(self.width)
+        DPArc(self.waggr, self, {'rel':'data','width':self.width})
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
         DPArc(self, self.raggr, {'rel':'bind','width':self.width})
+        DPArc(self.raggr, self, {'rel':'bind','width':self.awidth})
 
         for dpe in self.vcir.dp.storeloads[self.name]:
-            # dpe <-> store bi-directional PN arcs
+            # dpe <-> raggr bi-directional PN arcs
             PNArc(self.raggr,dpe,{})
             PNArc(dpe,self.raggr,{})
-            # store -> dpe data arc
+            # raggr <-> dpe bind arc (addr from dpe and value from raggr)
             DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
+            DPArc(dpe,self.raggr,{'rel': 'bind', 'width': self.awidth})
 
         for dpe in self.vcir.dp.storestores[self.name]:
-            # dpe <-> store bi-directional PN arcs
+            # dpe <-> waggr bi-directional PN arcs
             PNArc(self.waggr,dpe,{})
             PNArc(dpe,self.waggr,{})
-            # dpe -> store data arc
+            # dpe -> waggr data arc
             DPArc(dpe,self.waggr,{'rel': 'bind', 'width': sum(dpe.iwidths) })
 
 class VCSysDP:
@@ -255,16 +251,14 @@ class VCSysDP:
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
                 ])
-            DPArc( iparamport, entryplace, {'rel':'data'} )
-            entryplace.iwidths.append(width)
+            DPArc( iparamport, entryplace, {'rel':'data','width':width} )
         for paramname,width in zip( moduledict['onames'], moduledict['owidths'] ):
             oparamport = createPort(self, vcir, [
                 (OutPort,[]),
                 (ModuleParamPort,[modulename,paramname]),
                 (DataPort,[width]),
                 ])
-            DPArc( exitplace, oparamport, {'rel':'data'} )
-            exitplace.owidths.append(width)
+            DPArc( exitplace, oparamport, {'rel':'data','width':width} )
     def __init__(self,vcir):
         self.nodes = {}
         self.ports = []
