@@ -80,12 +80,7 @@ def createPort(sysdp, vcir, ClsArgsList):
     return port
 
 # Note: Aggreg Nodes are not arbiters, arbitration is handled by Petri net
-# Note: bind vs data choice for aggreg arcs:
-#   - Both raggr and aggr require 'bind' at inputs as it is call-entry like scenario
-#   - waggr output must be data since it has 2 argumets (addr and data) and
-#   needs to use map
-#   - raggr output arc could be either data or bind, we used bind as it can
-#   save map usage (just simplicity)
+# Note: see ahiasync/vhdl/pipestorage.dot for data flow of storage and pipes
 
 class AggrNode(SysNode):
     def dotprops(self): return [
@@ -164,10 +159,6 @@ class PipeNode(SysNode):
         self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
         self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
 
-        # Why use bind instead of data? bind does not require map, does not
-        # require separate population of iwidths and owidths on both-sides.
-        # data makes sens only when multiple ports are clubbed
-
         # Ensure that arcs with pipe come before those with DPE
         # First write then read aggr arcs
         PNArc(self.waggr, self, {})
@@ -176,7 +167,7 @@ class PipeNode(SysNode):
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
-        DPArc(self, self.raggr, {'rel':'bind','width':self.width})
+        DPArc(self, self.raggr, {'rel':'data','width':self.width})
 
 
         if self.isSysOutPipe(): self.createSysReadArcs()
