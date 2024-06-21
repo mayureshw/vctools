@@ -198,15 +198,13 @@ class StorageNode(SysNode):
 
         PNArc(self.waggr, self, {})
         PNArc(self, self.waggr, {})
-        # waggr -> storage address port arc
-        DPArc(self.waggr, self, {'rel':'data','width':self.width})
-        # waggr -> storage data port arc
-        DPArc(self.waggr, self, {'rel':'data','width':self.width})
+        # waggr -> storage address+data port arc
+        DPArc(self.waggr, self, {'rel':'data','width':self.width+self.awidth})
 
         PNArc(self.raggr, self, {})
         PNArc(self, self.raggr, {})
-        DPArc(self, self.raggr, {'rel':'bind','width':self.width})
-        DPArc(self.raggr, self, {'rel':'bind','width':self.awidth})
+        DPArc(self, self.raggr, {'rel':'data','width':self.width})
+        DPArc(self.raggr, self, {'rel':'data','width':self.awidth})
 
         for dpe in self.vcir.dp.storeloads[self.name]:
             # dpe <-> raggr bi-directional PN arcs
