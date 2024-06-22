@@ -54,7 +54,7 @@ class DPArc(Arc):
         # if either src or tgt node is a SysNode, the arc doesn't originate
         # from json input and is not represented by iwidths and owidths of the
         # node, so we add it here.
-        if srcnode.isSys() or tgtnode.isSys():
+        if self.rel == 'data' and ( srcnode.isSys() or tgtnode.isSys() ):
             srcnode.owidths.append(self.width)
             tgtnode.iwidths.append(self.width)
 
