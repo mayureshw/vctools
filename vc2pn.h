@@ -226,11 +226,11 @@ public:
         pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
 
         pn()->createArc(_acks[0], _reqs[1]); // Since sreq/ureq can be ||, need this sync
-        auto uack2sack = (PNPlace*) pn()->createArc(
-            _acks[1], _acks[0],
-            "MARKP:" + _acks[0]->_name
+        auto uack2sreq = (PNPlace*) pn()->createArc(
+            _acks[1], _reqs[0],
+            "MARKP:" + _reqs[0]->_name
             );
-        uack2sack->setMarking(1);
+        uack2sreq->setMarking(1);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
