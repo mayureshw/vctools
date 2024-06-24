@@ -272,6 +272,14 @@ public:
             // and releases a token to called module's mutex
             pn()->createArc(uack, calledMutexPlace);
         }
+        else if ( isLoad() or isStore() )
+        {
+            auto sreq = _reqs[0];
+            auto uack = _acks[1];
+            auto storageMutexPlace = sys()->getStorageMutexPlace( elem() );
+            pn()->createArc(storageMutexPlace,sreq);
+            pn()->createArc(uack,storageMutexPlace);
+        }
     }
     void createGuardReqs()
     {
@@ -1016,6 +1024,7 @@ class System : public SystemBase
     map<vcPipe*,Pipe*> _pipemap;
     map<string,PipeFeeder*> _feedermap;
     map<string,PipeReader*> _readermap;
+    map<vcStorageObject*,PNPlace*> _storageMutexPlaces;
     vcSystem* _vcs;
     VcPetriNet *_pn;
     PNPlace *_sysPreExitPlace;
@@ -1068,6 +1077,19 @@ public:
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
     map<vcStorageObject*,vector<DatumBase*>>& getStorageDatums() { return _opfactory.getStorageDatums(); }
+    PNPlace* getStorageMutexPlace(vcDatapathElement *dpe)
+    {
+        auto sto = getStorageObj( (vcLoadStore*) dpe);
+        auto it = _storageMutexPlaces.find(sto);
+        if ( it == _storageMutexPlaces.end() )
+        {
+            auto storageMutex = pn()->createPlace("MARKP:" + sto->Get_Id() + ".mutex");
+            pn()->annotatePNNode( storageMutex, Mutex_ );
+            _storageMutexPlaces.emplace(sto, storageMutex);
+            return storageMutex;
+        }
+        return it->second;
+    }
     PipeFeeder* getFeeder(string pipename, bool noError = false)
     {
         auto it = _feedermap.find(pipename);
