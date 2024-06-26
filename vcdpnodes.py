@@ -48,7 +48,7 @@ class DPArc(Arc):
     def dotprops(self): return \
         [ ('color','red') ] if self.rel == 'data' else \
         [ ('color','orange') ] if self.rel == 'bind' else \
-        [ ('color','magenta') ] if self.rel == 'callack' else []
+        [ ('color','magenta') ] if self.rel == 'dpsync' else []
     def __init__(self,srcnode,tgtnode,props):
         super().__init__(srcnode,tgtnode,props)
         # if either src or tgt node is a SysNode, the arc doesn't originate
@@ -112,8 +112,8 @@ class DPNode(Node):
             DPArc(srcnode,self,{ 'rel': 'bind', 'width': sum(self.owidths) })
             # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
             acknode = self.vcir.pn.nodes[self.uack]
-            DPArc(acknode,self,{ 'rel': 'callack' })
-            DPArc(self,acknode,{ 'rel': 'callack' })
+            DPArc(acknode,self,{ 'rel': 'dpsync' })
+            DPArc(self,acknode,{ 'rel': 'dpsync' })
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcDP:
