@@ -176,6 +176,25 @@ class PipeNode(SysNode):
         if self.isSysInPipe():  self.createSysFeedArcs()
         else: self.createInternalFeedArcs()
 
+class SysopPlace(SysNode):
+    def dotprops(self): return [
+        ('label', self.idstr()+':'+self.name),
+        ]
+    def __init__(self,sysdp,vcir,props) : super().__init__(sysdp,vcir,props)
+
+class SysopEnPlace(SysopPlace):
+    def nodeClass(self): return 'EntryPlace'
+    def __init__(self,sysdp,vcir,props):
+        super().__init__(sysdp,vcir,props)
+
+class SysopExPlace(SysopPlace):
+    def nodeClass(self): return 'PassiveBranchPlace' if self.multi else 'PassThroughPlace'
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+
+class SysopInprogressPlace(SysopPlace):
+    def nodeClass(self): return 'PassThroughPlace'
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+
 class StorageNode(SysNode):
     def nodeClass(self): return 'StorageNode'
     def dotprops(self): return [
@@ -188,38 +207,66 @@ class StorageNode(SysNode):
             print('Store has no Load operations. This is not handled.',self.name)
             sys.exit(1)
         return self.vcir.dp.storeloads[self.name][0].iwidths[0]
+    def buildDPPetriArcs(self,vcir,dpe,en,ex):
+        sacknode = vcir.pn.nodes[dpe.sack]
+        uacknode = vcir.pn.nodes[dpe.uack]
+        # sack -> en
+        PNArc( sacknode, en, {} )
+        # ex -> uack passive/reverse passive if multi, else petri
+        if ex.multi:
+            inprogressPlace = SysopInprogressPlace(sysdp,vcir,{'name':'inprogress:'+dpe.idstr()})
+            # sack -> inprogress
+            PNArc( sacknode, inprogressPlace, {} )
+            # inprogress -> uack
+            PNArc( inprogressPlace, uacknode, {} )
+            exuackarc = PNArc( ex, uacknode, {'rel':'passivebranch'} )
+            exuackarc.reversedArc()
+        else: PNArc( ex, uacknode, {} )
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
 
         self.awidth = self.inferAWidth()
 
-        self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
-        self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
+        haveMultLoads = len(self.vcir.dp.storeloads[self.name]) > 1
+        haveMultStores = len(self.vcir.dp.storestores[self.name]) > 1
 
-        PNArc(self.waggr, self, {})
-        PNArc(self, self.waggr, {})
-        # waggr -> storage address+data port arc
-        DPArc(self.waggr, self, {'rel':'data','width':self.width+self.awidth})
+        self.r_en = SysopEnPlace(sysdp,vcir,{'name':'r_en:'+self.name})
+        self.r_ex = SysopExPlace(sysdp,vcir,{'name':'r_ex:'+self.name,'multi':haveMultLoads})
 
-        PNArc(self.raggr, self, {})
-        PNArc(self, self.raggr, {})
-        DPArc(self, self.raggr, {'rel':'data','width':self.width})
-        DPArc(self.raggr, self, {'rel':'data','width':self.awidth})
+        self.w_en = SysopEnPlace(sysdp,vcir,{'name':'w_en:'+self.name})
+        self.w_ex = SysopExPlace(sysdp,vcir,{'name':'w_ex:'+self.name,'multi':haveMultStores})
+
+        # w_en -> self
+        PNArc(self.w_en, self, {})
+        DPArc(self.w_en, self, {'rel':'data','width':self.awidth})
+        DPArc(self.w_en, self, {'rel':'data','width':self.width})
+
+        # self -> w_ex
+        PNArc(self, self.w_ex, {})
+
+        # r_en -> self
+        PNArc(self.r_en, self, {})
+        DPArc(self.r_en, self, {'rel':'data','width':self.awidth})
+
+        # self -> r_ex
+        PNArc(self, self.r_ex, {})
+        DPArc(self, self.r_ex, {'rel':'data','width':self.width})
 
         for dpe in self.vcir.dp.storeloads[self.name]:
-            # dpe <-> raggr bi-directional PN arcs
-            PNArc(self.raggr,dpe,{})
-            PNArc(dpe,self.raggr,{})
-            # raggr <-> dpe bind arc (addr from dpe and value from raggr)
-            DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
-            DPArc(dpe,self.raggr,{'rel': 'bind', 'width': self.awidth})
+            uacknode = vcir.pn.nodes[dpe.uack]
+            self.buildDPPetriArcs(vcir,dpe,self.r_en,self.r_ex)
+            # dpe -> r_en bind arc for address
+            DPArc(dpe,self.r_en,{'rel': 'bind', 'width': self.awidth})
+            # r_ex -> dpe bind arc for data
+            DPArc(self.r_ex,dpe,{'rel': 'bind', 'width': self.width})
+            # dpe <-> uack 2 way dpsync
+            DPArc(dpe,uacknode,{ 'rel': 'dpsync' })
+            DPArc(uacknode,dpe,{ 'rel': 'dpsync' })
 
         for dpe in self.vcir.dp.storestores[self.name]:
-            # dpe <-> waggr bi-directional PN arcs
-            PNArc(self.waggr,dpe,{})
-            PNArc(dpe,self.waggr,{})
-            # dpe -> waggr data arc
-            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': sum(dpe.iwidths) })
+            self.buildDPPetriArcs(vcir,dpe,self.w_en,self.w_ex)
+            # dpe -> w_en bind arc for data+address
+            DPArc(dpe,self.w_en,{'rel': 'bind', 'width': self.width+self.awidth})
 
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
