@@ -111,7 +111,7 @@ class DPNode(Node):
             srcnode = self.vcir.pn.nodes[self.callexit]
             DPArc(srcnode,self,{ 'rel': 'bind', 'width': sum(self.owidths) })
             # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
-            acknode = self.vcir.pn.nodes[self.callack]
+            acknode = self.vcir.pn.nodes[self.uack]
             DPArc(acknode,self,{ 'rel': 'callack' })
             DPArc(self,acknode,{ 'rel': 'callack' })
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)

@@ -229,7 +229,7 @@ public:
         auto gacks_key = jf.createJsonAtom<string>("gacks");
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
-        auto callack_key = jf.createJsonAtom<string>("callack");
+        auto uack_key = jf.createJsonAtom<string>("uack");
         auto readspipe_key = jf.createJsonAtom<string>("readspipe");
         auto feedspipe_key = jf.createJsonAtom<string>("feedspipe");
         auto loads_key = jf.createJsonAtom<string>("loads");
@@ -268,9 +268,9 @@ public:
                 auto calledExitPlace_val = jf.createJsonAtom<unsigned>( calledExitPlaceId );
                 dpedict->push_back({ callexit_key, calledExitPlace_val });
 
-                auto callUackId = simdpe->getAckTransition(1)->_nodeid;
-                auto callUackId_val = jf.createJsonAtom<unsigned>( callUackId );
-                dpedict->push_back({ callack_key, callUackId_val });
+                auto uackId = simdpe->getAckTransition(1)->_nodeid;
+                auto uackId_val = jf.createJsonAtom<unsigned>( uackId );
+                dpedict->push_back({ uack_key, uackId_val });
             }
             else if ( simdpe->isIport() or simdpe->isOport() )
             {
