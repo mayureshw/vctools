@@ -24,6 +24,7 @@ class SysNode(Node):
         sysdp.nodes[self.nodeid] = self
         SysNode.cntr = SysNode.cntr + 1
         self.sysdp = sysdp
+        self.label = self.name
 
 class PortNode(SysNode):
     def dotprops(self): return [
@@ -79,103 +80,6 @@ def createPort(sysdp, vcir, ClsArgsList):
     sysdp.ports.append(port)
     return port
 
-# Note: Aggreg Nodes are not arbiters, arbitration is handled by Petri net
-# Note: see ahiasync/vhdl/pipestorage.dot for data flow of storage and pipes
-
-class AggrNode(SysNode):
-    def dotprops(self): return [
-        ('color','blue'),
-        ('shape','rectangle'),
-        ('label', self.idstr()+':'+self.label),
-        ]
-    def __init__(self,sysdp,vcir,props):
-        super().__init__(sysdp,vcir,props)
-        self.label = self.nodeClass()+':'+self.name
-class WriteAggrNode(AggrNode):
-    def nodeClass(self): return 'WriteAggrNode'
-    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
-
-class ReadAggrNode(AggrNode):
-    def nodeClass(self): return 'ReadAggrNode'
-    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
-
-# nodeClass = DPNode gives a vcInterconnect wrapper automatically, which suits
-# most operators with combinational implementation. Such wrapper is not needed
-# for some system nodes such as Pipe, ReadAggr, WriteAggr etc. So we use their
-# own name as nodeClass. They get a separate handler in vcNode vhdl
-class PipeNode(SysNode):
-    def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
-    def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
-    def nodeClass(self): return 'PipeNode'
-    def dotprops(self): return [
-        ('color','blue'),
-        ('shape','cds'),
-        ('label',self.idstr()+':pipe:'+self.name),
-        ]
-    def createSysReqAck(self,aggr):
-        trigplace = self.vcir.pn.nodes[self.trigplace]
-        trigreq = self.vcir.pn.nodes[self.trigreq]
-        trigack = self.vcir.pn.nodes[self.trigack]
-        reqport = createPort(self.sysdp, self.vcir, [
-            (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
-        PNArc( reqport, trigplace, {} )
-        ackport = createPort(self.sysdp, self.vcir, [
-            (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
-        PNArc( trigack, ackport, {} )
-        PNArc( trigreq, aggr, {} )
-        PNArc( aggr, trigack, {} )
-    def createSysReadArcs(self):
-        dataport = createPort(self.sysdp, self.vcir, [
-            (OutPort,[]),
-            (PipePort,[self.name]),
-            (DataPort,[self.width]),
-            ])
-        DPArc( self.raggr, dataport, { 'rel':'bind', 'width':self.width } )
-        self.createSysReqAck(self.raggr)
-    def createSysFeedArcs(self):
-        dataport = createPort(self.sysdp, self.vcir, [
-            (InPort,[]),
-            (PipePort,[self.name]),
-            (DataPort,[self.width]),
-            ])
-        DPArc( dataport, self.waggr, { 'rel':'bind', 'width':self.width } )
-        self.createSysReqAck(self.waggr)
-    def createInternalReadArcs(self):
-        for dpe in self.vcir.dp.pipereads[self.name]:
-            # dpe <-> raggr bi-directional PN arcs
-            PNArc(self.raggr,dpe,{})
-            PNArc(dpe,self.raggr,{})
-            # raggr -> dpe data arc
-            DPArc(self.raggr,dpe,{'rel': 'bind', 'width': self.width})
-    def createInternalFeedArcs(self):
-        for dpe in self.vcir.dp.pipefeeds[self.name]:
-            # dpe <-> waggr bi-directional PN arcs
-            PNArc(self.waggr,dpe,{})
-            PNArc(dpe,self.waggr,{})
-            # dpe -> waggr data arc
-            DPArc(dpe,self.waggr,{'rel': 'bind', 'width': self.width})
-    def __init__(self,sysdp,vcir,props):
-        super().__init__(sysdp,vcir,props)
-        self.raggr = ReadAggrNode(sysdp,vcir,{'name':self.name})
-        self.waggr = WriteAggrNode(sysdp,vcir,{'name':self.name})
-
-        # Ensure that arcs with pipe come before those with DPE
-        # First write then read aggr arcs
-        PNArc(self.waggr, self, {})
-        PNArc(self, self.waggr, {})
-        DPArc(self.waggr, self, {'rel':'data','width':self.width})
-
-        PNArc(self.raggr, self, {})
-        PNArc(self, self.raggr, {})
-        DPArc(self, self.raggr, {'rel':'data','width':self.width})
-
-
-        if self.isSysOutPipe(): self.createSysReadArcs()
-        else: self.createInternalReadArcs()
-
-        if self.isSysInPipe():  self.createSysFeedArcs()
-        else: self.createInternalFeedArcs()
-
 class SysopPlace(SysNode):
     def dotprops(self): return [
         ('label', self.idstr()+':'+self.name),
@@ -195,6 +99,116 @@ class SysopInprogressPlace(SysopPlace):
     def nodeClass(self): return 'PassThroughPlace'
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
+# Note that the controller Petri net already ensures that the requests are Mutexed
+# This class just builds the net for the return path
+class ArbiteredSysNode(SysNode):
+    def buildDPPetriArcs(self,en,ex,entrig,extrig,label):
+        # sack -> en
+        PNArc( entrig, en, {} )
+        # ex -> uack passive/reverse passive if multi, else petri
+        if ex.multi:
+            inprogressPlace = SysopInprogressPlace(self.sysdp,self.vcir,{'name':'inprogress:'+label})
+            # sack -> inprogress
+            PNArc( entrig, inprogressPlace, {} )
+            # inprogress -> uack
+            PNArc( inprogressPlace, extrig, {} )
+            exuackarc = PNArc( ex, extrig, {'rel':'passivebranch'} )
+            exuackarc.reversedArc()
+        else: PNArc( ex, extrig, {} )
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+
+class PipeNode(ArbiteredSysNode):
+    def isSysOutPipe(self): return self.name not in self.vcir.dp.pipereads
+    def isSysInPipe(self): return self.name not in self.vcir.dp.pipefeeds
+    def nodeClass(self): return 'PipeNode'
+    def dotprops(self): return [
+        ('color','blue'),
+        ('shape','cds'),
+        ('label',self.idstr()+':pipe:'+self.name),
+        ]
+# TODO: Also need to add return path for Sys arcs
+    def createSysReqAck(self,en,ex):
+        trigplace = self.vcir.pn.nodes[self.trigplace]
+        trigreq = self.vcir.pn.nodes[self.trigreq]
+        trigack = self.vcir.pn.nodes[self.trigack]
+        reqport = createPort(self.sysdp, self.vcir, [
+            (InPort, []), (PipePort,[self.name]), (ReqPort,[]) ])
+        PNArc( reqport, trigplace, {} )
+        ackport = createPort(self.sysdp, self.vcir, [
+            (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
+        PNArc( trigack, ackport, {} )
+        PNArc( trigreq, en, {} )
+        PNArc( ex, trigack, {} )
+        self.buildDPPetriArcs(en,ex,trigreq,trigack,self.idstr())
+    def createSysReadArcs(self):
+        dataport = createPort(self.sysdp, self.vcir, [
+            (OutPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        DPArc( self.r_ex, dataport, { 'rel':'bind', 'width':self.width } )
+        self.createSysReqAck(self.r_en,self.r_ex)
+    def createSysFeedArcs(self):
+        dataport = createPort(self.sysdp, self.vcir, [
+            (InPort,[]),
+            (PipePort,[self.name]),
+            (DataPort,[self.width]),
+            ])
+        DPArc( dataport, self.w_en, { 'rel':'bind', 'width':self.width } )
+        self.createSysReqAck(self.w_en,self.w_ex)
+    def createInternalReadArcs(self):
+        for dpe in self.vcir.dp.pipereads[self.name]:
+            ureqnode = dpe.ureq()
+            uacknode = dpe.uack()
+            self.buildDPPetriArcs(self.r_en,self.r_ex,ureqnode,uacknode,dpe.idstr())
+
+            # r_ex -> dpe bind arc for data
+            DPArc(self.r_ex,dpe,{'rel': 'bind', 'width': self.width})
+
+            # dpe <-> uack 2 way dpsync
+            DPArc(dpe,uacknode,{ 'rel': 'dpsync' })
+            DPArc(uacknode,dpe,{ 'rel': 'dpsync' })
+    def createInternalFeedArcs(self):
+        for dpe in self.vcir.dp.pipefeeds[self.name]:
+            sreqnode = dpe.sreq()
+            sacknode = dpe.sack()
+            self.buildDPPetriArcs(self.w_en,self.w_ex,sreqnode,sacknode,dpe.idstr())
+            # dpe -> w_en bind arc for data
+            DPArc(dpe,self.w_en,{'rel': 'bind', 'width': self.width})
+    def __init__(self,sysdp,vcir,props):
+        super().__init__(sysdp,vcir,props)
+
+        haveMultReads = len(self.vcir.dp.pipereads.get(self.name,[])) > 1
+        haveMultFeeds = len(self.vcir.dp.pipefeeds.get(self.name,[])) > 1
+
+        self.r_en = SysopEnPlace(sysdp,vcir,{'name':'r_en:'+self.name})
+        self.r_ex = SysopExPlace(sysdp,vcir,{'name':'r_ex:'+self.name,'multi':haveMultReads})
+
+        self.w_en = SysopEnPlace(sysdp,vcir,{'name':'w_en:'+self.name})
+        self.w_ex = SysopExPlace(sysdp,vcir,{'name':'w_ex:'+self.name,'multi':haveMultFeeds})
+
+        # Ensure that arcs with pipe come before those with DPE
+        # First write then read aggr arcs
+        # w_en -> self
+        PNArc(self.w_en, self, {})
+        DPArc(self.w_en, self, {'rel':'data','width':self.width})
+
+        # self -> w_ex
+        PNArc(self, self.w_ex, {})
+
+        # r_en -> self
+        PNArc(self.r_en, self, {})
+
+        # self -> r_ex
+        PNArc(self, self.r_ex, {})
+        DPArc(self, self.r_ex, {'rel':'data','width':self.width})
+
+        if self.isSysOutPipe(): self.createSysReadArcs()
+        else: self.createInternalReadArcs()
+
+        if self.isSysInPipe():  self.createSysFeedArcs()
+        else: self.createInternalFeedArcs()
+
 class StorageNode(SysNode):
     def nodeClass(self): return 'StorageNode'
     def dotprops(self): return [
@@ -207,21 +221,6 @@ class StorageNode(SysNode):
             print('Store has no Load operations. This is not handled.',self.name)
             sys.exit(1)
         return self.vcir.dp.storeloads[self.name][0].iwidths[0]
-    def buildDPPetriArcs(self,vcir,dpe,en,ex):
-        sacknode = dpe.sack()
-        uacknode = dpe.uack()
-        # sack -> en
-        PNArc( sacknode, en, {} )
-        # ex -> uack passive/reverse passive if multi, else petri
-        if ex.multi:
-            inprogressPlace = SysopInprogressPlace(sysdp,vcir,{'name':'inprogress:'+dpe.idstr()})
-            # sack -> inprogress
-            PNArc( sacknode, inprogressPlace, {} )
-            # inprogress -> uack
-            PNArc( inprogressPlace, uacknode, {} )
-            exuackarc = PNArc( ex, uacknode, {'rel':'passivebranch'} )
-            exuackarc.reversedArc()
-        else: PNArc( ex, uacknode, {} )
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
 
@@ -253,8 +252,9 @@ class StorageNode(SysNode):
         DPArc(self, self.r_ex, {'rel':'data','width':self.width})
 
         for dpe in self.vcir.dp.storeloads[self.name]:
+            sacknode = dpe.sack()
             uacknode = dpe.uack()
-            self.buildDPPetriArcs(vcir,dpe,self.r_en,self.r_ex)
+            self.buildDPPetriArcs(self.r_en,self.r_ex,sacknode,uacknode,dpe.idstr())
             # dpe -> r_en bind arc for address
             DPArc(dpe,self.r_en,{'rel': 'bind', 'width': self.awidth})
             # r_ex -> dpe bind arc for data
@@ -264,7 +264,9 @@ class StorageNode(SysNode):
             DPArc(uacknode,dpe,{ 'rel': 'dpsync' })
 
         for dpe in self.vcir.dp.storestores[self.name]:
-            self.buildDPPetriArcs(vcir,dpe,self.w_en,self.w_ex)
+            sacknode = dpe.sack()
+            uacknode = dpe.uack()
+            self.buildDPPetriArcs(self.w_en,self.w_ex,sacknode,uacknode,dpe.idstr())
             # dpe -> w_en bind arc for data+address
             DPArc(dpe,self.w_en,{'rel': 'bind', 'width': self.width+self.awidth})
 
