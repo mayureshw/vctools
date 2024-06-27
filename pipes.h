@@ -286,8 +286,7 @@ class PipeIf
 protected:
     Pipe *_p;
     t_PipeIf _iftyp;
-    // Could do with single transition here, but just keeping it uniform with the rest
-    PNTransition *_sreq, *_sack;
+    PNTransition *_treq, *_tack;
     PNPlace *_triggerPlace;
     VcPetriNet* pn() { return _p->pn(); }
     string ifname()
@@ -296,20 +295,20 @@ public:
     virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN() = 0;
     PNPlace* triggerPlace() { return _triggerPlace; }
-    PNTransition* triggerAck() { return _sack; }
-    PNTransition* triggerReq() { return _sreq; }
+    PNTransition* triggerAck() { return _tack; }
+    PNTransition* triggerReq() { return _treq; }
     void buildPN()
     {
-        pn()->createArc(_triggerPlace, _sreq);
-        pn()->createArc(_sreq, _sack);
+        pn()->createArc(_triggerPlace, _treq);
+        pn()->createArc(_treq, _tack);
         _buildPN();
     }
     PipeIf(Pipe *p, t_PipeIf iftyp) : _p(p), _iftyp(iftyp)
     {
         string prefix = ifname();
-        _sreq = pn()->createTransition(prefix+":PipeIf_sreq");
-        _sack = pn()->createTransition(prefix+":PipeIf_sack");
-        _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
+        _treq = pn()->createTransition(prefix+":PipeIf_trigreq");
+        _tack = pn()->createTransition(prefix+":PipeIf_trigack");
+        _tack->setEnabledActions(bind(&PipeIf::sack,this,_1));
         _triggerPlace = pn()->createPlace(prefix+":PipeIf_trigger",0,1);
     }
 };
@@ -318,7 +317,7 @@ class PipeFeeder : public PipeIf
 {
     mutex _qlock;
     queue<DatumBase*> _payloadq;
-    void _buildPN() { _p->buildPNOport(_sreq, _sack); }
+    void _buildPN() { _p->buildPNOport(_treq, _tack); }
     void sack(unsigned long eseqno)
     {
         _qlock.lock();
@@ -345,7 +344,7 @@ class PipeReader : public PipeIf
     function<void()> _exitActions;
     bool _syncmode;
     unsigned _sz;
-    void _buildPN() { _p->buildPNIport(_sreq, _sack); }
+    void _buildPN() { _p->buildPNIport(_treq, _tack); }
     void clear()
     {
         for(auto d:_retv) delete d;
