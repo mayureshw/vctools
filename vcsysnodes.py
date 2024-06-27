@@ -208,8 +208,8 @@ class StorageNode(SysNode):
             sys.exit(1)
         return self.vcir.dp.storeloads[self.name][0].iwidths[0]
     def buildDPPetriArcs(self,vcir,dpe,en,ex):
-        sacknode = vcir.pn.nodes[dpe.sack]
-        uacknode = vcir.pn.nodes[dpe.uack]
+        sacknode = dpe.sack()
+        uacknode = dpe.uack()
         # sack -> en
         PNArc( sacknode, en, {} )
         # ex -> uack passive/reverse passive if multi, else petri
@@ -253,7 +253,7 @@ class StorageNode(SysNode):
         DPArc(self, self.r_ex, {'rel':'data','width':self.width})
 
         for dpe in self.vcir.dp.storeloads[self.name]:
-            uacknode = vcir.pn.nodes[dpe.uack]
+            uacknode = dpe.uack()
             self.buildDPPetriArcs(vcir,dpe,self.r_en,self.r_ex)
             # dpe -> r_en bind arc for address
             DPArc(dpe,self.r_en,{'rel': 'bind', 'width': self.awidth})

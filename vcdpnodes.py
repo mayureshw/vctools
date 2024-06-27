@@ -73,6 +73,10 @@ class DPNode(Node):
     def nodeClass(self): return 'DPNode' if self.optyp not in self.nonInterconnectOps else self.optyp
     def optype(self): return self.optyp
     def idstr(self): return 'dp_' + str(self.nodeid)
+    def sreq(self): return self.vcir.pn.nodes[ self.reqs[0] ]
+    def sack(self): return self.vcir.pn.nodes[ self.acks[0] ]
+    def ureq(self): return self.vcir.pn.nodes[ self.reqs[1] ]
+    def uack(self): return self.vcir.pn.nodes[ self.acks[1] ]
     def createArcs(self):
         feedspipe = getattr(self,'feedspipe',None)
         if feedspipe != None: self.vcir.dp.addPipeFeed(feedspipe,self)
@@ -111,7 +115,7 @@ class DPNode(Node):
             srcnode = self.vcir.pn.nodes[self.callexit]
             DPArc(srcnode,self,{ 'rel': 'bind', 'width': sum(self.owidths) })
             # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
-            acknode = self.vcir.pn.nodes[self.uack]
+            acknode = self.uack()
             DPArc(acknode,self,{ 'rel': 'dpsync' })
             DPArc(self,acknode,{ 'rel': 'dpsync' })
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
