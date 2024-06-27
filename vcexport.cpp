@@ -229,8 +229,6 @@ public:
         auto gacks_key = jf.createJsonAtom<string>("gacks");
         auto callentry_key = jf.createJsonAtom<string>("callentry");
         auto callexit_key = jf.createJsonAtom<string>("callexit");
-        auto uack_key = jf.createJsonAtom<string>("uack");
-        auto sack_key = jf.createJsonAtom<string>("sack");
         auto readspipe_key = jf.createJsonAtom<string>("readspipe");
         auto feedspipe_key = jf.createJsonAtom<string>("feedspipe");
         auto loads_key = jf.createJsonAtom<string>("loads");
@@ -268,10 +266,6 @@ public:
                 auto calledExitPlaceId = calledModule->exitPlace()->_nodeid;
                 auto calledExitPlace_val = jf.createJsonAtom<unsigned>( calledExitPlaceId );
                 dpedict->push_back({ callexit_key, calledExitPlace_val });
-
-                auto uackId = simdpe->getAckTransition(1)->_nodeid;
-                auto uackId_val = jf.createJsonAtom<unsigned>( uackId );
-                dpedict->push_back({ uack_key, uackId_val });
             }
             else if ( simdpe->isIport() or simdpe->isOport() )
             {
@@ -286,14 +280,6 @@ public:
                 auto store_val = jf.createJsonAtom<string>(storename);
                 auto store_key = simdpe->isLoad() ? loads_key : stores_key;
                 dpedict->push_back({ store_key, store_val });
-
-                auto sackId = simdpe->getAckTransition(0)->_nodeid;
-                auto sackId_val = jf.createJsonAtom<unsigned>( sackId );
-                dpedict->push_back({ sack_key, sackId_val });
-
-                auto uackId = simdpe->getAckTransition(1)->_nodeid;
-                auto uackId_val = jf.createJsonAtom<unsigned>( uackId );
-                dpedict->push_back({ uack_key, uackId_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
