@@ -51,6 +51,7 @@ class DPElement : public Element
     vector<PNTransition*> _greqs, _gacks;
     Operator *_op;
     BRANCH *_guardBranchOp;
+    PNPlace *_branchPlace = NULL; // associated with guarded nodes and branch operators
     void indexcheck(int indx)
     {
         if ( (indx!=0) && (indx!=1) )
@@ -116,19 +117,18 @@ public:
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
-    PNPlace* createBrPlaceAcks()
+    void createBrPlaceAcks()
     {
-        auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
-        pn()->annotatePNNode(brplace, Branch_);
-        brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
-        pn()->createArc(brplace, _acks[0]);
-        pn()->createArc(brplace, _acks[1]);
+        _branchPlace = pn()->createPlace("DPE:" + _label + "_brplace");
+        pn()->annotatePNNode(_branchPlace, Branch_);
+        _branchPlace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
+        pn()->createArc(_branchPlace, _acks[0]);
+        pn()->createArc(_branchPlace, _acks[1]);
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
-        return brplace;
     }
     void buildPNBranch()
     {
@@ -138,8 +138,8 @@ public:
             cout << "vc2pn: branch has input driver count != 1: " << elem()->Get_Id() << endl;
             exit(1);
         }
-        auto brplace = createBrPlaceAcks();
-        pn()->createArc(_reqs[0], brplace);
+        createBrPlaceAcks();
+        pn()->createArc(_reqs[0], _branchPlace);
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
@@ -149,11 +149,21 @@ public:
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
     }
+    PNPlace* branchPlace()
+    {
+        if ( _branchPlace == NULL )
+        {
+            cout << "vc2pn: invalid branchPlace access" << endl;
+            exit(1);
+        }
+        return _branchPlace;
+    }
     bool isIport() { return _vctyp == vcInport_; }
     bool isOport() { return _vctyp == vcOutport_; }
     bool isCall() { return _vctyp == vcCall_; }
     bool isLoad() { return _vctyp == vcLoad_; }
     bool isStore() { return _vctyp == vcStore_; }
+    bool isBranch() { return _vctyp == vcBranch_; }
     bool isDeemedPhi()
     {
         return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
@@ -176,9 +186,9 @@ public:
         PNTransition *go = pn()->createTransition(dpelabel + "go");
         PNTransition *nogo = pn()->createTransition(dpelabel + "nogo");
         PNTransition *nogo_ureq = pn()->createTransition(dpelabel + "nogo_ureq");
-        PNPlace *brplace = pn()->createPlace(dpelabel + "brplace");
-        pn()->annotatePNNode(brplace, Branch_);
-        brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
+        _branchPlace = pn()->createPlace(dpelabel + "brplace");
+        pn()->annotatePNNode(_branchPlace, Branch_);
+        _branchPlace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
         PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");
         PNPlace *gureqplace = pn()->createPlace(dpelabel + "gureqplace");
@@ -187,17 +197,17 @@ public:
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
 
-        pn()->createArc(gsreq, brplace);
+        pn()->createArc(gsreq, _branchPlace);
 
         if ( elem()->Get_Guard_Complement() )
         {
-            pn()->createArc(brplace, go);
-            pn()->createArc(brplace, nogo);
+            pn()->createArc(_branchPlace, go);
+            pn()->createArc(_branchPlace, nogo);
         }
         else
         {
-            pn()->createArc(brplace, nogo);
-            pn()->createArc(brplace, go);
+            pn()->createArc(_branchPlace, nogo);
+            pn()->createArc(_branchPlace, go);
         }
         pn()->createArc(nogo, gsackplace);
         pn()->createArc(nogo, nogo_ureq);
@@ -304,7 +314,7 @@ public:
     void buildPN()
     {
         if ( isDeemedFlowThrough() );
-        else if ( _vctyp == vcBranch_ )
+        else if ( isBranch() )
             buildPNBranch();
         else if ( isDeemedPhi() )
             buildPNPhi();

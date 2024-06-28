@@ -233,6 +233,8 @@ public:
         auto feedspipe_key = jf.createJsonAtom<string>("feedspipe");
         auto loads_key = jf.createJsonAtom<string>("loads");
         auto stores_key = jf.createJsonAtom<string>("stores");
+        auto branchinp_key = jf.createJsonAtom<string>("branchinp");
+        auto place_key = jf.createJsonAtom<string>("place");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -280,6 +282,15 @@ public:
                 auto store_val = jf.createJsonAtom<string>(storename);
                 auto store_key = simdpe->isLoad() ? loads_key : stores_key;
                 dpedict->push_back({ store_key, store_val });
+            }
+            else if ( simdpe->isBranch() or simdpe->isDeemedGuarded() )
+            {
+                auto branchinpdict = jf.createJsonMap();
+                dpedict->push_back({ branchinp_key, branchinpdict });
+
+                auto placeid = simdpe->branchPlace()->_nodeid;
+                auto place_val = jf.createJsonAtom<unsigned>( placeid );
+                branchinpdict->push_back({ place_key, place_val });
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
