@@ -119,6 +119,7 @@ class DPNode(Node):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcDP:
+    excludeOpTyps = { 'Branch' }
     def addPipeFeed(self,pipe,node): self.pipefeeds.setdefault(pipe,[]).append(node)
     def addPipeRead(self,pipe,node): self.pipereads.setdefault(pipe,[]).append(node)
     def addLoads(self,store,node): self.storeloads.setdefault(store,[]).append(node)
@@ -132,4 +133,6 @@ class VcDP:
         self.pipefeeds = {}
         self.storeloads = {}
         self.storestores = {}
-        self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()}
+        self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()
+            if dpe.get('optyp',None) not in self.excludeOpTyps
+            }
