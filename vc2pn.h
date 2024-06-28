@@ -158,6 +158,17 @@ public:
         }
         return _branchPlace;
     }
+    vcWire* branchInpWire()
+    {
+        if ( isDeemedGuarded() ) return elem()->Get_Guard_Wire();
+        // buildPNBranch already validates the vector size of input wires to be 1
+        else if ( isBranch() ) return elem()->Get_Input_Wires()[0];
+        else
+        {
+            cout << "vc2pn: invalid branchInpWire access" << endl;
+            exit(1);
+        }
+    }
     bool isIport() { return _vctyp == vcInport_; }
     bool isOport() { return _vctyp == vcOutport_; }
     bool isCall() { return _vctyp == vcCall_; }

@@ -291,6 +291,9 @@ public:
                 auto placeid = simdpe->branchPlace()->_nodeid;
                 auto place_val = jf.createJsonAtom<unsigned>( placeid );
                 branchinpdict->push_back({ place_key, place_val });
+
+                vector<vcWire*> branchinpv = { simdpe->branchInpWire() };
+                buildJsonDPEInputs(jf, branchinpv, branchinpdict);
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
