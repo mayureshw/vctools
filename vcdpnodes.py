@@ -61,7 +61,7 @@ class DPArc(Arc):
 class DPNode(Node):
     # Operators that do not need AHIR split protocol interconnect
     # (vcInterconnect) wrapped around them by default.
-    nonInterconnectOps = {}
+    nonInterconnectOps = { 'Phi' }
     def dotprops(self): return [
         ('color','red'),
         ('shape','triangle'),
