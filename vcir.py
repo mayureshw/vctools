@@ -63,8 +63,8 @@ class Vcir:
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
         self.pipes = jsonobj.get('pipes',{})
         self.storage = jsonobj.get('storage',{})
-        self.dp = VcDP(jsonobj['dpes'],self)
         self.pn = VcPetriNet(pnobj,self)
+        self.dp = VcDP(jsonobj['dpes'],self)
         for en,moddescr in jsonobj['modules'].items():
             entryplace = self.pn.nodes[ int(en) ]
             exitplace = self.pn.nodes[ moddescr['exit'] ]

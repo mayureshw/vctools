@@ -90,6 +90,14 @@ class Node:
     def ooffsets(self): return self._widths2offset(self.owidths)
     def successors(self,rel): return [ a.tgtnode for a in self.oarcs[rel] ]
     def predecessors(self,rel): return [ a.srcnode for a in self.iarcs[rel] ]
+    def createDataInpArcs(self,inps,srcnodedict,ArcCls):
+        for tgtpos,srcinfo in inps.items():
+            srcnode = srcnodedict[srcinfo['id']]
+            ArcCls(srcnode,self,{
+                'srcpos'  : srcinfo['oppos'],
+                'tgtpos'  : tgtpos,
+                'rel'     : 'data'
+                })
     def __init__(self,nodeid,vcir,props):
         self.vcir = vcir
         self.oarcs = {}

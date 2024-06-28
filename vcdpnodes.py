@@ -85,20 +85,9 @@ class DPNode(Node):
         stores = getattr(self,'stores',None)
         if stores != None: self.vcir.dp.addStores(stores,self)
 
-        for tgtpos,srcinfo in self.dpinps.items():
-            srcnode = self.vcir.dp.nodes[srcinfo['id']]
-            DPArc(srcnode,self,{
-                'srcpos'  : srcinfo['oppos'],
-                'tgtpos'  : tgtpos,
-                'rel'     : 'data'
-                })
-        for tgtpos,srcinfo in self.fpinps.items():
-            srcnode = self.vcir.pn.nodes[srcinfo['id']]
-            DPArc(srcnode,self,{
-                'srcpos'  : srcinfo['oppos'],
-                'tgtpos'  : tgtpos,
-                'rel'     : 'data'
-                })
+        self.createDataInpArcs(self.dpinps,self.vcir.dp.nodes,DPArc)
+        self.createDataInpArcs(self.fpinps,self.vcir.pn.nodes,DPArc)
+
         for req in self.reqs + self.greqs:
             srcnode = self.vcir.pn.nodes[req]
             DPArc(srcnode,self,{'rel' : 'petri'})
@@ -128,11 +117,23 @@ class VcDP:
     def sysOutPipes(self): return [ p for p in self.pipefeeds if p not in self.pipereads ]
     def createArcs(self):
         for n in self.nodes.values(): n.createArcs()
+        for branchinp in self.branchinps:
+            brplace = self.vcir.pn.nodes[branchinp['place']]
+            brplace.createDataInpArcs(branchinp['dpinps'],self.nodes,DPArc)
+            brplace.createDataInpArcs(branchinp['fpinps'],self.vcir.pn.nodes,DPArc)
     def __init__(self,dpes,vcir):
         self.pipereads = {}
         self.pipefeeds = {}
         self.storeloads = {}
         self.storestores = {}
-        self.nodes = { int(id):DPNode(int(id),vcir,dpe) for id,dpe in dpes.items()
-            if dpe.get('optyp',None) not in self.excludeOpTyps
-            }
+        self.nodes = {}
+        self.branchinps = []
+        self.vcir = vcir
+        for id,dpe in dpes.items():
+            dpetyp = dpe.get('optyp',None)
+            # Discard Branch DP nodes as they are taken care of by BranchPlace
+            # Just use them to provide data input arc to BranchPlace
+            if dpetyp not in self.excludeOpTyps:
+                self.nodes[int(id)] = DPNode(int(id),vcir,dpe)
+            branchinp = dpe.get('branchinp',None)
+            if branchinp != None: self.branchinps.append(branchinp)
