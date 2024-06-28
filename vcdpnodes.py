@@ -88,10 +88,10 @@ class DPNode(Node):
         self.createDataInpArcs(self.dpinps,self.vcir.dp.nodes,DPArc)
         self.createDataInpArcs(self.fpinps,self.vcir.pn.nodes,DPArc)
 
-        for req in self.reqs + self.greqs:
+        for req in self.reqs:
             srcnode = self.vcir.pn.nodes[req]
             DPArc(srcnode,self,{'rel' : 'petri'})
-        for ack in self.acks + self.gacks:
+        for ack in self.acks:
             tgtnode = self.vcir.pn.nodes[ack]
             DPArc(self,tgtnode,{'rel' : 'petri'})
         if self.optyp == 'Call':
