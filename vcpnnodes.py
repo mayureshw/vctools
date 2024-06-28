@@ -150,7 +150,9 @@ class Place(PNNode):
     def isPassiveBranch(self): return self.nodeid in self.vcir.passive_branches
     def isMerge(self): return self.fanin('petri') > 1
     def isHighCapacity(self): return self.capacity > 1 or self.capacity == 0
-    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
+    def __init__(self,nodeid,vcir,props):
+        super().__init__(nodeid,vcir,props)
+        if self.isBranch: self.iwidths = [1]
 
 class VcPetriNet:
     def isSimuOnlyArc(self,srcid,tgtid): return self.isSimuOnlyNode(srcid) or self.isSimuOnlyNode(tgtid)
