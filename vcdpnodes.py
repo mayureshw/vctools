@@ -119,6 +119,7 @@ class VcDP:
         for n in self.nodes.values(): n.createArcs()
         for branchinp in self.branchinps:
             brplace = self.vcir.pn.nodes[branchinp['place']]
+            brplace.constinps = branchinp['constinps']
             brplace.createDataInpArcs(branchinp['dpinps'],self.nodes,DPArc)
             brplace.createDataInpArcs(branchinp['fpinps'],self.vcir.pn.nodes,DPArc)
     def __init__(self,dpes,vcir):
