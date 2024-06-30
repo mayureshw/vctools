@@ -103,14 +103,10 @@ class SysopInprogressPlace(SysopPlace):
 # This class just builds the net for the return path
 class ArbiteredSysNode(SysNode):
     def buildDPPetriArcs(self,en,ex,entrig,extrig,label):
-        # sack -> en
         PNArc( entrig, en, {} )
-        # ex -> uack passive/reverse passive if multi, else petri
         if ex.multi:
             inprogressPlace = SysopInprogressPlace(self.sysdp,self.vcir,{'name':'inprogress:'+label})
-            # sack -> inprogress
             PNArc( entrig, inprogressPlace, {} )
-            # inprogress -> uack
             PNArc( inprogressPlace, extrig, {} )
             exuackarc = PNArc( ex, extrig, {'rel':'passivebranch'} )
             exuackarc.reversedArc()
@@ -137,7 +133,6 @@ class PipeNode(ArbiteredSysNode):
         ackport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
         PNArc( trigack, ackport, {} )
-        PNArc( trigreq, en, {} )
         self.buildDPPetriArcs(en,ex,trigreq,trigack,self.idstr())
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
@@ -160,11 +155,7 @@ class PipeNode(ArbiteredSysNode):
             ureqnode = dpe.ureq()
             uacknode = dpe.uack()
             self.buildDPPetriArcs(self.r_en,self.r_ex,ureqnode,uacknode,dpe.idstr())
-
-            # r_ex -> dpe bind arc for data
             DPArc(self.r_ex,dpe,{'rel': 'bind', 'width': self.width})
-
-            # dpe <-> uack 2 way dpsync
             DPArc(dpe,uacknode,{ 'rel': 'dpsync' })
             DPArc(uacknode,dpe,{ 'rel': 'dpsync' })
     def createInternalFeedArcs(self):
@@ -172,7 +163,6 @@ class PipeNode(ArbiteredSysNode):
             sreqnode = dpe.sreq()
             sacknode = dpe.sack()
             self.buildDPPetriArcs(self.w_en,self.w_ex,sreqnode,sacknode,dpe.idstr())
-            # dpe -> w_en bind arc for data
             DPArc(dpe,self.w_en,{'rel': 'bind', 'width': self.width})
     def __init__(self,sysdp,vcir,props):
         super().__init__(sysdp,vcir,props)
@@ -182,23 +172,15 @@ class PipeNode(ArbiteredSysNode):
 
         self.r_en = SysopEnPlace(sysdp,vcir,{'name':'r_en:'+self.name})
         self.r_ex = SysopExPlace(sysdp,vcir,{'name':'r_ex:'+self.name,'multi':haveMultReads})
-
         self.w_en = SysopEnPlace(sysdp,vcir,{'name':'w_en:'+self.name})
         self.w_ex = SysopExPlace(sysdp,vcir,{'name':'w_ex:'+self.name,'multi':haveMultFeeds})
 
         # Ensure that arcs with pipe come before those with DPE
         # First write then read aggr arcs
-        # w_en -> self
         PNArc(self.w_en, self, {})
         DPArc(self.w_en, self, {'rel':'data','width':self.width})
-
-        # self -> w_ex
         PNArc(self, self.w_ex, {})
-
-        # r_en -> self
         PNArc(self.r_en, self, {})
-
-        # self -> r_ex
         PNArc(self, self.r_ex, {})
         DPArc(self, self.r_ex, {'rel':'data','width':self.width})
 
