@@ -104,7 +104,8 @@ class PNArc(Arc):
         super().__init__(srcnode,tgtnode,props)
 
 class PNNode(Node):
-    def onreset(self): return self.marking if self.isPlace() else 0
+    def pnmarking(self): return self.marking if self.isPlace() else None
+    def pncapacity(self): return self.capacity if self.isPlace() else None
     def nodeClass(self): return self.classname
     def optype(self): return None
     def idstr(self): return 'pn_' + str(self.nodeid)

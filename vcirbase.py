@@ -43,7 +43,8 @@ class Node:
     def isPlace(self): return False
     def isTransition(self): return False
     def isPort(self): return False
-    def onreset(self): return 0
+    def pnmarking(self): return None
+    def pncapacity(self): return None
     def iArcs(self): return [ a for r,arcs in self.iarcs.items() for a in arcs ]
     def constvals(self): return [ (int(pos),int(val))
         for pos,val in self.constinps.items()
