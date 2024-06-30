@@ -138,7 +138,6 @@ class PipeNode(ArbiteredSysNode):
             (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
         PNArc( trigack, ackport, {} )
         PNArc( trigreq, en, {} )
-        PNArc( ex, trigack, {} )
         self.buildDPPetriArcs(en,ex,trigreq,trigack,self.idstr())
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
