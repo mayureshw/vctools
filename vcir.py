@@ -33,7 +33,6 @@ class Vcir:
     def validate(self):
         self.branchPlaceType()
         self.highCapacityMustBePassive()
-        self.highCapacityNotSupported()
         self.arcWtNotSupported()
         self.confusionNotSupported()
     def checkFilExists(self,flnm):
