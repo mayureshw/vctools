@@ -13,16 +13,11 @@ class Vcir:
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
                 print('ERROR: unresolved branch place:',p.nodeid,p.label)
-    # TODO: When supported, we might make HighCapacityPlace a class and move this validation there
     def highCapacityMustBePassive(self):
         highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
             if not p.isPassiveBranch():
                 print('ERROR: Places with capacity > 1 must be passive branches',p.nodeid,p.label)
-    def highCapacityNotSupported(self):
-        highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
-        for p in highCapPlaces:
-            print('ERROR: High capacity places not supported in asyncvhdl as of now',p.nodeid,p.label,p.capacity)
     def arcWtNotSupported(self):
         highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
         for a in highWtArcs:
