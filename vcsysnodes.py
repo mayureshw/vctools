@@ -190,7 +190,7 @@ class PipeNode(ArbiteredSysNode):
         if self.isSysInPipe():  self.createSysFeedArcs()
         else: self.createInternalFeedArcs()
 
-class StorageNode(SysNode):
+class StorageNode(ArbiteredSysNode):
     def nodeClass(self): return 'StorageNode'
     def dotprops(self): return [
         ('color','blue'),
