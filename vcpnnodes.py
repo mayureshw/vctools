@@ -5,9 +5,6 @@ from vcirbase import *
 #  - nodeType: Broad classification into just Place and Transition
 #  - nodeClass: Further classification based on fanin-fanout structure of a node
 
-# To add: PassThroughPlace cannot have marking > 1
-# To add: MutexPlace must have marking = 1
-
 class EntryPlace(NodeClass):
     sign = [ isPlace, isEntryPlace ]
 
@@ -18,6 +15,7 @@ class MutexPlace(NodeClass):
         ( eq, (fanin,petri),     (fanout,mutex) ),
         ( eq, (fanin,total),     ( mul, (fanout,mutex), 2 ) ),
         ( eq, (fanout,total),    (fanout,mutex) ),
+        ( eq, marking,           1 ),
         ]
 
 class PassiveBranchPlace(NodeClass):
@@ -57,6 +55,9 @@ class PassThroughPlace(NodeClass):
         ( eq, (fanout,petri), 1 ),
         ( eq, (fanin,total),  1 ),
         ( eq, (fanout,total), 1 ),
+        ]
+    props = [
+        ( le, marking, 1 ),
         ]
 
 class MiscTransition(NodeClass):

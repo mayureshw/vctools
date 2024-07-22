@@ -57,6 +57,8 @@ class add(Infix):
     opstr = '+'
     op = operator.add
 
+class marking(Functor):
+    def eval(self,n) : return n.pnmarking()
 class fanin(Functor):
     def eval(self,n) : return n.fanin(str(self.args[0]))
 class fanout(Functor):
