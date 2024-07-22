@@ -9,7 +9,7 @@ from vcnodeprops import *
 class Vcir:
     def branchPlaceType(self):
         resolved_branches = self.mutexes.union(self.passive_branches).union(self.branches)
-        branchplaces = [ p for p in self.pn.places.values() if p.fanout('total') > 1 ]
+        branchplaces = [ p for p in self.pn.places.values() if p.fanout('petri') > 1 ]
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
                 print('ERROR: unresolved branch place:',p.nodeid,p.label)
