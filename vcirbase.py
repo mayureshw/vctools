@@ -16,8 +16,8 @@ class NodeClass:
             for s in nodecls.sign:
                 print('\t\t',Functor.create(s))
             print('\t','Properties:')
-            for propfn in nodecls.props:
-                print('\t\t',propfn(None))
+            for prop in nodecls.props:
+                print('\t\t',Functor.create(prop))
 
 class Node:
     maxdataports = 5

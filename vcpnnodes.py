@@ -24,7 +24,7 @@ class PassiveBranchPlace(NodeClass):
     sign  = [ isPlace, isPassiveBranch ]
     props = [
         ( eq, (fanin,rev_passivebranch), (fanout,passivebranch) ),
-        ( eq, (fanin,total), ( add, (fanout,passivebranch), (fanin,petri) ),
+        ( eq, (fanin,total), ( add, (fanout,passivebranch), (fanin,petri) ) ),
         ( eq, (fanout,total), (fanout,passivebranch) ),
         ]
 
@@ -112,7 +112,7 @@ class PNNode(Node):
             return
         nodeclass = clss[0]
         self.classname = nodeclass.__name__
-        propvios = [ str(propfn) for prop in nodeclass.props for propfn in [prop(self)] if not propfn.eval() ]
+        propvios = [ str(propobj) for prop in nodeclass.props for propobj in [Functor.create(prop)] if not propobj.eval(self) ]
         if len(propvios) > 0 :
             for p in propvios:
                 print('PROPVIO',self.classname,p,self.nodeinfo())
