@@ -107,7 +107,9 @@ class PNNode(Node):
             print('MultiClassification',clss,self.nodeinfo())
             return
         elif len(clss) == 0:
-            print('NoClassification',self.nodeinfo())
+            # skip reporting this error if node is not connected anywhere
+            if self.fanin('total') != 0 or self.fanout('total') != 0:
+                print('NoClassification',self.nodeinfo())
             return
         nodeclass = clss[0]
         self.classname = nodeclass.__name__
