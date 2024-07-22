@@ -24,7 +24,7 @@ class Vcir:
             print('ERROR: High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
     def confusionNotSupported(self):
         jointrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 1 ]
-        confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.fanout('petri') > 1 ]
+        confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.isPlace() and p.fanout('petri') > 1 ]
         for p,t in confpairs:
             print('ERROR: Confusion scenario not supported',p.nodeid,p.label,t.nodeid,t.label)
     def checksNotAutomated(self):
