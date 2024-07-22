@@ -71,7 +71,7 @@ class MiscTransition(NodeClass):
         ( le, (fanin,branch),         1 ),
         ( eq, (fanout,branch),        0 ),
         ( le, (fanin,petri),          4 ), # LUT inps - 2
-        ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ), # TODO: check this
+        ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ),
         ]
 
 #################################################################################################
