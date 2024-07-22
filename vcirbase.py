@@ -1,18 +1,20 @@
 # This module contains base classes for both pn and dpe irs. This abstract view
 # of pn and dp forms the basis for vhdl code generation.
 
+from vcnodeprops import Functor
+
 class NodeClass:
     props = []
     sign = []
     @classmethod
-    def checkSign(cls,o): return all( s(o).eval() for s in cls.sign )
+    def checkSign(cls,o): return all( Functor.create(s).eval(o) for s in cls.sign )
     @classmethod
     def printProps(cls):
         for nodecls in cls.__subclasses__():
             print(nodecls.__name__,':')
             print('\t','Signature:')
             for s in nodecls.sign:
-                print('\t\t',s(None))
+                print('\t\t',Functor.create(s))
             print('\t','Properties:')
             for propfn in nodecls.props:
                 print('\t\t',propfn(None))

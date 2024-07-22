@@ -2,17 +2,16 @@ import sys
 import operator
 
 class Functor:
-    def isconst(self,c): return isinstance(c,int)
+    @staticmethod
+    def isconst(c): return isinstance(c,int)
+    @classmethod
+    def create(cls,e): return c(e) if cls.isconst(e) else e[0](e[1:]) if isinstance(e,tuple) else e([])
     def __str__(self) :
         return self.__class__.__name__ if self.args == [] else (
         self.__class__.__name__ + '( ' + \
         ', '.join(str(a) for a in self.args) + \
         ' )' )
-    def __init__(self,args):
-        self.args = [
-            ( c(a) if self.isconst(a) else a[0](a[1:]) if isinstance(a,tuple) else a([]) )
-            for a in args
-            ]
+    def __init__(self,args): self.args = [ self.create(a) for a in args ]
 
 class Unary(Functor):
     def eval(self,n): return self.op( self.args[0].eval(n) )
@@ -24,6 +23,7 @@ class not_(Unary):
     op = operator.not_
 
 class c(Functor):
+    def eval(self,n): return self.val
     def __str__(self): return str(self.val)
     def __init__(self,val): self.val = val
 
