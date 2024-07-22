@@ -53,8 +53,6 @@ class PassThroughPlace(NodeClass):
         ( not_, isEntryPlace ),
         ( eq, (fanin,petri),  1 ),
         ( eq, (fanout,petri), 1 ),
-        ( eq, (fanin,total),  1 ),
-        ( eq, (fanout,total), 1 ),
         ]
     props = [
         ( le, marking, 1 ),
