@@ -1104,7 +1104,7 @@ public:
         auto it = _storageMutexPlaces.find(sto);
         if ( it == _storageMutexPlaces.end() )
         {
-            auto storageMutex = pn()->createPlace("MARKP:" + sto->Get_Id() + ".mutex");
+            auto storageMutex = pn()->createPlace("MARKP:" + sto->Get_Id() + ".mutex",1);
             pn()->annotatePNNode( storageMutex, Mutex_ );
             _storageMutexPlaces.emplace(sto, storageMutex);
             return storageMutex;
