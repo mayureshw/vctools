@@ -5,79 +5,72 @@ from vcirbase import *
 #  - nodeType: Broad classification into just Place and Transition
 #  - nodeClass: Further classification based on fanin-fanout structure of a node
 
+# To add: PassThroughPlace cannot have marking > 1
+# To add: MutexPlace must have marking = 1
+
 class EntryPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isEntryPlace'),
-        ]
+    sign = [ isPlace, isEntryPlace ]
 
 class MutexPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isMutex'),
-        ]
+    sign = [ isPlace, isMutex ]
     props = [
-lambda n: e( v(n,'rev_mutex','fanin'), eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'petri','fanin'),     eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'total','fanin'),     eq, e( v(n,'mutex','fanout'), mul, c(2) ) ),
-lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
+        ( eq, (fanin,rev_mutex), (fanout,mutex) ),
+        ( eq, (fanin,petri),     (fanout,mutex) ),
+        ( eq, (fanin,total),     ( mul, (fanout,mutex), 2 ) ),
+        ( eq, (fanout,total),    (fanout,mutex) ),
         ]
 
 class PassiveBranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isPassiveBranch'),
-        ]
+    sign  = [ isPlace, isPassiveBranch ]
     props = [
-lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
+        ( eq, (fanin,rev_passivebranch), (fanout,passivebranch) ),
+        ( eq, (fanin,total), ( add, (fanout,passivebranch), (fanin,petri) ),
+        ( eq, (fanout,total), (fanout,passivebranch) ),
         ]
 
 class BranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isBranch'),
-        ]
+    sign  = [ isPlace, isBranch ]
     props = [
-lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
-lambda n: e( v(n,'petri','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanout'),  eq, c(2) ),
+        ( eq, (fanout,branch), 2 ),
+        ( eq, (fanin,petri),   1 ),
+        ( eq, (fanout,total),  2 ),
+        ( eq, (fanin,total),   1 ),
         ]
 
 class MergePlace(NodeClass):
     sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-lambda n: e( not_, f(n,'isEntryPlace') ),
+        isPlace,
+        ( not_, isEntryPlace ),
+        ( eq, (fanin,petri),  2 ),
+        ( eq, (fanout,petri), 1 ),
         ]
     props = [
-lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
+        ( eq, (fanin,total),  2 ),
+        ( eq, (fanout,total), 1 ),
         ]
 
 class PassThroughPlace(NodeClass):
     sign = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-lambda n: e( not_, f(n,'isEntryPlace') ),
+        isPlace,
+        ( not_, isEntryPlace ),
+        ( eq, (fanin,petri),  1 ),
+        ( eq, (fanout,petri), 1 ),
+        ( eq, (fanin,total),  1 ),
+        ( eq, (fanout,total), 1 ),
         ]
 
 class MiscTransition(NodeClass):
-    sign = [
-lambda n: f(n,'isTransition')
-        ]
+    sign = [ isTransition ]
     props = [
-lambda n: e( v(n,'mutex','fanin'), le, c(1) ),
-lambda n: e( v(n,'mutex','fanin'), eq, v(n,'rev_mutex','fanout') ),
-lambda n: e( v(n,'mutex','fanout'), eq, c(0) ),
-lambda n: e( v(n,'passivebranch','fanin'), eq, v(n,'rev_passivebranch','fanout') ),
-lambda n: e( v(n,'passivebranch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'branch','fanin'), le, c(1) ),
-lambda n: e( e( v(n,'branch','fanin'), eq, c(0) ), or_, e( v(n,'total','fanin') ,eq, c(1) ) ),
-lambda n: e( v(n,'branch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl layer
+        ( le, (fanin,mutex),          1 ),
+        ( eq, (fanin,mutex),          (fanout,rev_mutex) ),
+        ( eq, (fanout,mutex),         0 ),
+        ( eq, (fanin,passivebranch),  (fanout,rev_passivebranch) ),
+        ( eq, (fanout,passivebranch), 0 ),
+        ( le, (fanin,branch),         1 ),
+        ( eq, (fanout,branch),        0 ),
+        ( le, (fanin,petri),          4 ), # LUT inps - 2
+        ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ), # TODO: check this
         ]
 
 #################################################################################################
