@@ -41,6 +41,7 @@ class Pipe
 {
     VcPetriNet *_pn;
 protected:
+    vcPipe *_vcp;
     unsigned _depth;
     unsigned _nElems = 0;
     vector<DatumBase*> _store;
@@ -144,7 +145,7 @@ public:
         buildPNMutexDepOport(sreq, sack);
         buildPNOport1(sreq, sack);
     }
-    Pipe(unsigned depth, string label, VcPetriNet* pn) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn)
+    Pipe(unsigned depth, string label, VcPetriNet* pn, vcPipe* vcp) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn), _vcp(vcp)
     {
         _mutexPlace = _pn->createPlace("MARKP:"+_label+".Mutex",1);
         pn->annotatePNNode(_mutexPlace, Mutex_);
@@ -184,7 +185,7 @@ protected:
         // in port should release a token to freePlace on uack
         pn()->createArc(uack, _freePlace);
     }
-    BlockingPipe(unsigned depth, string label, VcPetriNet *pn) : Pipe(depth,label,pn)
+    BlockingPipe(unsigned depth, string label, VcPetriNet *pn, vcPipe *vcp) : Pipe(depth,label,pn,vcp)
     {
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
         pn->annotatePNNode(_freePlace, PassiveBranch_);
@@ -223,7 +224,7 @@ public:
         pn()->createArc(popEmpty, _freePlace, "", _depth);
         pn()->createArc(_freePlace, popEmpty, "", _depth);
     }
-    NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn) : BlockingPipe(depth,label,pn)
+    NonBlockingPipe(unsigned depth, string label, VcPetriNet* pn, vcPipe *vcp) : BlockingPipe(depth,label,pn,vcp)
     {
         _popPlace = pn->createPlace(_label+".pop");
         pn->annotatePNNode(_popPlace, PassiveBranch_);
@@ -253,7 +254,7 @@ protected:
     unsigned poppos() { return _rpos++; }
     unsigned lastPopPosOnEmpty() { return _rpos.prev(); }
 public:
-    Fifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : _rpos(ModCntr(depth)), Base(depth,label,pn)
+    Fifo(unsigned depth, unsigned width, string label, VcPetriNet* pn, vcPipe *vcp) : _rpos(ModCntr(depth)), Base(depth,label,pn,vcp)
     {
         Pipe::initStore<T>(depth, width);
     }
@@ -266,35 +267,42 @@ protected:
     unsigned poppos() { return --(this->_wpos); }
     unsigned lastPopPosOnEmpty() { return 0; }
 public:
-    Lifo(unsigned depth, unsigned width, string label, VcPetriNet* pn) : Base(depth,label,pn)
+    Lifo(unsigned depth, unsigned width, string label, VcPetriNet* pn, vcPipe *vcp) : Base(depth,label,pn,vcp)
     {
         Pipe::initStore<T>(depth, width);
     }
 };
 
+typedef enum { Feeder_, Reader_ } t_PipeIf;
 class PipeIf
 {
 protected:
     Pipe *_p;
-    // Could do with single transition here, but just keeping it uniform with the rest
-    PNTransition *_sreq, *_sack;
+    t_PipeIf _iftyp;
+    PNTransition *_treq, *_tack;
     PNPlace *_triggerPlace;
     VcPetriNet* pn() { return _p->pn(); }
+    string ifname()
+    { return _p->_label + ( _iftyp == Feeder_ ? ":Feeder" : ":Reader" ); }
 public:
     virtual void sack(unsigned long eseqno) = 0;
     virtual void _buildPN() = 0;
+    PNPlace* triggerPlace() { return _triggerPlace; }
+    PNTransition* triggerAck() { return _tack; }
+    PNTransition* triggerReq() { return _treq; }
     void buildPN()
     {
-        pn()->createArc(_triggerPlace, _sreq);
-        pn()->createArc(_sreq, _sack);
+        pn()->createArc(_triggerPlace, _treq);
+        pn()->createArc(_treq, _tack);
         _buildPN();
     }
-    PipeIf(Pipe *p) : _p(p)
+    PipeIf(Pipe *p, t_PipeIf iftyp) : _p(p), _iftyp(iftyp)
     {
-        _sreq = pn()->createTransition("PipeIf_sreq");
-        _sack = pn()->createTransition("PipeIf_sack");
-        _sack->setEnabledActions(bind(&PipeIf::sack,this,_1));
-        _triggerPlace = pn()->createPlace("PipeIf_trigger",0,0);
+        string prefix = ifname();
+        _treq = pn()->createTransition(prefix+":PipeIf_trigreq");
+        _tack = pn()->createTransition(prefix+":PipeIf_trigack");
+        _tack->setEnabledActions(bind(&PipeIf::sack,this,_1));
+        _triggerPlace = pn()->createPlace(prefix+":PipeIf_trigger",0,1);
     }
 };
 
@@ -302,8 +310,7 @@ class PipeFeeder : public PipeIf
 {
     mutex _qlock;
     queue<DatumBase*> _payloadq;
-using PipeIf::PipeIf;
-    void _buildPN() { _p->buildPNOport(_sreq, _sack); }
+    void _buildPN() { _p->buildPNOport(_treq, _tack); }
     void sack(unsigned long eseqno)
     {
         _qlock.lock();
@@ -319,18 +326,18 @@ public:
         _qlock.unlock();
         pn()->addtokens(_triggerPlace, payload.size());
     }
+    PipeFeeder(Pipe *p) : PipeIf(p,Feeder_) {}
 };
 
 class PipeReader : public PipeIf
 {
-using PipeIf::PipeIf;
     mutex _recd_mutex;
     condition_variable _recd_cvar;
     vector<DatumBase*> _retv;
     function<void()> _exitActions;
     bool _syncmode;
     unsigned _sz;
-    void _buildPN() { _p->buildPNIport(_sreq, _sack); }
+    void _buildPN() { _p->buildPNIport(_treq, _tack); }
     void clear()
     {
         for(auto d:_retv) delete d;
@@ -379,5 +386,6 @@ public:
         // There is no need to reset any attributes as next read cycle can
         // begin only after next receive call which would set fresh attributes
     }
+    PipeReader(Pipe *p) : PipeIf(p,Reader_) {}
 };
 #endif

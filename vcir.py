@@ -3,32 +3,28 @@ from itertools import chain
 from operator import *
 from vcpnnodes import *
 from vcdpnodes import *
+from vcsysnodes import *
 from vcnodeprops import *
 
 class Vcir:
     def branchPlaceType(self):
         resolved_branches = self.mutexes.union(self.passive_branches).union(self.branches)
-        branchplaces = [ p for p in self.pn.places.values() if p.fanout('total') > 1 ]
+        branchplaces = [ p for p in self.pn.places.values() if p.fanout('petri') > 1 ]
         for p in branchplaces:
             if p.nodeid not in resolved_branches:
                 print('ERROR: unresolved branch place:',p.nodeid,p.label)
-    # TODO: When supported, we might make HighCapacityPlace a class and move this validation there
     def highCapacityMustBePassive(self):
         highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
         for p in highCapPlaces:
             if not p.isPassiveBranch():
                 print('ERROR: Places with capacity > 1 must be passive branches',p.nodeid,p.label)
-    def highCapacityNotSupported(self):
-        highCapPlaces = [ p for p in self.pn.places.values() if p.isHighCapacity() ]
-        for p in highCapPlaces:
-            print('ERROR: High capacity places not supported in asyncvhdl as of now',p.nodeid,p.label,p.capacity)
     def arcWtNotSupported(self):
         highWtArcs = [ a for a in self.pn.arcs if a.wt > 1 ]
         for a in highWtArcs:
             print('ERROR: High arc wt not supported in asyncvhdl as of now',a.srcnode.nodeid,'->',a.tgtnode.nodeid,a.wt)
     def confusionNotSupported(self):
         jointrns = [ t for t in self.pn.transitions.values() if t.fanin('petri') > 1 ]
-        confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.fanout('petri') > 1 ]
+        confpairs = [ (p,t) for t in jointrns for p in t.predecessors('petri') if p.isPlace() and p.fanout('petri') > 1 ]
         for p,t in confpairs:
             print('ERROR: Confusion scenario not supported',p.nodeid,p.label,t.nodeid,t.label)
     def checksNotAutomated(self):
@@ -37,15 +33,15 @@ class Vcir:
     def validate(self):
         self.branchPlaceType()
         self.highCapacityMustBePassive()
-        self.highCapacityNotSupported()
         self.arcWtNotSupported()
         self.confusionNotSupported()
     def checkFilExists(self,flnm):
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
-    def nodes(self): return [ n for n in chain(self.pn.nodes.values(), self.dp.nodes.values())
-        if n.fanout('total') > 0 ]
+    def nodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
+    def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
+        if self.pn.nodes[en].fanin('total') == 0 ]
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'
@@ -57,10 +53,12 @@ class Vcir:
         self.passive_branches = set(jsonobj['passive_branches'])
         self.branches = set(jsonobj['branches'])
         self.simu_only = set(jsonobj['simu_only'])
-        self.module_entries = { int(en) for en in jsonobj['modules'] }
+        self.module_entries = { int(en) : d for en,d in jsonobj['modules'].items() }
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
-        self.dp = VcDP(jsonobj['dpes'],self)
+        self.pipes = jsonobj.get('pipes',{})
+        self.storage = jsonobj.get('storage',{})
         self.pn = VcPetriNet(pnobj,self)
+        self.dp = VcDP(jsonobj['dpes'],self)
         for en,moddescr in jsonobj['modules'].items():
             entryplace = self.pn.nodes[ int(en) ]
             exitplace = self.pn.nodes[ moddescr['exit'] ]
@@ -71,24 +69,18 @@ class Vcir:
 
             for tgtpos,srcinfo in moddescr['dpinps'].items():
                 srcnode = self.dp.nodes[srcinfo['id']]
-                arcobj = DPArc({
-                    'srcnode' : srcnode,
+                DPArc(srcnode,exitplace,{
                     'srcpos' : srcinfo['oppos'],
-                    'tgtnode' : exitplace,
                     'tgtpos' : tgtpos,
                     'rel' : 'data'
                     })
-                exitplace.addIarc(arcobj,False)
-                srcnode.addOarc(arcobj,False)
             for tgtpos,srcinfo in moddescr['fpinps'].items():
-                arcobj = DPArc({
-                    'srcnode' : entryplace,
+                DPArc(entryplace,exitplace,{
                     'srcpos' : srcinfo['oppos'],
-                    'tgtnode' : exitplace,
                     'tgtpos' : tgtpos,
                     'rel' : 'data'
                     })
-                exitplace.addIarc(arcobj,False)
-                entryplace.addOarc(arcobj,False)
         self.dp.createArcs() # Needs to be done after pn is in place
+        self.sysdp = VCSysDP(self)
+        self.pn.classify() # Needs to be called after pn,dp,sys - all are in place
         self.validate()

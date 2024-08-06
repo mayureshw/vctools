@@ -6,82 +6,70 @@ from vcirbase import *
 #  - nodeClass: Further classification based on fanin-fanout structure of a node
 
 class EntryPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isEntryPlace'),
-        ]
+    sign = [ isPlace, isEntryPlace ]
 
 class MutexPlace(NodeClass):
-    sign = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isMutex'),
-        ]
+    sign = [ isPlace, isMutex ]
     props = [
-lambda n: e( v(n,'rev_mutex','fanin'), eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'petri','fanin'),     eq, v(n,'mutex','fanout') ),
-lambda n: e( v(n,'total','fanin'),     eq, e( v(n,'mutex','fanout'), mul, c(2) ) ),
-lambda n: e( v(n,'total','fanout'),    eq, v(n,'mutex','fanout') ),
+        ( eq, (fanin,rev_mutex), (fanout,mutex) ),
+        ( eq, (fanin,petri),     (fanout,mutex) ),
+        ( eq, (fanin,total),     ( mul, (fanout,mutex), 2 ) ),
+        ( eq, (fanout,total),    (fanout,mutex) ),
+        ( eq, marking,           1 ),
         ]
 
 class PassiveBranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isPassiveBranch'),
-        ]
+    sign  = [ isPlace, isPassiveBranch ]
     props = [
-lambda n: e( v(n,'rev_passivebranch','fanin'), eq, v(n,'passivebranch','fanout') ),
-lambda n: e( v(n,'total','fanin'),             eq, e( v(n,'passivebranch','fanout'), add, v(n,'petri','fanin') ) ),
-lambda n: e( v(n,'total','fanout'),            eq, v(n,'passivebranch','fanout') ),
+        ( eq, (fanin,rev_passivebranch), (fanout,passivebranch) ),
+        ( eq, (fanin,total), ( add, (fanout,passivebranch), (fanin,petri) ) ),
+        ( eq, (fanout,total), (fanout,passivebranch) ),
         ]
 
 class BranchPlace(NodeClass):
-    sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: f(n,'isBranch'),
-        ]
+    sign  = [ isPlace, isBranch ]
     props = [
-lambda n: e( v(n,'branch','fanout'), eq, c(2) ),
-lambda n: e( v(n,'petri','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanin'),   eq, c(1) ),
-lambda n: e( v(n,'total','fanout'),  eq, c(2) ),
+        ( eq, (fanout,branch), 2 ),
+        ( eq, (fanin,petri),   1 ),
+        ( eq, (fanout,total),  2 ),
+        ( eq, (fanin,total),   1 ),
         ]
 
 class MergePlace(NodeClass):
     sign  = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'petri','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-lambda n: e( not_, f(n,'isEntryPlace') ),
+        isPlace,
+        ( not_, isEntryPlace ),
+        ( eq, (fanin,petri),  2 ),
+        ( eq, (fanout,petri), 1 ),
         ]
     props = [
-lambda n: e( v(n,'total','fanin'),  eq, c(2) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
+        ( eq, (fanin,total),  2 ),
+        ( eq, (fanout,total), 1 ),
         ]
 
 class PassThroughPlace(NodeClass):
     sign = [
-lambda n: f(n,'isPlace'),
-lambda n: e( v(n,'total','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'total','fanout'), eq, c(1) ),
-lambda n: e( v(n,'petri','fanin'),  eq, c(1) ),
-lambda n: e( v(n,'petri','fanout'), eq, c(1) ),
-lambda n: e( not_, f(n,'isEntryPlace') ),
+        isPlace,
+        ( not_, isEntryPlace ),
+        ( eq, (fanin,petri),  1 ),
+        ( eq, (fanout,petri), 1 ),
+        ]
+    props = [
+        ( le, marking, 1 ),
         ]
 
 class MiscTransition(NodeClass):
-    sign = [
-lambda n: f(n,'isTransition')
-        ]
+    sign = [ isTransition ]
     props = [
-lambda n: e( v(n,'mutex','fanin'), le, c(1) ),
-lambda n: e( v(n,'mutex','fanin'), eq, v(n,'rev_mutex','fanout') ),
-lambda n: e( v(n,'mutex','fanout'), eq, c(0) ),
-lambda n: e( v(n,'passivebranch','fanin'), eq, v(n,'rev_passivebranch','fanout') ),
-lambda n: e( v(n,'passivebranch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'branch','fanin'), le, c(1) ),
-lambda n: e( e( v(n,'branch','fanin'), eq, c(0) ), or_, e( v(n,'total','fanin') ,eq, c(1) ) ),
-lambda n: e( v(n,'branch','fanout'), eq, c(0) ),
-lambda n: e( v(n,'petri','fanin'), le, c(4) ), # Current limitation in vhdl layer
+        ( le, (fanin,mutex),          1 ),
+        ( eq, (fanin,mutex),          (fanout,rev_mutex) ),
+        ( eq, (fanout,mutex),         0 ),
+        ( eq, (fanin,passivebranch),  (fanout,rev_passivebranch) ),
+        ( eq, (fanout,passivebranch), 0 ),
+        ( le, (fanin,branch),         1 ),
+        ( eq, (fanout,branch),        0 ),
+        ( le, (fanin,petri),          4 ), # LUT inps - 2
+        ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ),
         ]
 
 #################################################################################################
@@ -92,25 +80,24 @@ class PNArc(Arc):
         [ ('color','green'), ('style','dotted') ] if self.rel == 'rev_mutex' else \
         [ ('color','lightblue') ] if self.rel == 'passivebranch' else \
         [ ('color','lightblue'), ('style','dotted') ] if self.rel == 'rev_passivebranch' else []
-    def reversedArc(self): return PNArc({
-        'srcnode'   : self.tgtnode,
-        'tgtnode'   : self.srcnode,
-        'wt'        : self.wt,
-        'rel'       : 'rev_' + self.rel,
+    def reversedArc(self): return PNArc(self.tgtnode,self.srcnode,{
+        'wt'  : self.wt,
+        'rel' : 'rev_' + self.rel,
         })
-    def _inferRel(self): return (
-        'mutex' if self.srcnode.isMutex() else \
-        'passivebranch' if self.srcnode.isPassiveBranch() else \
-        'branch' if self.srcnode.isBranch() else \
+    def _inferRel(self,srcnode): return (
+        'mutex' if srcnode.isMutex() else \
+        'passivebranch' if srcnode.isPassiveBranch() else \
+        'branch' if srcnode.isBranch() else \
         'petri'
-        ) if self.srcnode.isPlace() else \
+        ) if srcnode.isPlace() else \
         'petri'
-    def __init__(self,d):
-        super().__init__(d)
-        if 'rel' not in self.__dict__: self.rel = self._inferRel()
+    def __init__(self,srcnode,tgtnode,props):
+        if 'rel' not in props: props['rel'] = self._inferRel(srcnode)
+        super().__init__(srcnode,tgtnode,props)
 
 class PNNode(Node):
-    def onreset(self): return self.marking if self.isPlace() else 0
+    def pnmarking(self): return self.marking if self.isPlace() else None
+    def pncapacity(self): return self.capacity if self.isPlace() else None
     def nodeClass(self): return self.classname
     def optype(self): return None
     def idstr(self): return 'pn_' + str(self.nodeid)
@@ -120,11 +107,13 @@ class PNNode(Node):
             print('MultiClassification',clss,self.nodeinfo())
             return
         elif len(clss) == 0:
-            print('NoClassification',self.nodeinfo())
+            # skip reporting this error if node is not connected anywhere
+            if self.fanin('total') != 0 or self.fanout('total') != 0:
+                print('NoClassification',self.nodeinfo())
             return
         nodeclass = clss[0]
         self.classname = nodeclass.__name__
-        propvios = [ str(propfn) for prop in nodeclass.props for propfn in [prop(self)] if not propfn.eval() ]
+        propvios = [ str(propobj) for prop in nodeclass.props for propobj in [Functor.create(prop)] if not propobj.eval(self) ]
         if len(propvios) > 0 :
             for p in propvios:
                 print('PROPVIO',self.classname,p,self.nodeinfo())
@@ -156,11 +145,16 @@ class Place(PNNode):
     def isPassiveBranch(self): return self.nodeid in self.vcir.passive_branches
     def isMerge(self): return self.fanin('petri') > 1
     def isHighCapacity(self): return self.capacity > 1 or self.capacity == 0
-    def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
+    def __init__(self,nodeid,vcir,props):
+        super().__init__(nodeid,vcir,props)
+        if self.isBranch(): self.iwidths = [1]
 
 class VcPetriNet:
     def isSimuOnlyArc(self,srcid,tgtid): return self.isSimuOnlyNode(srcid) or self.isSimuOnlyNode(tgtid)
     def isSimuOnlyNode(self,nodeid): return nodeid in self.vcir.simu_only
+    # classify should be called after all layers of vcir are built
+    def classify(self):
+        for node in self.nodes.values(): node.classify()
     def __init__(self,pnobj,vcir):
         self.vcir = vcir
         self.places = {
@@ -180,16 +174,6 @@ class VcPetriNet:
             if self.isSimuOnlyArc(srcid,tgtid): continue
             srcnode = self.nodes[ srcid ]
             tgtnode = self.nodes[ tgtid ]
-            arcobj = PNArc({
-                'srcnode'   : srcnode,
-                'tgtnode'   : tgtnode,
-                'wt'        : arc['wt'],
-                })
-            srcnode.addOarc(arcobj)
-            tgtnode.addIarc(arcobj)
-            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} :
-                revarc = arcobj.reversedArc()
-                srcnode.addIarc(revarc)
-                tgtnode.addOarc(revarc)
-        for node in self.nodes.values(): node.classify()
+            arcobj = PNArc(srcnode,tgtnode, { 'wt': arc['wt'] })
+            if srcnode.isPlace() and arcobj.rel in {'mutex','passivebranch'} : arcobj.reversedArc()
 

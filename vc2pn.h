@@ -51,6 +51,7 @@ class DPElement : public Element
     vector<PNTransition*> _greqs, _gacks;
     Operator *_op;
     BRANCH *_guardBranchOp;
+    PNPlace *_branchPlace = NULL; // associated with guarded nodes and branch operators
     void indexcheck(int indx)
     {
         if ( (indx!=0) && (indx!=1) )
@@ -116,19 +117,18 @@ public:
         _acks[0]->setEnabledActions(bind(&Operator::uack,_op,_1));
 
     }
-    PNPlace* createBrPlaceAcks()
+    void createBrPlaceAcks()
     {
-        auto brplace = pn()->createPlace("DPE:" + _label + "_brplace");
-        pn()->annotatePNNode(brplace, Branch_);
-        brplace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
-        pn()->createArc(brplace, _acks[0]);
-        pn()->createArc(brplace, _acks[1]);
+        _branchPlace = pn()->createPlace("DPE:" + _label + "_brplace");
+        pn()->annotatePNNode(_branchPlace, Branch_);
+        _branchPlace->setArcChooser(bind(&BRANCH::arcChooser,(BRANCH*)_op));
+        pn()->createArc(_branchPlace, _acks[0]);
+        pn()->createArc(_branchPlace, _acks[1]);
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
-        return brplace;
     }
     void buildPNBranch()
     {
@@ -138,8 +138,8 @@ public:
             cout << "vc2pn: branch has input driver count != 1: " << elem()->Get_Id() << endl;
             exit(1);
         }
-        auto brplace = createBrPlaceAcks();
-        pn()->createArc(_reqs[0], brplace);
+        createBrPlaceAcks();
+        pn()->createArc(_reqs[0], _branchPlace);
 #       ifdef USECEP
         auto rootindex = elem()->Get_Root_Index();
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
@@ -149,7 +149,32 @@ public:
     {
         return _vctyp == vcPhiPipelined_ ? 0 : 1;
     }
+    PNPlace* branchPlace()
+    {
+        if ( _branchPlace == NULL )
+        {
+            cout << "vc2pn: invalid branchPlace access" << endl;
+            exit(1);
+        }
+        return _branchPlace;
+    }
+    vcWire* branchInpWire()
+    {
+        if ( isDeemedGuarded() ) return elem()->Get_Guard_Wire();
+        // buildPNBranch already validates the vector size of input wires to be 1
+        else if ( isBranch() ) return elem()->Get_Input_Wires()[0];
+        else
+        {
+            cout << "vc2pn: invalid branchInpWire access" << endl;
+            exit(1);
+        }
+    }
+    bool isIport() { return _vctyp == vcInport_; }
+    bool isOport() { return _vctyp == vcOutport_; }
     bool isCall() { return _vctyp == vcCall_; }
+    bool isLoad() { return _vctyp == vcLoad_; }
+    bool isStore() { return _vctyp == vcStore_; }
+    bool isBranch() { return _vctyp == vcBranch_; }
     bool isDeemedPhi()
     {
         return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
@@ -172,9 +197,9 @@ public:
         PNTransition *go = pn()->createTransition(dpelabel + "go");
         PNTransition *nogo = pn()->createTransition(dpelabel + "nogo");
         PNTransition *nogo_ureq = pn()->createTransition(dpelabel + "nogo_ureq");
-        PNPlace *brplace = pn()->createPlace(dpelabel + "brplace");
-        pn()->annotatePNNode(brplace, Branch_);
-        brplace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
+        _branchPlace = pn()->createPlace(dpelabel + "brplace");
+        pn()->annotatePNNode(_branchPlace, Branch_);
+        _branchPlace->setArcChooser(bind(&BRANCH::arcChooser, _guardBranchOp));
         PNPlace *gsackplace = pn()->createPlace(dpelabel + "gsackplace");
         PNPlace *guackplace = pn()->createPlace(dpelabel + "guackplace");
         PNPlace *gureqplace = pn()->createPlace(dpelabel + "gureqplace");
@@ -183,17 +208,17 @@ public:
         auto gsreq = _greqs[0], gureq = _greqs[1], gsack = _gacks[0], guack = _gacks[1];
         auto sreq = _reqs[0], ureq = _reqs[1], sack = _acks[0], uack = _acks[1];
 
-        pn()->createArc(gsreq, brplace);
+        pn()->createArc(gsreq, _branchPlace);
 
         if ( elem()->Get_Guard_Complement() )
         {
-            pn()->createArc(brplace, go);
-            pn()->createArc(brplace, nogo);
+            pn()->createArc(_branchPlace, go);
+            pn()->createArc(_branchPlace, nogo);
         }
         else
         {
-            pn()->createArc(brplace, nogo);
-            pn()->createArc(brplace, go);
+            pn()->createArc(_branchPlace, nogo);
+            pn()->createArc(_branchPlace, go);
         }
         pn()->createArc(nogo, gsackplace);
         pn()->createArc(nogo, nogo_ureq);
@@ -211,25 +236,22 @@ public:
     // buildPN that suits most DPEs
     void buildPNDefault()
     {
-        bool isIport = _vctyp == vcInport_;
-        bool isOport = _vctyp == vcOutport_;
-        if ( isIport ) // In AHIR Inport reads on ureq, not on sreq
+        if ( isIport() ) // In AHIR Inport reads on ureq, not on sreq
             _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
         auto sreq_sack_place = pn()->createArc(_reqs[0], _acks[0]);
-        auto sack_uack_place = pn()->createArc(_acks[0], _acks[1]); // Since sreq/ureq can be ||, need this sync
-        auto ureq_uack_place = pn()->createArc(_reqs[1], _acks[1]);
         pn()->annotatePNNode(sreq_sack_place, SimuOnly_);
-        pn()->annotatePNNode(sack_uack_place, SimuOnly_);
+        auto ureq_uack_place = pn()->createArc(_reqs[1], _acks[1]);
         pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
-        auto uack2sack = (PNPlace*) pn()->createArc(
-            _acks[1], _acks[0],
-            "MARKP:" + _acks[0]->_name
+
+        pn()->createArc(_acks[0], _reqs[1]); // Since sreq/ureq can be ||, need this sync
+        auto uack2sreq = (PNPlace*) pn()->createArc(
+            _acks[1], _reqs[0],
+            "MARKP:" + _reqs[0]->_name
             );
-        uack2sack->setMarking(1);
-        pn()->annotatePNNode(uack2sack, SimuOnly_);
+        uack2sreq->setMarking(1);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
         pn()->vctid.add({ rootindex, "req0", _reqs[0]->_nodeid });
@@ -237,14 +259,14 @@ public:
         pn()->vctid.add({ rootindex, "ack0", _acks[0]->_nodeid });
         pn()->vctid.add({ rootindex, "ack1", _acks[1]->_nodeid });
 #       endif
-        if ( isIport or isOport )
+        if ( isIport() or isOport() )
         {
             auto sreq = _reqs[0];
             auto sack = _acks[0];
             auto ureq = _reqs[1];
             auto uack = _acks[1];
             auto pipe = ((IOPort*)_op)->_pipe;
-            if ( isIport ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
+            if ( isIport() ) pipe->buildPNIport(ureq, uack); // See comment "In AHIR..." above
             else pipe->buildPNOport(sreq, sack);
         }
         else if ( isCall() )
@@ -271,6 +293,14 @@ public:
             // and releases a token to called module's mutex
             pn()->createArc(uack, calledMutexPlace);
         }
+        else if ( isLoad() or isStore() )
+        {
+            auto sreq = _reqs[0];
+            auto uack = _acks[1];
+            auto storageMutexPlace = sys()->getStorageMutexPlace( elem() );
+            pn()->createArc(storageMutexPlace,sreq);
+            pn()->createArc(uack,storageMutexPlace);
+        }
     }
     void createGuardReqs()
     {
@@ -295,7 +325,7 @@ public:
     void buildPN()
     {
         if ( isDeemedFlowThrough() );
-        else if ( _vctyp == vcBranch_ )
+        else if ( isBranch() )
             buildPNBranch();
         else if ( isDeemedPhi() )
             buildPNPhi();
@@ -975,7 +1005,7 @@ public:
         _moduleEntryPlace = pn()->createPlace("MOD:"+name()+".entry");
         _moduleExitPlace = pn()->createPlace("MOD:"+name()+".exit"); // Do not use DbgPlace for this, due to exit mechanism
         _moduleMutexOrDaemonPlace = pn()->createPlace("MARKP:" + name() + (_isDaemon ? ".daemon" : ".mutex"), 1 );
-        if ( ! _isDaemon )
+        if ( _vcm->Get_Num_Calls() > 1 )
         {
             pn()->annotatePNNode( _moduleMutexOrDaemonPlace, Mutex_ );
             pn()->annotatePNNode( _moduleExitPlace, PassiveBranch_ );
@@ -1015,6 +1045,7 @@ class System : public SystemBase
     map<vcPipe*,Pipe*> _pipemap;
     map<string,PipeFeeder*> _feedermap;
     map<string,PipeReader*> _readermap;
+    map<vcStorageObject*,PNPlace*> _storageMutexPlaces;
     vcSystem* _vcs;
     VcPetriNet *_pn;
     PNPlace *_sysPreExitPlace;
@@ -1062,24 +1093,41 @@ class System : public SystemBase
     }
 public:
     string name() { return _vcs->Get_Id(); }
+    map<string,vcPipe*> getPipeMap() { return _vcs->Get_Pipe_Map(); }
     void stop() { pn()->quit(); } // For low level simulator interface
     VcPetriNet* pn() { return _pn; }
     vcStorageObject* getStorageObj(vcLoadStore* dpe) { return _opfactory.getStorageObj(dpe); }
-    PipeFeeder* getFeeder(string pipename)
+    map<vcStorageObject*,vector<DatumBase*>>& getStorageDatums() { return _opfactory.getStorageDatums(); }
+    PNPlace* getStorageMutexPlace(vcDatapathElement *dpe)
+    {
+        auto sto = getStorageObj( (vcLoadStore*) dpe);
+        auto it = _storageMutexPlaces.find(sto);
+        if ( it == _storageMutexPlaces.end() )
+        {
+            auto storageMutex = pn()->createPlace("MARKP:" + sto->Get_Id() + ".mutex",1);
+            pn()->annotatePNNode( storageMutex, Mutex_ );
+            _storageMutexPlaces.emplace(sto, storageMutex);
+            return storageMutex;
+        }
+        return it->second;
+    }
+    PipeFeeder* getFeeder(string pipename, bool noError = false)
     {
         auto it = _feedermap.find(pipename);
         if ( it == _feedermap.end() )
         {
+            if ( noError ) return NULL;
             cout << "No such pipe : " << pipename << endl;
             exit(1);
         }
         return it->second;
     }
-    PipeReader* getReader(string pipename)
+    PipeReader* getReader(string pipename, bool noError = false)
     {
         auto it = _readermap.find(pipename);
         if ( it == _readermap.end() )
         {
+            if ( noError ) return NULL;
             cout << "No such pipe : " << pipename << endl;
             exit(1);
         }
@@ -1219,11 +1267,21 @@ public:
         {
             vcPipe* vcp = pm.first;
             Pipe* p = pm.second;
+            auto nReads = vcp->Get_Pipe_Read_Count();
+            auto nWrites = vcp->Get_Pipe_Write_Count();
+            bool isSysIn = nReads > 0 and nWrites == 0;
+            bool isSysOut = nReads == 0 and nWrites > 0;
             string pname = vcp->Get_Id();
-            auto feeder = new PipeFeeder(p);
-            auto reader = new PipeReader(p);
-            _feedermap.emplace(pname,feeder);
-            _readermap.emplace(pname,reader);
+            if ( isSysIn )
+            {
+                auto feeder = new PipeFeeder(p);
+                _feedermap.emplace(pname,feeder);
+            }
+            if ( isSysOut )
+            {
+                auto reader = new PipeReader(p);
+                _readermap.emplace(pname,reader);
+            }
         }
         buildPN();
 #ifdef USECEP
