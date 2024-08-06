@@ -1,9 +1,10 @@
 :-import load/2, store/3 from fileio.
 :-import dep2cep/3 from dep2cep.
 
-:-dynamic scep/4, sdep/2, eventmap/2, patomic/3, reaches/3, dppipe/2, dpstore/2.
+:-dynamic scep/4, sdep/2, eventmap/2, patomic/3, reaches/3, dppipe/2, dpstore/2, dpdep/3.
 
 :-index(dpe/4,[2]).
+:-index(dpdep/3,[1,3]).
 :-index(dppipe/2,[1,2]).
 :-index(dpstore/2,[1,2]).
 :-op(300,fx,#).
@@ -23,7 +24,7 @@ rewritescep( (iwatch,C,TA,FA), (iev(E),C,TA,FA) ) :- !, statevar(C,V), uackevent
 rewritescep( (I,C,TA,FA), (I,C,TA,FA) ).
 
 uackevent(V,de(V,ack0)) :- dpe(Vid,V,vcPhi,_), vctid(Vid,ack0,_), !.
-uackevent(V,de(V,Etyp)) :- dpe(Vid,V,_,_), vctid(Vid,Etyp,_), (Etyp=ack1;Etyp=ftreq).
+uackevent(V,de(V,ack1)) :- dpe(Vid,V,_,_), vctid(Vid,ack1,_).
 
 :-table statevar/2.
 statevar(*(V),V) :- !.
@@ -48,9 +49,18 @@ cep(IN,CN,TAN,FAN) :- rwscep(I,C,TA,FA),
     numerizeInterval(I,IN), numerizeExpr(C,CN),
     numerizeActions(TA,TAN), numerizeActions(FA,FAN).
 
-pipeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
+pipeInstEvent(Inst,de(ProxyInst,Etyp)) :- dpe(Id,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp),
+    proxyInst(Id,ProxyId), dpe(ProxyId,ProxyInst,_,_).
 storeInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
 loadInstEvent(Inst,de(Inst,Etyp)) :- dpe(_,Inst,OpTyp,_), loadOpEvent(OpTyp,Etyp).
+
+% We could write a generalized logic to connect a flowthrough operator with its consumer, but for pipes
+% if flowthrough (signal) it should be enough to go one level forward from it.
+proxyInst(InstId,ProxyId):- isFlowthrough(InstId), !, dpdep(ProxyId,_,InstId).
+proxyInst(InstId,InstId).
+
+:-table isFlowthrough/1.
+isFlowthrough(Id):- dpe(Id,_,_,_), \+ vctid(Id,_,_).
 
 pipeEvent(Pipe,de(Inst,Etyp)) :-
     dppipe(Id,Pipe), dpe(Id,Inst,OpTyp,_), pipeOpEvent(OpTyp,Etyp).
@@ -58,7 +68,6 @@ storeWrEvent(S,de(Inst,Etyp)) :-
     dpstore(Id,S), dpe(Id,Inst,OpTyp,_), storeOpEvent(OpTyp,Etyp).
 
 pipeOpEvent(vcInport,ack1).
-pipeOpEvent(vcInport,ftreq).
 pipeOpEvent(vcOutport,req1).
 % Notes: storeOpEvent as suitable for 'reaches'
 loadOpEvent(vcLoad,req0).
@@ -103,7 +112,6 @@ eventTyp(req0).
 eventTyp(req1).
 eventTyp(ack0).
 eventTyp(ack1).
-eventTyp(ftreq).
 
 numerizeComplexEvent(E,EN) :- eventmap(E,EN), !.
 numerizeComplexEvent(E,EN) :- lastEventNo(NLast), EN is NLast + 1, asserta(eventmap(E,EN)).

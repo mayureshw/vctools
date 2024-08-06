@@ -323,6 +323,25 @@ public:
         inpv.push_back(inpdatum);
         _guardBranchOp->setinpv(inpv);
     }
+    void handleSignalInportFT()
+    {
+        auto owires = elem()->Get_Output_Wires();
+        if ( owires.size() != 1 )
+        {
+            cout << "Signal with output wires count != 1 not expected" << endl;
+            exit(1);
+        }
+        auto receivers = owires[0]->Get_Receivers();
+        if ( receivers.size() != 1 )
+        {
+            cout << "Signal output wire with receivers count != 1 not expected" << endl;
+            exit(1);
+        }
+        auto succelem = *receivers.begin();
+        auto succdpe = _module->getDPE(succelem);
+        auto succ_sreq = succdpe->getReqTransition(0);
+        succ_sreq->setEnabledActions(bind(&Operator::flowthrough,_op,_1));
+    }
     void setinpv()
     {
         vector<DatumBase*> inpv;
@@ -347,8 +366,11 @@ public:
             inpv.push_back(inpdatum);
         }
         _op->setinpv(inpv);
-        if ( isDeemedFlowThrough() )
+
+        if ( isDeemedFlowThrough() and listenToOps.size() > 0 )
             _op->setFlowthroughInps( listenToOps );
+
+        if ( isSignalInport() ) handleSignalInportFT();
 
         if ( isDeemedGuarded() ) setGuardBranchInpv();
     }
