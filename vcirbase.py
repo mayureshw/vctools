@@ -21,7 +21,7 @@ class NodeClass:
 
 class Node:
     maxdataports = 5
-    controlrels = { 'petri', 'mutex', 'passivebranch', 'branch', 'dpsync', 'rev_mutex', 'rev_passivebranch' }
+    controlrels = [ 'petri', 'mutex', 'passivebranch', 'branch', 'dpsync', 'rev_mutex', 'rev_passivebranch' ]
     def _mapstr(self,io,pos):
         mapstr = self.idstr()+'_'+io+'map('+str(pos)+')'
         return mapstr + '(0) downto ' + mapstr + '(1)'
@@ -76,6 +76,8 @@ class Node:
         if rel == 'total' else len(
             self.owidths if rel == 'data' else
             self.oarcs.get(rel,[]))
+    def ctrlwidth(self): return sum( self.fanin(r) + self.fanout(r) for r in self.controlrels )
+    def dbgvec(self): return ' & '.join( 'pn_' + str(self.nodeid) + io + '.' + r for r in self.controlrels for io in ['_i','_o'] )
     def iarcnt(self,rel): return len( self.iarcs.get(rel,[]) )
     def oarcnt(self,rel): return len( self.oarcs.get(rel,[]) )
     def inpwidth(self,rel,index): return (
