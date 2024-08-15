@@ -77,7 +77,8 @@ class Node:
             self.owidths if rel == 'data' else
             self.oarcs.get(rel,[]))
     def ctrlwidth(self): return sum( self.fanin(r) + self.fanout(r) for r in self.controlrels )
-    def dbgvec(self): return ' & '.join( 'pn_' + str(self.nodeid) + io + '.' + r for r in self.controlrels for io in ['_i','_o'] )
+    def dbgvecLbl(self): return ' & '.join( 'pn_' + str(self.nodeid) + io + '.' + r for r in self.controlrels for io in ['_i','_o'] )
+    def dbgvec(self): return [ sz for r in self.controlrels for sz  in [ self.fanin(r),self.fanout(r) ] ]
     def iarcnt(self,rel): return len( self.iarcs.get(rel,[]) )
     def oarcnt(self,rel): return len( self.oarcs.get(rel,[]) )
     def inpwidth(self,rel,index): return (
