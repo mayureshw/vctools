@@ -91,7 +91,7 @@ public:
     DatumBase* clone() { return new Datum<T>(_width); } // caller to manage delete
     string str()
     {
-        if constexpr ( ISWUINT(T) ) return val.to_string();
+        if constexpr ( ISWUINT(T) ) return val.to_string().substr( val.size() - _width );
         else return to_string(val);
     }
 };
