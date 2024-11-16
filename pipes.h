@@ -51,6 +51,8 @@ protected:
     virtual unsigned poppos()=0;
     virtual unsigned lastPopPosOnEmpty()=0;
     PNPlace *_mutexPlace;
+    unsigned nReaders() { return _vcp->Get_Pipe_Read_Count(); }
+    unsigned nFeeders() { return _vcp->Get_Pipe_Write_Count(); }
     void buildPNMutexDepCommon(PNTransition *req, PNTransition *ack)
     {
         // for i or o, req should seek token from mutexplace
@@ -188,9 +190,9 @@ protected:
     BlockingPipe(unsigned depth, string label, VcPetriNet *pn, vcPipe *vcp) : Pipe(depth,label,pn,vcp)
     {
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
-        pn->annotatePNNode(_freePlace, PassiveBranch_);
+        if ( nFeeders() > 1 ) pn->annotatePNNode(_freePlace, PassiveBranch_);
         _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
-        pn->annotatePNNode(_filledPlace, PassiveBranch_);
+        if ( nReaders() > 1 ) pn->annotatePNNode(_filledPlace, PassiveBranch_);
     }
 };
 
