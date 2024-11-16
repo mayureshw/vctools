@@ -168,7 +168,9 @@ public:
             else if ( w->Is_Constant() )
             {
                 auto vcv = ( (vcConstantWire*) w )->Get_Value();
-                string const_str = _sys.valueDatum( vcv )->str();
+                auto datum = _sys.valueDatum( vcv );
+                string const_str = datum->isWUINT() ? "b" : "";
+                const_str += datum->str();
                 auto const_val = jf.createJsonAtom<string>(const_str);
                 constinpdict->push_back({ i_val, const_val });
             }
