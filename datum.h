@@ -26,6 +26,7 @@ virtual void* elemPtr()=0;
     // do not validate types and refrain from using dynamic_casst
     // Do test with DATUMDBG whenever a new call to blindcopy is added
     virtual void blindcopy(DatumBase*) = 0;
+    virtual bool isWUINT() = 0;
     unsigned width() { return _width; }
     DatumBase(unsigned width) : _width(width) {}
     virtual ~DatumBase() {}
@@ -89,6 +90,11 @@ public:
         }
     }
     DatumBase* clone() { return new Datum<T>(_width); } // caller to manage delete
+    bool isWUINT()
+    {
+        if constexpr ( ISWUINT(T) ) return true;
+        else return false;
+    }
     string str()
     {
         if constexpr ( ISWUINT(T) ) return val.to_string().substr( val.size() - _width );
