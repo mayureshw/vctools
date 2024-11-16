@@ -48,7 +48,7 @@ class Node:
     def pnmarking(self): return None
     def pncapacity(self): return None
     def iArcs(self): return [ a for r,arcs in self.iarcs.items() for a in arcs ]
-    def constvals(self): return [ (int(pos),int(val))
+    def constvals(self): return [ (int(pos),val)
         for pos,val in self.constinps.items()
         ]
     def addOarc(self,arc): self.oarcs.setdefault(arc.rel,[]).append(arc)
