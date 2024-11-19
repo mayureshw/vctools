@@ -237,6 +237,7 @@ public:
         auto stores_key = jf.createJsonAtom<string>("stores");
         auto branchinp_key = jf.createJsonAtom<string>("branchinp");
         auto place_key = jf.createJsonAtom<string>("place");
+        auto opargs_key = jf.createJsonAtom<string>("opargs");
 
         for( auto simdpe : _simmod->getDPEList() )
         {
@@ -257,6 +258,9 @@ public:
             dpedict->push_back({ greqs_key, pnv2jsonlist(jf, simdpe->getGReqs())});
             dpedict->push_back({ acks_key, pnv2jsonlist(jf, simdpe->getAcks())});
             dpedict->push_back({ gacks_key, pnv2jsonlist(jf, simdpe->getGAcks())});
+
+            auto opargslist = jf.createJsonList();
+            dpedict->push_back({ opargs_key, opargslist });
 
             if ( simdpe->isCall() )
             {
@@ -296,6 +300,12 @@ public:
 
                 vector<vcWire*> branchinpv = { simdpe->branchInpWire() };
                 buildJsonDPEInputs(jf, branchinpv, branchinpdict);
+            }
+            else if ( simdpe->isSlice() )
+            {
+                auto l = ( (vcSlice*) simdpe->elem() )->Get_Low_Index();
+                auto l_val = jf.createJsonAtom<unsigned>( l );
+                opargslist->push_back(l_val);
             }
 
             auto iws = simdpe->elem()->Get_Input_Wires();
