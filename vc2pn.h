@@ -175,6 +175,7 @@ public:
     bool isLoad() { return _vctyp == vcLoad_; }
     bool isStore() { return _vctyp == vcStore_; }
     bool isBranch() { return _vctyp == vcBranch_; }
+    bool isSlice() { return _vctyp == vcSlice_; }
     bool isDeemedPhi()
     {
         return _vctyp == vcPhi_ or _vctyp == vcPhiPipelined_;
