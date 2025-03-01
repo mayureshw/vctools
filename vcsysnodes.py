@@ -251,6 +251,10 @@ class StorageNode(ArbiteredSysNode):
             # dpe -> w_en bind arc for data+address
             DPArc(dpe,self.w_en,{'rel': 'bind', 'width': self.width+self.awidth})
 
+class SysAckDelayNode(SysNode):
+    def nodeClass(self): return 'SysAckDelay'
+    def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
+
 class VCSysDP:
     def processModuleInterface(self,vcir,en):
         moduledict = vcir.module_entries[en]
@@ -263,7 +267,9 @@ class VCSysDP:
         PNArc( reqport, entryplace, {} )
         ackport = createPort(self, vcir, [
             (OutPort,[]), (ModulePort,[modulename]), (AckPort,[]) ])
-        PNArc( exitplace, ackport, {} )
+        ackdelaynode = SysAckDelayNode(self,vcir,{'name':ackport.name()+'_delay'})
+        PNArc( exitplace, ackdelaynode, {} )
+        PNArc( ackdelaynode, ackport, {} )
         for paramname,width in zip( moduledict['inames'], moduledict['iwidths'] ):
             iparamport = createPort(self, vcir, [
                 (InPort,[]),
