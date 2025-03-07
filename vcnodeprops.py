@@ -67,6 +67,8 @@ class isPlace(Functor):
     def eval(self,n) : return n.isPlace()
 class isEntryPlace(Functor):
     def eval(self,n) : return n.isEntryPlace()
+class isExitPlace(Functor):
+    def eval(self,n) : return n.isExitPlace()
 class isMutex(Functor):
     def eval(self,n) : return n.isMutex()
 class isPassiveBranch(Functor):
