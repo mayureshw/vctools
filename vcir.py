@@ -41,7 +41,12 @@ class Vcir:
             sys.exit(1)
     def nodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
     def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
-        if self.pn.nodes[en].fanin('total') == 0 ]
+        if self.module_entries[en]['nCallers'] == 0 and self.module_entries[en]['isDaemon'] == 0 ]
+    def validateModules(self):
+        for moddict in self.module_entries.values():
+            if moddict['isVolatile'] and moddict['nCallers'] !=1 :
+                print('Volatile module with > 1 callers is not supported',moddict['name'])
+                sys.exit(1)
     def __init__(self,stem):
         pnflnm = stem + '_petri.json'
         jsonflnm = stem + '.json'
@@ -54,6 +59,7 @@ class Vcir:
         self.branches = set(jsonobj['branches'])
         self.simu_only = set(jsonobj['simu_only'])
         self.module_entries = { int(en) : d for en,d in jsonobj['modules'].items() }
+        self.validateModules()
         self.module_exits = { v['exit'] for v in jsonobj['modules'].values() }
         self.pipes = jsonobj.get('pipes',{})
         self.storage = jsonobj.get('storage',{})
