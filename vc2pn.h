@@ -813,6 +813,7 @@ class Module : public ModuleBase
     vector<Operator*> _ftlisteners;
 public:
     bool _isDaemon;
+    bool isDaemon() { return _isDaemon; }
     SystemBase* sys() { return _sys; }
     VcPetriNet* pn() { return _sys->pn(); }
     DPElement* getDPE(vcDatapathElement* vcdpe) { return _ef.getDPElement(vcdpe); }

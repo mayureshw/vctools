@@ -199,6 +199,7 @@ public:
         auto exit_key = jf.createJsonAtom<string>("exit");
         auto nCallers_key = jf.createJsonAtom<string>("nCallers");
         auto isVolatile_key = jf.createJsonAtom<string>("isVolatile");
+        auto isDaemon_key = jf.createJsonAtom<string>("isDaemon");
         auto entryPlace_key = jf.createJsonAtom<string>( to_string( entryPlace()->_nodeid ) );
 
         auto moduleDict = jf.createJsonMap();
@@ -213,8 +214,11 @@ public:
         auto nCallers_val = jf.createJsonAtom<unsigned>( _vcm->Get_Num_Calls() );
         moduleDict->push_back( { nCallers_key, nCallers_val } );
 
-        auto isVolatile_val = jf.createJsonAtom<unsigned>( _vcm->Get_Volatile_Flag() );
+        auto isVolatile_val = jf.createJsonAtom<unsigned>( _simmod->isVolatile() );
         moduleDict->push_back( { isVolatile_key, isVolatile_val } );
+
+        auto isDaemon_val = jf.createJsonAtom<unsigned>( _simmod->isDaemon() );
+        moduleDict->push_back( { isDaemon_key, isDaemon_val } );
 
         buildJsonParamNames(jf, moduleDict);
 
