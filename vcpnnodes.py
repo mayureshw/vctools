@@ -70,7 +70,11 @@ class VolatileExitPlace(NodeClass):
         ]
 
 class MiscTransition(NodeClass):
-    sign = [ isTransition ]
+    sign = [
+        isTransition,
+        ( gt, (fanin,petri),  0 ),
+        ( gt, (fanout,petri), 0 ),
+        ]
     props = [
         ( le, (fanin,mutex),          1 ),
         ( eq, (fanin,mutex),          (fanout,rev_mutex) ),
