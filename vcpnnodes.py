@@ -58,6 +58,17 @@ class PassThroughPlace(NodeClass):
         ( le, marking, 1 ),
         ]
 
+class VolatileExitPlace(NodeClass):
+    sign = [
+        isPlace,
+        isExitPlace,
+        ( eq, (fanin,petri),  0),
+        ( eq, (fanout,petri), 0),
+        ]
+    props = [
+        ( le, marking, 1 ),
+        ]
+
 class MiscTransition(NodeClass):
     sign = [ isTransition ]
     props = [
