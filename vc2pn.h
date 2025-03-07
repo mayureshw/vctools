@@ -976,7 +976,6 @@ public:
         for(auto e:_dpelist) e->setinpv(); // Need to call this after buildPN of dpe, as datapath is cyclic
         for(auto e:_cpelist) e->buildPN();
 
-        pn()->createArc(_moduleEntryPlace, entryTransition());
 
         vcCPElement* exitElem = _cp->Get_Exit_Element();
         vcCPElementGroup* exitGroup = _cp->Get_CPElement_To_Group_Map()[exitElem];
@@ -992,7 +991,11 @@ public:
             pn()->createArc(exitCPE->outPNNode(), exitCPENode);
         }
 
-        pn()->createArc(exitCPENode, _moduleExitPlace );
+        if ( not isVolatile() )
+        {
+            pn()->createArc(_moduleEntryPlace, entryTransition());
+            pn()->createArc(exitCPENode, _moduleExitPlace );
+        }
 
         if ( _isDaemon )
         {
