@@ -101,10 +101,11 @@ class DPNode(Node):
             # Exit -> Call : single bind for all opparams
             srcnode = self.vcir.pn.nodes[self.callexit]
             DPArc(srcnode,self,{ 'rel': 'bind', 'width': sum(self.owidths) })
-            # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
-            acknode = self.uack()
-            DPArc(acknode,self,{ 'rel': 'dpsync' })
-            DPArc(self,acknode,{ 'rel': 'dpsync' })
+            if len(self.reqs) > 0: # non volatile calls
+                # CallAck -> Call : to trigger latching the result and Call -> CallAck, to ack the same
+                acknode = self.uack()
+                DPArc(acknode,self,{ 'rel': 'dpsync' })
+                DPArc(self,acknode,{ 'rel': 'dpsync' })
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class VcDP:
