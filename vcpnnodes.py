@@ -83,7 +83,7 @@ class MiscTransition(NodeClass):
         ( eq, (fanout,passivebranch), 0 ),
         ( le, (fanin,branch),         1 ),
         ( eq, (fanout,branch),        0 ),
-        ( le, (fanin,petri),          4 ), # LUT inps - 2
+        #( le, (fanin,petri),          4 ), # LUT inps - 2 (for FPGAs)
         ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ),
         ]
 
