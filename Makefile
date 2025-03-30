@@ -25,8 +25,9 @@ LDFLAGS	+=	-L/usr/pkg/lib -lantlr
 CXXFLAGS+=	-I/usr/pkg/include
 ANTLR	=	antlr
 else
-LDFLAGS	+=	-lantlr-pic -ldl
-ANTLR	=	runantlr
+LDFLAGS	+=	-L/usr/pkg/lib -L. -lantlr -ldl
+CXXFLAGS+=	-I/usr/pkg/include
+ANTLR	=	antlr
 endif
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include

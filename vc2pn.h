@@ -283,11 +283,11 @@ public:
             auto calledMutexPlace = calledModule->mutexPlace();
 
             auto inProgressPlace = pn()->createPlace(_label+".CallInProgress");
-            // sack requires called module's mutex token
+            // sreq requires called module's mutex token
             pn()->createArc(calledMutexPlace, sreq);
             // and passes token to inProgressPlace and called module's entry
-            pn()->createArc(sack, inProgressPlace);
-            pn()->createArc(sack, calledEntryPlace);
+            pn()->createArc(sreq, inProgressPlace);
+            pn()->createArc(sreq, calledEntryPlace);
             // uack requires inProgressPlace and called module's exit place token
             pn()->createArc(inProgressPlace, uack);
             pn()->createArc(calledExitPlace, uack);
