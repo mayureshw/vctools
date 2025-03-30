@@ -21,9 +21,8 @@ class MutexPlace(NodeClass):
 class PassiveBranchPlace(NodeClass):
     sign  = [ isPlace, isPassiveBranch ]
     props = [
+        ( eq, (fanout,petri), 0 ),
         ( eq, (fanin,rev_passivebranch), (fanout,passivebranch) ),
-        ( eq, (fanin,total), ( add, (fanout,passivebranch), (fanin,petri) ) ),
-        ( eq, (fanout,total), (fanout,passivebranch) ),
         ]
 
 class BranchPlace(NodeClass):
@@ -62,7 +61,7 @@ class VolatileExitPlace(NodeClass):
     sign = [
         isPlace,
         isExitPlace,
-        ( eq, (fanin,petri),  0),
+        ( eq, (fanout,passivebranch), 0),
         ( eq, (fanout,petri), 0),
         ]
     props = [
@@ -123,7 +122,7 @@ class PNNode(Node):
             return
         elif len(clss) == 0:
             # skip reporting this error if node is not connected anywhere
-            if self.fanin('total') != 0 or self.fanout('total') != 0:
+            if self.fanin('total') != 0 and self.fanout('total') != 0:
                 print('NoClassification',self.nodeinfo())
             return
         nodeclass = clss[0]
