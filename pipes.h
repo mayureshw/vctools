@@ -175,8 +175,7 @@ protected:
     {
         // out port sreq should seek token from freePlace
         pn()->createArc(_freePlace, sreq);
-        if ( _freePlace->_oarcs.size() == 2 )
-            pn()->annotatePNNode(_freePlace, PassiveBranch_);
+        pn()->annotatePNNode(_freePlace, PassiveBranch_);
         // out port sack should release a token to filledPlace
         pn()->createArc(sreq, _filledPlace);
     }
@@ -184,8 +183,7 @@ protected:
     {
         // in port ureq should need a token in filledPlace
         pn()->createArc(_filledPlace, ureq);
-        if ( _filledPlace->_oarcs.size() == 2 )
-            pn()->annotatePNNode(_filledPlace, PassiveBranch_);
+        pn()->annotatePNNode(_filledPlace, PassiveBranch_);
         // in port should release a token to freePlace on uack
         pn()->createArc(uack, _freePlace);
     }
