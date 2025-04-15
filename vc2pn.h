@@ -247,7 +247,8 @@ public:
         auto ureq_uack_place = pn()->createArc(_reqs[1], _acks[1]);
         pn()->annotatePNNode(ureq_uack_place, SimuOnly_);
 
-        pn()->createArc(_acks[0], _reqs[1]); // Since sreq/ureq can be ||, need this sync
+        auto sack_ureq_place = pn()->createArc(_acks[0], _reqs[1]); // Since sreq/ureq can be ||, need this sync
+        pn()->annotatePNNode(sack_ureq_place, SimuOnly_);
         auto uack2sreq = (PNPlace*) pn()->createArc(
             _acks[1], _reqs[0],
             "MARKP:" + _reqs[0]->_name
