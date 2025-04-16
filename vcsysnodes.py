@@ -132,7 +132,9 @@ class PipeNode(ArbiteredSysNode):
         PNArc( reqport, trigplace, {} )
         ackport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]), (PipePort,[self.name]), (AckPort,[]) ])
-        PNArc( trigack, ackport, {} )
+        ackdelaynode = SysAckDelayNode(self.sysdp,self.vcir,{'name':ackport.name()+'_delay'})
+        PNArc( trigack, ackdelaynode, {} )
+        PNArc( ackdelaynode, ackport, {} )
         self.buildDPPetriArcs(en,ex,trigreq,trigack,self.idstr())
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
