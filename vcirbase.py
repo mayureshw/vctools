@@ -54,8 +54,8 @@ class Node:
             for oa in oarcs:
                 ret.setdefault(
                     '_'.join( [ 'i_conn', self.idstr(), r, str(oa.srcpos) ] ),
-                    ( self.opwidth(r,oa.srcpos), self.ostr(r,oa.srcpos), [] )
-                    )[2].append( oa.tgtnode.istr(r,oa.tgtpos) )
+                    ( r in {'bind','data'}, self.opwidth(r,oa.srcpos), self.ostr(r,oa.srcpos), [] )
+                    )[3].append( oa.tgtnode.istr(r,oa.tgtpos) )
         return ret
     def constvals(self): return [ (int(pos),val)
         for pos,val in self.constinps.items()
