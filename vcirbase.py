@@ -48,6 +48,15 @@ class Node:
     def pnmarking(self): return None
     def pncapacity(self): return None
     def iArcs(self): return [ a for r,arcs in self.iarcs.items() for a in arcs ]
+    def oArcsBySrc(self):
+        ret = {}
+        for r,oarcs in self.oarcs.items():
+            for oa in oarcs:
+                ret.setdefault(
+                    '_'.join( [ 'i_conn', self.idstr(), r, str(oa.srcpos) ] ),
+                    ( self.opwidth(r,oa.srcpos), self.ostr(r,oa.srcpos), [] )
+                    )[2].append( oa.tgtnode.istr(r,oa.tgtpos) )
+        return ret
     def constvals(self): return [ (int(pos),val)
         for pos,val in self.constinps.items()
         ]
@@ -90,7 +99,7 @@ class Node:
             self.owidths[index] if index < len(self.owidths) else 0
         ) if rel == 'data' else (
             self.oarcs['bind'][index].width if index < len(self.oarcs.get('bind',[])) else 0
-        ) if rel == 'bind' else None
+        ) if rel == 'bind' else 1
     def _widths2offset(self,ws): return [ (l+w-1,l) for i,w in enumerate(ws) for l in [sum(ws[:i])] ]
     def ioffsets(self): return self._widths2offset(self.iwidths)
     def ooffsets(self): return self._widths2offset(self.owidths)
