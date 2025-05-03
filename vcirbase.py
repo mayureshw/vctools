@@ -60,7 +60,13 @@ class Node:
     def constvals(self): return [ (int(pos),val)
         for pos,val in self.constinps.items()
         ]
-    def addOarc(self,arc): self.oarcs.setdefault(arc.rel,[]).append(arc)
+    def maxDataFanout(self) : return max( self.dataFanoutByPos.values(), default = 0 )
+    def addOarc(self,arc):
+        self.oarcs.setdefault(arc.rel,[]).append(arc)
+        if arc.rel == 'data' :
+            fanoutForSrcPos =  self.dataFanoutByPos.get( arc.srcpos, 0 ) + 1
+            self.dataFanoutByPos[ arc.srcpos ] = fanoutForSrcPos
+            arc.lindex = fanoutForSrcPos - 1
     def addIarc(self,arc): self.iarcs.setdefault(arc.rel,[]).append(arc)
     # Note: fanin/out and in/out arc count are in general different properties
     # however in case of Petri nets, this difference is relevant only for forks
@@ -124,6 +130,7 @@ class Node:
         self.owidths = []
         self.constinps = {}
         self.depth = 0
+        self.dataFanoutByPos = {}
         self.__dict__.update(props)
 
 # Note: rel identifies the arc type, but it does not reflect in the class
@@ -139,5 +146,6 @@ class Arc:
         self.tgtpos = tgtnode.iarcnt(props['rel'])
         self.wt = 1
         self.__dict__.update(props)
+        self.lindex = None
         srcnode.addOarc(self)
         tgtnode.addIarc(self)
