@@ -30,7 +30,8 @@ class Node:
     def _iostr(self,io,rel,pos): return self.idstr()+'_' +io+'.'+rel+'('+\
         self._sliceStr(io,rel,pos)+')'
     def istr(self,rel,pos): return self._iostr('i',rel,pos)
-    def ostr(self,rel,pos): return self._iostr('o',rel,pos)
+    def ostr(self,rel,pos,lindex): return self._iostr('o',rel,pos) if rel != 'data' else \
+        ( self.idstr()+'_o.bufdata('+str(lindex)+')('+self._sliceStr('o','data',pos)+')' )
     def dotprops(self) : return []
     def nodeinfo(self): return str({
         **{
@@ -48,15 +49,6 @@ class Node:
     def pnmarking(self): return None
     def pncapacity(self): return None
     def iArcs(self): return [ a for r,arcs in self.iarcs.items() for a in arcs ]
-    def oArcsBySrc(self):
-        ret = {}
-        for r,oarcs in self.oarcs.items():
-            for oa in oarcs:
-                ret.setdefault(
-                    '_'.join( [ 'i_conn', self.idstr(), r, str(oa.srcpos) ] ),
-                    ( r in {'bind','data'}, self.opwidth(r,oa.srcpos), self.ostr(r,oa.srcpos), [] )
-                    )[3].append( oa.tgtnode.istr(r,oa.tgtpos) )
-        return ret
     def constvals(self): return [ (int(pos),val)
         for pos,val in self.constinps.items()
         ]
@@ -137,7 +129,7 @@ class Node:
 # hierarchy, because in most cases rel needs to be inferred
 class Arc:
     def conn(self): return (self.tgtnode.istr(self.rel,self.tgtpos),
-        self.srcnode.ostr(self.rel,self.srcpos))
+        self.srcnode.ostr(self.rel,self.srcpos,self.lindex))
     def __init__(self,srcnode,tgtnode,props):
         self.srcnode = srcnode
         self.tgtnode = tgtnode

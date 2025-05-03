@@ -34,7 +34,7 @@ class PortNode(SysNode):
     def isPort(self): return True
     def isControlPort(self): return False
     def istr(self,rel,pos): return self.name()
-    def ostr(self,rel,pos): return self.name()
+    def ostr(self,rel,pos,lindex): return self.name()
     def __init__(self,sysdp,vcir,props): super().__init__(sysdp,vcir,props)
 
 # Port directions
