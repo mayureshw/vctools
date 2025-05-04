@@ -125,6 +125,9 @@ class Node:
         self.dataFanoutByPos = {}
         self.__dict__.update(props)
 
+class NCNode(Node):
+    pass
+
 # Note: rel identifies the arc type, but it does not reflect in the class
 # hierarchy, because in most cases rel needs to be inferred
 class Arc:

@@ -75,6 +75,9 @@ class DPNode(Node):
     def sack(self): return self.vcir.pn.nodes[ self.acks[0] ]
     def ureq(self): return self.vcir.pn.nodes[ self.reqs[1] ]
     def uack(self): return self.vcir.pn.nodes[ self.acks[1] ]
+    def filterOutArc(self,rel,arcindx): return (self.optyp,rel,arcindx) in {
+        ( 'Outport', 'petri', 0 ) # driven by w_ex pipe node instead of dp itself
+        }
     def createArcs(self):
         feedspipe = getattr(self,'feedspipe',None)
         if feedspipe != None: self.vcir.dp.addPipeFeed(feedspipe,self)
@@ -91,8 +94,9 @@ class DPNode(Node):
         for req in self.reqs:
             srcnode = self.vcir.pn.nodes[req]
             DPArc(srcnode,self,{'rel' : 'petri'})
-        for ack in self.acks:
-            tgtnode = self.vcir.pn.nodes[ack]
+        for i,ack in enumerate(self.acks):
+            tgtnode = self.vcir.ncnode if self.filterOutArc('petri',i) else \
+                self.vcir.pn.nodes[ack]
             DPArc(self,tgtnode,{'rel' : 'petri'})
         if self.optyp == 'Call':
             # Call -> Entry : single bind for all inpparams
