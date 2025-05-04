@@ -76,7 +76,8 @@ class DPNode(Node):
     def ureq(self): return self.vcir.pn.nodes[ self.reqs[1] ]
     def uack(self): return self.vcir.pn.nodes[ self.acks[1] ]
     def filterOutArc(self,rel,arcindx): return (self.optyp,rel,arcindx) in {
-        ( 'Outport', 'petri', 0 ) # driven by w_ex pipe node instead of dp itself
+        ( 'Outport', 'petri', 0 ), # driven by w_ex pipe node instead of dp itself
+        ( 'Inport', 'petri', 1 ), # driven by r_ex pipe node instead of dp itself
         }
     def createArcs(self):
         feedspipe = getattr(self,'feedspipe',None)
