@@ -249,11 +249,11 @@ public:
 
         auto sack2ureq = pn()->createArc(_acks[0], _reqs[1]); // Since sreq/ureq can be ||, need this sync
         pn()->annotatePNNode( sack2ureq, SimuOnly_ );
+        // uack2sreq is critical for cross iteration dep (do not make SimuOnly_)
         auto uack2sreq = (PNPlace*) pn()->createArc(
             _acks[1], _reqs[0],
             "MARKP:" + _reqs[0]->_name
             );
-        pn()->annotatePNNode( uack2sreq, SimuOnly_ );
         uack2sreq->setMarking(1);
         auto rootindex = elem()->Get_Root_Index();
 #       ifdef USECEP
