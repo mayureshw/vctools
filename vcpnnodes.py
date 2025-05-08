@@ -31,7 +31,6 @@ class BranchPlace(NodeClass):
         ( eq, (fanout,branch), 2 ),
         ( eq, (fanin,petri),   1 ),
         ( eq, (fanout,total),  2 ),
-        ( eq, (fanin,total),   1 ),
         ]
 
 class MergePlace(NodeClass):
