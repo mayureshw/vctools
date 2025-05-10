@@ -48,7 +48,9 @@ class DPArc(Arc):
     def dotprops(self): return \
         [ ('color','red') ] if self.rel == 'data' else \
         [ ('color','orange') ] if self.rel == 'bind' else \
-        [ ('color','magenta') ] if self.rel == 'dpsync' else []
+        [ ('color','magenta') ] if self.rel == 'dpsync' else \
+        [ ('color','magenta'), ('style','dotted') ] if self.rel == 'rdsync' else \
+        [ ]
     def __init__(self,srcnode,tgtnode,props):
         super().__init__(srcnode,tgtnode,props)
         # if either src or tgt node is a SysNode, the arc doesn't originate
