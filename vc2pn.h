@@ -687,6 +687,29 @@ public:
 class LoopTerminatorCPElement : public SoloCPElement
 {
     int _depth;
+    vcCPElement *getUniqPred( vcCPElement* n )
+    {
+        auto preds = n->Get_Predecessors();
+        if ( preds.size() != 1 )
+        {
+            cout << "getUniqPred expects unique pred, got " << preds.size() << " " << n->Kind() << ":" << n->Get_Id() << endl;
+            exit(1);
+        }
+        return *preds.begin();
+    }
+    vcBranch* getLoopCondBranch()
+    {
+        auto le = elem()->Get_Loop_Exit();
+        auto cdone = getUniqPred(le);
+        auto cevaled = (vcTransition*) getUniqPred(cdone);
+        auto cevaled_dpl = cevaled->Get_DP_Link();
+        if ( cevaled_dpl.size() != 1 )
+        {
+            cout << "DP link size of condition_evaled transition expected to be 1, got " << cevaled_dpl.size() <<  " " << cevaled->Kind() << ":" << cevaled->Get_Id() << endl;
+            exit(1);
+        }
+        return (vcBranch*) cevaled_dpl[0].first;
+    }
 protected:
     vcLoopTerminator* elem() { return (vcLoopTerminator*) _elem; }
 public:
@@ -696,8 +719,21 @@ public:
         ((PNPlace*) _pnnode)->setMarking(_depth-1);
         ((PNPlace*) _pnnode)->setCapacity(_depth);
     }
+    bool isInfiniteLoop()
+    {
+        auto brplace = getLoopCondBranch();
+        auto inpwires = brplace->Get_Input_Wires();
+        if ( inpwires.size() != 1 )
+        {
+            cout << "Excpect inpwire count to be 1, got " << inpwires.size() << " " << brplace->Kind() << " " << brplace->Get_Id() << endl;
+            exit(1);
+        }
+        // NOTE: When looping condition's input is constant we don't expect it to be 0
+        return inpwires[0]->Is_Constant();
+    }
     void buildPN()
     {
+
         auto depthPlace = (PNPlace*) _pnnode;
 
         // inputs
@@ -709,27 +745,34 @@ public:
         auto pnLoopBack = vce2pnnode(elem()->Get_Loop_Back());
         auto pnLoopExit = (PNTransition*) vce2pnnode(elem()->Get_Exit_From_Loop());
 
-        // We create output transitions internally and connect with the vC
-        // created ones to avoid issues related to whether it is place or transition
-        // On input side it seems to be always a transition
-        auto exitOut = pn()->createTransition("exitOut");
-        auto contOut = pn()->createTransition("contOut");
+        if ( isInfiniteLoop() )
+        {
+            pn()->createArc(pnIterOver,pnLoopBack);
+            pn()->createArc(pnLoopTerm,pnLoopExit);
+        }
+        else
+        {
+            // We create output transitions internally and connect with the vC
+            // created ones to avoid issues related to whether it is place or transition
+            // On input side it seems to be always a transition
+            auto exitOut = pn()->createTransition("exitOut");
+            auto contOut = pn()->createTransition("contOut");
 
-        // Our own intenal network
-        pn()->createArc(pnLoopTerm, exitOut);
-        pn()->createArc(pnLoopCont, contOut);
-        pn()->createArc(pnIterOver, depthPlace);
-        pn()->createArc(depthPlace, contOut);
+            // Our own intenal network
+            pn()->createArc(pnLoopTerm, exitOut);
+            pn()->createArc(pnLoopCont, contOut);
+            pn()->createArc(pnIterOver, depthPlace);
+            pn()->createArc(depthPlace, contOut);
 
-        // Weighted arcs between depthPlace and exitOut
-        pn()->createArc(depthPlace, exitOut, "", _depth);
-        pn()->createArc(exitOut, depthPlace, "", _depth - 1);
+            // Weighted arcs between depthPlace and exitOut
+            pn()->createArc(depthPlace, exitOut, "", _depth);
+            pn()->createArc(exitOut, depthPlace, "", _depth - 1);
 
-        // from architecture Behave of loop_terminator
-        // Connections between our transitions and outer elements
-        pn()->createArc(exitOut, pnLoopExit);
-        pn()->createArc(contOut, pnLoopBack);
-
+            // from architecture Behave of loop_terminator
+            // Connections between our transitions and outer elements
+            pn()->createArc(exitOut, pnLoopExit);
+            pn()->createArc(contOut, pnLoopBack);
+        }
     }
     LoopTerminatorCPElement(vcLoopTerminator* elem, ModuleBase* module) : SoloCPElement(elem, module)
     {

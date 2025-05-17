@@ -39,7 +39,11 @@ class Vcir:
         if not os.path.exists(flnm):
             print('Did not find file', flnm)
             sys.exit(1)
-    def nodes(self): return [ n for n in chain( self.pn.nodes.values(), self.dp.nodes.values(), self.sysdp.nodes.values() ) ]
+    def nodes(self): return [ n for n in chain(
+        [ n for n in self.pn.nodes.values() if n.fanin('total') > 0 or n.fanout('total') > 0 ],
+        self.dp.nodes.values(),
+        self.sysdp.nodes.values()
+        )]
     def nonCalledNonDaemonEns(self): return [ en for en in self.module_entries
         if self.module_entries[en]['nCallers'] == 0 and self.module_entries[en]['isDaemon'] == 0 ]
     def validateModules(self):
