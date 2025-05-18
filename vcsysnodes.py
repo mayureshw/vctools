@@ -136,7 +136,7 @@ class PipeNode(ArbiteredSysNode):
         PNArc( trigack, ackdelaynode, {} )
         PNArc( ackdelaynode, ackport, {} )
         self.buildDPPetriArcs(en,ex,trigreq,trigack,self.idstr())
-        return trigack
+        return ackport
     def createSysReadArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
             (OutPort,[]),
@@ -144,8 +144,8 @@ class PipeNode(ArbiteredSysNode):
             (DataPort,[self.width]),
             ])
         DPArc( self.r_ex, dataport, { 'rel':'bind', 'width':self.width } )
-        trigack = self.createSysReqAck(self.r_en,self.r_ex)
-        DPArc(trigack,self,{ 'rel': 'rdsync' })
+        ackport = self.createSysReqAck(self.r_en,self.r_ex)
+        DPArc(ackport,self,{ 'rel': 'rdsync' })
     def createSysFeedArcs(self):
         dataport = createPort(self.sysdp, self.vcir, [
             (InPort,[]),
