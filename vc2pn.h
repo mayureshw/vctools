@@ -234,11 +234,32 @@ public:
         pn()->createArc(gureqplace, ureq);
         pn()->createArc(gureqplace, nogo_ureq);
     }
+    void trimIportSackUreqPath()
+    {
+        // It's unclear why base AHIR creates sack-ureq arcs for Inport
+        // We mark them SimuOnly_ and remove from the export
+        auto n = (PNNode*) _acks[0];
+        const int sack2ureqDist = 3;
+        for( int i=0; i<sack2ureqDist; i++ )
+        {
+            auto oarcs = n->_oarcs;
+            if ( oarcs.size() != 1 )
+            {
+                cout << "trimIportSackUreqPath expects a straight line path. Got oarcs.size=" << oarcs.size() << " in " << n->idlabel() << endl;
+                exit(1);
+            }
+            n = oarcs[0]->target();
+            pn()->annotatePNNode(n,SimuOnly_);
+        }
+    }
     // buildPN that suits most DPEs
     void buildPNDefault()
     {
         if ( isIport() ) // In AHIR Inport reads on ureq, not on sreq
+        {
             _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
+            trimIportSackUreqPath();
+        }
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
@@ -1018,9 +1039,10 @@ public:
     }
     void buildPN()
     {
+        for(auto e:_cpelist) e->buildPN();
+        // Some buildPNs, such as Inport do PN trimming, which rquires cpelist to be processed before them
         for(auto e:_dpelist) e->buildPN();
         for(auto e:_dpelist) e->setinpv(); // Need to call this after buildPN of dpe, as datapath is cyclic
-        for(auto e:_cpelist) e->buildPN();
 
 
         vcCPElement* exitElem = _cp->Get_Exit_Element();
