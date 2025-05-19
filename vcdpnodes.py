@@ -77,10 +77,14 @@ class DPNode(Node):
     def sack(self): return self.vcir.pn.nodes[ self.acks[0] ]
     def ureq(self): return self.vcir.pn.nodes[ self.reqs[1] ]
     def uack(self): return self.vcir.pn.nodes[ self.acks[1] ]
-    def filterOutArc(self,rel,arcindx): return (self.optyp,rel,arcindx) in {
-        ( 'Outport', 'petri', 0 ), # driven by w_ex pipe node instead of dp itself
-        ( 'Inport', 'petri', 1 ), # driven by r_ex pipe node instead of dp itself
-        }
+    def filterOutArc(self,rel,arcindx):
+        return False
+        # Experimental only. w_ex, r_ex have to be PB, hence their successors need another incoming arc
+        # So don't filter these (or refine the logic to filter iff r_ex/w_ex are passthrough)
+        return (self.optyp,rel,arcindx) in {
+            ( 'Outport', 'petri', 0 ), # driven by w_ex pipe node instead of dp itself
+            ( 'Inport', 'petri', 1 ), # driven by r_ex pipe node instead of dp itself
+            }
     def createArcs(self):
         feedspipe = getattr(self,'feedspipe',None)
         if feedspipe != None: self.vcir.dp.addPipeFeed(feedspipe,self)
