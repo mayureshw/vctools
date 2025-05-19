@@ -236,8 +236,8 @@ public:
     }
     void trimIportSackUreqPath()
     {
-        // It's unclear why base AHIR creates sack-ureq arcs for Inport
-        // We mark them SimuOnly_ and remove from the export
+        // This is kept for experimental purposes only. Inport sreq-sack-ureq path is made so as to control pipe read request
+        // from the incoming flow, rather than leaving it entirely to reverse request from the consumer
         auto n = (PNNode*) _acks[0];
         const int sack2ureqDist = 3;
         for( int i=0; i<sack2ureqDist; i++ )
@@ -258,7 +258,7 @@ public:
         if ( isIport() ) // In AHIR Inport reads on ureq, not on sreq
         {
             _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
-            trimIportSackUreqPath();
+            // trimIportSackUreqPath(); // Experimental only
         }
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
