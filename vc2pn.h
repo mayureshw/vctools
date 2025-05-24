@@ -718,6 +718,16 @@ class LoopTerminatorCPElement : public SoloCPElement
         }
         return *preds.begin();
     }
+    vcCPElement *getUniqSucc( vcCPElement* n )
+    {
+        auto succs = n->Get_Successors();
+        if ( succs.size() != 1 )
+        {
+            cout << "getUniqSucc expects unique succ, got " << succs.size() << " " << n->Kind() << ":" << n->Get_Id() << endl;
+            exit(1);
+        }
+        return *succs.begin();
+    }
     vcBranch* getLoopCondBranch()
     {
         auto le = elem()->Get_Loop_Exit();
@@ -768,8 +778,14 @@ public:
 
         if ( isInfiniteLoop() )
         {
-            pn()->createArc(pnIterOver,pnLoopBack);
-            pn()->createArc(pnLoopTerm,pnLoopExit);
+            auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
+            auto pnBackEdge = vce2pnnode(back_edge);
+            pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+            pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+            pn()->annotatePNNode(pnIterOver,SimuOnly_);
+            pn()->annotatePNNode(pnLoopBack,SimuOnly_);
+            pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+            pn()->annotatePNNode(pnBackEdge,SimuOnly_);
         }
         else
         {
