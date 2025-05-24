@@ -85,6 +85,16 @@ class MiscTransition(NodeClass):
         ( or_, ( eq, (fanin,branch), 0 ), ( eq, (fanin,total), 1 ) ),
         ]
 
+# Some transformations cut open some Petri net paths leading to dangling transitions
+# Ideally these paths to the nearest marked place should be pruned, pending that we just identify them so as to tie them to 0
+class SourceTransition(NodeClass):
+    sign = [
+        isTransition,
+        ( eq, (fanin,total), 0 )
+        ]
+    props = [
+        ]
+
 #################################################################################################
 
 class PNArc(Arc):
