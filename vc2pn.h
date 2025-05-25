@@ -728,11 +728,66 @@ class LoopTerminatorCPElement : public SoloCPElement
         }
         return *succs.begin();
     }
-    vcBranch* getLoopCondBranch()
+    PNNode* getUniqSucc( PNNode *n )
+    {
+        if ( n->_oarcs.size() != 1 )
+        {
+            cout << "getUniqSucc expects unique succ, got " << n->_oarcs.size() << " " << n->idstr() << endl;
+            exit(1);
+        }
+        return n->_oarcs[0]->target();
+    }
+    vcTransition* getCevaled()
     {
         auto le = elem()->Get_Loop_Exit();
         auto cdone = getUniqPred(le);
-        auto cevaled = (vcTransition*) getUniqPred(cdone);
+        return (vcTransition*) getUniqPred(cdone);
+    }
+    void modifyEntryNodePN( vcCPElement *entrynode, vcCPElement *lbstart )
+    {
+        auto pnEntryNode = vce2pnnode(entrynode);
+        auto pnLbstart = vce2pnnode(lbstart);
+        auto& pnEntryPreds = pnEntryNode->_iarcs;
+        if ( pnEntryPreds.size() != 2 )
+        {
+            cout << "modifyEntryNodePN expects pnEntryNode to have 2 PN iarcs, got " << pnEntryPreds.size() << endl;
+            exit(1);
+        }
+        auto nonMarkedPred = (PNPlace*) pnEntryPreds[0]->source();
+        auto markedPred = (PNPlace*) pnEntryPreds[1]->source();
+        if ( nonMarkedPred->marking() != 0 )
+        {
+            cout << "modifyEntryNodePN expects nonMarkedPred marking=0" << endl;
+            exit(1);
+        }
+        if ( markedPred->marking() != 1 )
+        {
+            cout << "modifyEntryNodePN expects markedPred marking=1" << endl;
+            exit(1);
+        }
+        markedPred->setMarking(0); // Sadly MARKP in the lable lurks...
+        pn()->annotatePNNode(nonMarkedPred,SimuOnly_);
+        pn()->createArc( pnLbstart, markedPred );
+    }
+    void transformInfiniteLoopPN()
+    {
+        auto cevaled = getCevaled();
+        auto lbdelay = getUniqPred(cevaled);
+        auto lbstart = getUniqPred(lbdelay);
+        auto& lbstartSuccs = lbstart->Get_Successors();
+        if ( lbstartSuccs.size() != 2 )
+        {
+            cout << "transformInfiniteLoopPN expects two successors to loop_body_start, got " << lbstartSuccs.size() << endl;
+            exit(1);
+        }
+        // this successor of interest, prints the same label as of lbstart, if printed
+        auto lbstartSucc = lbstartSuccs[0] == lbdelay ? lbstartSuccs[1] : lbstartSuccs[0];
+        for( auto entrynode : lbstartSucc->Get_Successors() ) modifyEntryNodePN( entrynode, lbstartSucc );
+
+    }
+    vcBranch* getLoopCondBranch()
+    {
+        auto cevaled = getCevaled();
         auto cevaled_dpl = cevaled->Get_DP_Link();
         if ( cevaled_dpl.size() != 1 )
         {
@@ -786,6 +841,8 @@ public:
             pn()->annotatePNNode(pnLoopBack,SimuOnly_);
             pn()->annotatePNNode(pnLoopExit,SimuOnly_);
             pn()->annotatePNNode(pnBackEdge,SimuOnly_);
+
+            transformInfiniteLoopPN();
         }
         else
         {
