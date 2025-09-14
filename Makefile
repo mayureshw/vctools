@@ -1,7 +1,3 @@
-ifndef VCTOOLSDIR
-$(error VCTOOLSDIR not set)
-endif
-
 include Makefile.conf
 
 NON_STPN_MODES	=	FAST
@@ -76,7 +72,7 @@ INSTBINS	+=	cprcheck.out
 VCTOOLSRCS	+=	cprcheck.cpp
 endif
 
-vcexport.out:LDFLAGS	+=	-L $(VCTOOLSDIR) -lvcsim -lahirvc
+vcexport.out:LDFLAGS	+=	-lvcsim -L. -lahirvc
 $(OPTBINS):CXXFLAGS		+=	-O3
 
 # Need to touch the file as antlr doesn't change the timestamp if the file wasn't changed
