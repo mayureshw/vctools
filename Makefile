@@ -52,7 +52,7 @@ GENHDRS		=	$(PARSERHDRS) vcsimconf.h
 INSTHDRS	=	vcsim.h vcsimconf.h datum.h opf.h $(CEPTOOLDIR)/stateif.h $(CEPTOOLDIR)/exprf.h
 INSTLIBS	=	libvcsim.so
 
-CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
+CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I. -I$(AHIRDIR)/v2/libAhirV2/src
 CXXFLAGS	+=	-std=c++17 -fPIC -MMD -MP -g
 VPATH		+=	$(AHIRSRCDIR)
 
