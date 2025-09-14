@@ -43,10 +43,11 @@ MISCFILES	=	vcParserTokenTypes.txt
 AHIROBJS	=	$(notdir $(AHIRSRCS:.cpp=.o))
 PARSEROBJS	=	$(PARSERSRCS:.cpp=.o)
 VCTOOLOBJS	=	$(VCTOOLSRCS:.cpp=.o)
+OBJS		=	$(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS)
 DFILES		=	$(notdir $(AHIRSRCS:.cpp=.d)) $(PARSERSRCS:.cpp=.d) $(VCTOOLSRCS:.cpp=.d)
 
 CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
-CXXFLAGS	+=	-fPIC -g
+CXXFLAGS	+=	-std=c++17 -fPIC -MMD -MP -g
 VPATH		+=	$(AHIRSRCDIR)
 
 BINS		=	libahirvc.a libvcsim.so
@@ -70,18 +71,12 @@ $(OPTBINS):CXXFLAGS		+=	-O3
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
 	$(ANTLR) $< && touch $@
 
-%.d:	%.cpp
-	set -e; $(CXX) -M $(CXXFLAGS) $< \
-		| sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@; \
-		[ -s $@ ] || rm -f $@
-
 all:	$(BINS)
 
 libahirvc.a:	$(AHIROBJS) $(PARSEROBJS)
 	ar rv $@ $?
 
-$(AHIROBJS):	$(PARSERHDRS)
-$(DFILES):		$(PARSERHDRS)
+$(OBJS):	$(PARSERHDRS)
 
 $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 
@@ -102,7 +97,7 @@ opf.h:	opf.P
 endif
 
 clean:
-	rm -f $(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES) $(DFILES)
+	rm -f $(OBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES) $(DFILES)
 
 CONFOPTS	=	USECEP USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML PN_PLACE_CAPACITY_EXCEPTION
 CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
@@ -117,4 +112,4 @@ include $(CEPTOOLDIR)/Makefile.ceptool
 endif
 
 include $(PETRISIMUDIR)/Makefile.petrisimu
-include $(DFILES)
+-include $(DFILES)
