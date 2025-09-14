@@ -103,7 +103,8 @@ endif
 vcexport.out:	vcexport.o libvcsim.so libahirvc.a
 	$(CXX) $< $(LDFLAGS) -o $@
 
-ifdef XSBDIR
+# opf.h is committed, hence this generation is required only for vcsim developers if opf.P changes
+ifdef GENOPF
 opf.h:	opf.P
 	echo [opf]. | xsb > $@
 endif
