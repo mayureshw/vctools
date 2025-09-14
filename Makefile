@@ -21,14 +21,21 @@ endif
 OS	=	$(shell uname -s)
 
 ifeq ($(OS),NetBSD)
-LDFLAGS	+=	-L/usr/pkg/lib -lantlr
-CXXFLAGS+=	-I/usr/pkg/include
-ANTLR	=	antlr
+PREFIX  ?=  /usr/pkg
 else
-LDFLAGS	+=	-L/usr/pkg/lib -L. -lantlr -ldl
-CXXFLAGS+=	-I/usr/pkg/include
-ANTLR	=	antlr
+PREFIX  ?=  /usr/local
 endif
+
+INSTALL ?=  install
+
+
+LDFLAGS	+=	-L$(PREFIX)/lib -lantlr
+CXXFLAGS+=	-I$(PREFIX)/include
+ANTLR	=	antlr
+
+INSTBINDIR  =   $(PREFIX)/bin
+INSTLIBDIR  =   $(PREFIX)/lib
+INSTINCDIR  =   $(PREFIX)/include
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include
 AHIRSRCDIR	=	$(AHIRDIR)/v2/libAhirV2/src
@@ -46,6 +53,8 @@ VCTOOLOBJS	=	$(VCTOOLSRCS:.cpp=.o)
 OBJS		=	$(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS)
 DFILES		=	$(notdir $(AHIRSRCS:.cpp=.d)) $(PARSERSRCS:.cpp=.d) $(VCTOOLSRCS:.cpp=.d)
 GENHDRS		=	$(PARSERHDRS) vcsimconf.h
+INSTHDRS	=	vcsim.h vcsimconf.h datum.h opf.h $(CEPTOOLDIR)/stateif.h $(CEPTOOLDIR)/exprf.h
+INSTLIBS	=	libvcsim.so
 
 CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-std=c++17 -fPIC -MMD -MP -g
@@ -57,11 +66,13 @@ OPTBINS		=	$(filter-out $(EXCLUDEOPT), $(BINS))
 
 ifeq ($(USECEP),y)
 BINS		+=	vcexport.out
+INSTBINS	+=	vcexport.out
 VCTOOLSRCS	+=	vcexport.cpp
 endif
 
 ifeq ($(BUILD_CPR_CHECK),y)
 BINS		+=	cprcheck.out
+INSTBINS	+=	cprcheck.out
 VCTOOLSRCS	+=	cprcheck.cpp
 endif
 
@@ -111,6 +122,12 @@ vcsimconf.h	:	Makefile.conf
 	$(foreach O,$(SELECTOPTS),echo "#define $(O)";) \
 	echo "#endif" \
 	) > $@
+
+install:	all
+	$(INSTALL) -d -m 755 $(DESTDIR)$(INSTBINDIR) $(DESTDIR)$(INSTLIBDIR) $(DESTDIR)$(INSTINCDIR)
+	$(INSTALL) -m 755 $(INSTBINS) $(DESTDIR)$(INSTBINDIR)
+	$(INSTALL) -m 755 $(INSTLIBS) $(DESTDIR)$(INSTLIBDIR)
+	$(INSTALL) -m 644 $(INSTHDRS) $(DESTDIR)$(INSTINCDIR)
 
 ifeq ($(USECEP),y)
 include $(XSBCPPIFDIR)/Makefile.xsbcppif
