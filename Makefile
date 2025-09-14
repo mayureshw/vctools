@@ -45,6 +45,7 @@ PARSEROBJS	=	$(PARSERSRCS:.cpp=.o)
 VCTOOLOBJS	=	$(VCTOOLSRCS:.cpp=.o)
 OBJS		=	$(AHIROBJS) $(PARSEROBJS) $(VCTOOLOBJS)
 DFILES		=	$(notdir $(AHIRSRCS:.cpp=.d)) $(PARSERSRCS:.cpp=.d) $(VCTOOLSRCS:.cpp=.d)
+GENHDRS		=	$(PARSERHDRS) vcsimconf.h
 
 CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I.
 CXXFLAGS	+=	-std=c++17 -fPIC -MMD -MP -g
@@ -76,7 +77,7 @@ all:	$(BINS)
 libahirvc.a:	$(AHIROBJS) $(PARSEROBJS)
 	ar rv $@ $?
 
-$(OBJS):	$(PARSERHDRS)
+$(OBJS):	$(GENHDRS)
 
 $(PARSERSRCS) $(PARSERHDRS):	$(VCGRAMMAR)
 
@@ -97,11 +98,19 @@ opf.h:	opf.P
 endif
 
 clean:
-	rm -f $(OBJS) $(BINS) $(PARSERSRCS) $(PARSERHDRS) $(MISCFILES) $(DFILES)
+	rm -f $(OBJS) $(BINS) $(PARSERSRCS) $(GENHDRS) $(MISCFILES) $(DFILES)
 
 CONFOPTS	=	USECEP USESEQNO DATUMDBG PIPEDBG OPDBG PNDBG GEN_CPDOT GEN_DPDOT GEN_PETRIDOT GEN_PETRIJSON GEN_PETRIPNML PN_PLACE_CAPACITY_EXCEPTION
-CXXFLAGS	+=	$(foreach OPT, $(CONFOPTS), $(if $(filter y, $($(OPT))), -D$(OPT)))
-CXXFLAGS	+=	-DWIDEUINTSZ=$(WIDEUINTSZ)
+SELECTOPTS	=	$(foreach OPT, $(CONFOPTS),$(if $(filter y,$($(OPT))),$(OPT)))
+
+vcsimconf.h	:	Makefile.conf
+	@echo "Generating $@"
+	@( echo "#ifndef _VCSIMCONF_H"; \
+	echo "#define _VCSIMCONF_H"; \
+	echo "#define WIDEUINTSZ $(WIDEUINTSZ)"; \
+	$(foreach O,$(SELECTOPTS),echo "#define $(O)";) \
+	echo "#endif" \
+	) > $@
 
 ifeq ($(USECEP),y)
 include $(XSBCPPIFDIR)/Makefile.xsbcppif
