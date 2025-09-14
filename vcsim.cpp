@@ -2,8 +2,8 @@ using namespace std;
 
 #include <iostream>
 #include <filesystem>
-#include "vc2pn.h"
 #include "vcsim.h"
+#include "vc2pn.h"
 
 void dbghooks(vcSystem& vcs, System& sys)
 {

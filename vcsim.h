@@ -4,6 +4,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include "vcsimconf.h"
 #include "datum.h"
 
 class System;

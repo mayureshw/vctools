@@ -3,6 +3,7 @@ using namespace std;
 #include <iostream>
 #include <functional>
 #include <filesystem>
+#include "vcsimconf.h"
 #include "vcLexer.hpp"
 #include "vcParser.hpp"
 #include "cpp2xsb.h"
