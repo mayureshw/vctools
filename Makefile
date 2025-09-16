@@ -30,10 +30,12 @@ CXXFLAGS+=	-I$(PREFIX)/include
 ANTLR	=	antlr
 
 XSB_VERSION	=	5.0.0
+XSBDIR		=	$(PREFIX)/xsb-$(XSB_VERSION)
 INSTBINDIR  =   $(PREFIX)/bin
 INSTLIBDIR  =   $(PREFIX)/lib
 INSTINCDIR  =   $(PREFIX)/include
-INSTXWAMDIR	=	$(PREFIX)/xsb-$(XSB_VERSION)/lib
+INSTXWAMDIR	=	$(XSBDIR)/lib
+XSB			=	$(XSBDIR)/bin/xsb
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include
 AHIRSRCDIR	=	$(AHIRDIR)/v2/libAhirV2/src
@@ -84,7 +86,7 @@ $(OPTBINS):CXXFLAGS		+=	-O3
 	$(ANTLR) $< && touch $@
 
 %.xwam:	%.P
-	xsb -e "compile('$<'),halt."
+	$(XSB) -e "compile('$<'),halt."
 
 all:	$(BINS) $(XWAMFILES)
 
@@ -109,7 +111,7 @@ vcexport.out:	vcexport.o libvcsim.so libahirvc.a
 # opf.h is committed, hence this generation is required only for vcsim developers if opf.P changes
 ifdef GENOPF
 opf.h:	opf.P
-	echo [opf]. | xsb > $@
+	echo [opf]. | $(XSB) > $@
 endif
 
 clean:
