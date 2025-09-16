@@ -29,9 +29,11 @@ LDFLAGS	+=	-L$(PREFIX)/lib -lantlr
 CXXFLAGS+=	-I$(PREFIX)/include
 ANTLR	=	antlr
 
+XSB_VERSION	=	5.0.0
 INSTBINDIR  =   $(PREFIX)/bin
 INSTLIBDIR  =   $(PREFIX)/lib
 INSTINCDIR  =   $(PREFIX)/include
+INSTXWAMDIR	=	$(PREFIX)/xsb-$(XSB_VERSION)/lib
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include
 AHIRSRCDIR	=	$(AHIRDIR)/v2/libAhirV2/src
@@ -64,6 +66,8 @@ ifeq ($(USECEP),y)
 BINS		+=	vcexport.out
 INSTBINS	+=	vcexport.out
 VCTOOLSRCS	+=	vcexport.cpp
+PFILES		=	$(wildcard $(CEPTOOLDIR)/*.P)
+XWAMFILES	=	$(PFILES:.P=.xwam)
 endif
 
 ifeq ($(BUILD_CPR_CHECK),y)
@@ -79,7 +83,10 @@ $(OPTBINS):CXXFLAGS		+=	-O3
 %Parser.cpp %Lexer.cpp %Parser.hpp %Lexer.hpp: $(AHIRGRAMDIR)/%.g
 	$(ANTLR) $< && touch $@
 
-all:	$(BINS)
+%.xwam:	%.P
+	xsb -e "compile('$<'),halt."
+
+all:	$(BINS) $(XWAMFILES)
 
 libahirvc.a:	$(AHIROBJS) $(PARSEROBJS)
 	ar rv $@ $?
@@ -121,10 +128,11 @@ vcsimconf.h	:	Makefile.conf
 	) > $@
 
 install:	all
-	$(INSTALL) -d -m 755 $(DESTDIR)$(INSTBINDIR) $(DESTDIR)$(INSTLIBDIR) $(DESTDIR)$(INSTINCDIR)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(INSTBINDIR) $(DESTDIR)$(INSTLIBDIR) $(DESTDIR)$(INSTINCDIR) $(DESTDIR)$(INSTXWAMDIR)
 	$(INSTALL) -m 755 $(INSTBINS) $(DESTDIR)$(INSTBINDIR)
 	$(INSTALL) -m 755 $(INSTLIBS) $(DESTDIR)$(INSTLIBDIR)
 	$(INSTALL) -m 644 $(INSTHDRS) $(DESTDIR)$(INSTINCDIR)
+	$(INSTALL) -m 644 $(XWAMFILES) $(DESTDIR)$(INSTXWAMDIR)
 
 ifeq ($(USECEP),y)
 include $(XSBCPPIFDIR)/Makefile.xsbcppif
