@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <bitset>
+#include <cassert>
 #include "opf.h"
 #ifdef USECEP
 #include "stateif.h"
