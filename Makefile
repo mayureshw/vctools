@@ -68,7 +68,7 @@ ifeq ($(USECEP),y)
 BINS		+=	vcexport.out
 INSTBINS	+=	vcexport.out
 VCTOOLSRCS	+=	vcexport.cpp
-PFILES		=	$(wildcard $(CEPTOOLDIR)/*.P)
+PFILES		=	$(wildcard $(CEPTOOLDIR)/*.P) $(wildcard *.P)
 XWAMFILES	=	$(PFILES:.P=.xwam)
 endif
 
