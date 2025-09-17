@@ -84,6 +84,11 @@ public:
         for(auto inp:_ipv) retstr += inp->str() + ":";
         return retstr;
     }
+    virtual void sreq(unsigned long eseqno)
+    {
+        cout << "operators.h: sreq not implemented " << endl;
+        exit(1);
+    }
     virtual void ureq(unsigned long eseqno)
     {
         cout << "operators.h: ureq not implemented " << endl;
@@ -480,7 +485,7 @@ class Call : public Operator
     vector<DatumBase*> _moduleipv;
 public:
     string oplabel() { return "Call"; }
-    void sack(unsigned long eseqno)
+    void sreq(unsigned long eseqno)
     {
         for(int i=0; i<_ipv.size(); i++) _moduleipv[i]->blindcopy(_ipv[i]);
     }

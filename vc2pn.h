@@ -260,6 +260,8 @@ public:
             _reqs[1]->setEnabledActions(bind(&Operator::ureq,_op,_1));
             // trimIportSackUreqPath(); // Experimental only
         }
+        else if ( isCall() )
+            _reqs[0]->setEnabledActions(bind(&Operator::sreq,_op,_1));
         else
             _acks[0]->setEnabledActions(bind(&Operator::sack,_op,_1));
         _acks[1]->setEnabledActions(bind(&Operator::uack,_op,_1));
