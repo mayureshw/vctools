@@ -1,7 +1,7 @@
 using namespace std;
 #include <vector>
-#include "datum.h"
 #include "vcsim.h"
+#include "datum.h"
 
 int main()
 {

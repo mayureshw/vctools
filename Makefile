@@ -31,11 +31,13 @@ ANTLR	=	antlr
 
 XSB_VERSION	=	5.0.0
 XSBDIR		=	$(PREFIX)/xsb-$(XSB_VERSION)
+XSB			=	$(XSBDIR)/bin/xsb
+
 INSTBINDIR  =   $(PREFIX)/bin
 INSTLIBDIR  =   $(PREFIX)/lib
 INSTINCDIR  =   $(PREFIX)/include
 INSTXWAMDIR	=	$(XSBDIR)/lib
-XSB			=	$(XSBDIR)/bin/xsb
+INSTEXAMPDIR=	$(PREFIX)/share/examples/ahir/vcsim
 
 AHIRHDRDIRS	=	$(AHIRDIR)/v2/libAhirV2/include $(AHIRDIR)/v2/BGLWrap/include
 AHIRSRCDIR	=	$(AHIRDIR)/v2/libAhirV2/src
@@ -55,6 +57,7 @@ DFILES		=	$(notdir $(AHIRSRCS:.cpp=.d)) $(PARSERSRCS:.cpp=.d) $(VCTOOLSRCS:.cpp=
 GENHDRS		=	$(PARSERHDRS) vcsimconf.h
 INSTHDRS	=	vcsim.h vcsimconf.h datum.h opf.h $(CEPTOOLDIR)/stateif.h $(CEPTOOLDIR)/exprf.h
 INSTLIBS	=	libvcsim.so
+INSTEXAMPS	=	examples/Makefile $(wildcard examples/*.cpp) $(wildcard examples/*.aa) $(wildcard examples/*.uprops)
 
 CXXFLAGS	+=	$(addprefix -I,$(AHIRHDRDIRS)) -I. -I$(AHIRDIR)/v2/libAhirV2/src
 CXXFLAGS	+=	-std=c++17 -fPIC -MMD -MP -g
@@ -130,11 +133,12 @@ vcsimconf.h	:	Makefile.conf
 	) > $@
 
 install:	all
-	$(INSTALL) -d -m 755 $(DESTDIR)$(INSTBINDIR) $(DESTDIR)$(INSTLIBDIR) $(DESTDIR)$(INSTINCDIR) $(DESTDIR)$(INSTXWAMDIR)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(INSTBINDIR) $(DESTDIR)$(INSTLIBDIR) $(DESTDIR)$(INSTINCDIR) $(DESTDIR)$(INSTXWAMDIR) $(DESTDIR)$(INSTEXAMPDIR)
 	$(INSTALL) -m 755 $(INSTBINS) $(DESTDIR)$(INSTBINDIR)
 	$(INSTALL) -m 755 $(INSTLIBS) $(DESTDIR)$(INSTLIBDIR)
 	$(INSTALL) -m 644 $(INSTHDRS) $(DESTDIR)$(INSTINCDIR)
 	$(INSTALL) -m 644 $(XWAMFILES) $(DESTDIR)$(INSTXWAMDIR)
+	$(INSTALL) -m 644 $(INSTEXAMPS) $(DESTDIR)$(INSTEXAMPDIR)
 
 ifeq ($(USECEP),y)
 include $(XSBCPPIFDIR)/Makefile.xsbcppif
