@@ -31,7 +31,7 @@ CEPFILES	=	$(VCFILES:.vc=.cep)
 VCIRFILES	=	$(VCFILES:.vc=.vcir)
 PROPFILES	=	$(VCFILES:.vc=.props)
 IPROPFILES	=	$(VCFILES:.vc=.iprops)
-LDFLAGS		+=	-L$(PREFIX)/lib -lpthread -lvcsim
+LDFLAGS		+=	-L$(PREFIX)/lib -lpthread -lvcsim -Wl,-rpath,$(PREFIX)/lib
 CXXFLAGS	+=	-std=c++17 -I$(PREFIX)/include
 
 %.out:	%.cpp %.vc
