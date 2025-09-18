@@ -1,4 +1,5 @@
 using namespace std;
+#include <atomic>
 #include <vector>
 #include <iostream>
 #include <thread>
@@ -86,10 +87,11 @@ void invokesim(VcsimIf* simif)
 // counter might appear to start at an arbitrary value. But the actual value
 // of counter is not relevant here. We are just illustrating the moduleInvoke
 // mechanism.
+atomic<bool> stoplog {false};
 void log(VcsimIf* simif)
 {
     int lastcnt, cnt = 0;
-    for(;;)
+    while(!stoplog)
     {
         lastcnt = cnt;
         auto opv = simif->moduleInvoke("getcounter");
@@ -104,15 +106,14 @@ int main()
     // No top module, no input vector
     VcsimIf simif("vcsim04.vc",{"daemon"});
 
-    // Detach the log thread. It doesn't have a logical synchronization point
     thread tlog(log, &simif);
-    tlog.detach();
-
     thread tfeeder(feeder, &simif);
     thread treader(reader, &simif);
     thread tinvoke(invokesim, &simif);
     tfeeder.join();
     treader.join();
+    stoplog = true;
+    tlog.join();
 
     // You may optionally stop the simulation as per your stopping logic Else
     // it will keep running. In this example, we can stop the simulation after
