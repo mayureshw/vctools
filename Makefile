@@ -32,6 +32,7 @@ ANTLR	=	antlr
 XSB_VERSION	=	5.0.0
 XSBDIR		=	$(PREFIX)/xsb-$(XSB_VERSION)
 XSB			=	$(XSBDIR)/bin/xsb
+CXXFLAGS	+=	-DXSBDIR=\"${XSBDIR}\"
 
 INSTBINDIR  =   $(PREFIX)/bin
 INSTLIBDIR  =   $(PREFIX)/lib
