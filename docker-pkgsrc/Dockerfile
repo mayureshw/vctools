@@ -33,6 +33,7 @@ RUN cd /usr/pkgsrc/wip/ahir && bmake depends-fetch
 RUN cd /usr/pkgsrc/wip/xsb && bmake MAKE_JOBS=`/usr/bin/nproc` package
 RUN cd /usr/pkgsrc/wip/ahir && bmake MAKE_JOBS=`/usr/bin/nproc` package
 RUN pkg_add -u /usr/pkgsrc/packages/All/ahir-*
+RUN rm -rf /usr/pkgsrc
 
 CMD ["/bin/bash"]
 
