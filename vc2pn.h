@@ -709,6 +709,7 @@ public:
 
 class LoopTerminatorCPElement : public SoloCPElement
 {
+    int _phicnt;
     int _depth;
     vcCPElement *getUniqPred( vcCPElement* n )
     {
@@ -771,7 +772,7 @@ class LoopTerminatorCPElement : public SoloCPElement
         pn()->annotatePNNode(nonMarkedPred,SimuOnly_);
         pn()->createArc( pnLbstart, markedPred );
     }
-    void transformInfiniteLoopPN()
+    void transformPhilessInfiniteLoopPN()
     {
         auto cevaled = getCevaled();
         auto lbdelay = getUniqPred(cevaled);
@@ -779,7 +780,7 @@ class LoopTerminatorCPElement : public SoloCPElement
         auto& lbstartSuccs = lbstart->Get_Successors();
         if ( lbstartSuccs.size() != 2 )
         {
-            cout << "transformInfiniteLoopPN expects two successors to loop_body_start, got " << lbstartSuccs.size() << endl;
+            cout << "transformPhilessInfiniteLoopPN expects two successors to loop_body_start, got " << lbstartSuccs.size() << endl;
             exit(1);
         }
         // this successor of interest, prints the same label as of lbstart, if printed
@@ -801,6 +802,7 @@ class LoopTerminatorCPElement : public SoloCPElement
 protected:
     vcLoopTerminator* elem() { return (vcLoopTerminator*) _elem; }
 public:
+    void setPhiCount(int phicnt) { _phicnt = phicnt; }
     void setdepth(int depth)
     {
         _depth = depth;
@@ -819,6 +821,7 @@ public:
         // NOTE: When looping condition's input is constant we don't expect it to be 0
         return inpwires[0]->Is_Constant();
     }
+    bool isPhilessLoop() { return _phicnt == 0; }
     void buildPN()
     {
 
@@ -835,16 +838,24 @@ public:
 
         if ( isInfiniteLoop() )
         {
-            auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
-            auto pnBackEdge = vce2pnnode(back_edge);
-            pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
-            pn()->annotatePNNode(pnLoopCont,SimuOnly_);
-            pn()->annotatePNNode(pnIterOver,SimuOnly_);
-            pn()->annotatePNNode(pnLoopBack,SimuOnly_);
-            pn()->annotatePNNode(pnLoopExit,SimuOnly_);
-            pn()->annotatePNNode(pnBackEdge,SimuOnly_);
+            if ( isPhilessLoop() )
+            {
+                auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
+                auto pnBackEdge = vce2pnnode(back_edge);
+                pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+                pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+                pn()->annotatePNNode(pnIterOver,SimuOnly_);
+                pn()->annotatePNNode(pnLoopBack,SimuOnly_);
+                pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+                pn()->annotatePNNode(pnBackEdge,SimuOnly_);
 
-            transformInfiniteLoopPN();
+                transformPhilessInfiniteLoopPN();
+            }
+            else
+            {
+                cout << "Infinite loop with phi not implemented" << endl;
+                exit(1);
+            }
         }
         else
         {
@@ -1168,6 +1179,7 @@ public:
             loopTermCPE->setdepth(slb->Get_Pipeline_Depth());
             _cpelist.push_back(loopTermCPE);
             auto plb = slb->Get_Loop_Body();
+            loopTermCPE->setPhiCount( plb->Get_Number_Of_Phi_Sequencers() );
             for(auto psq : plb->Get_Phi_Sequencers()) _cpelist.push_back(getCPE(psq));
             for(auto tmerge : plb->Get_Transition_Merges()) _cpelist.push_back(getCPE(tmerge));
         }
