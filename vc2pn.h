@@ -853,8 +853,10 @@ public:
             }
             else
             {
-                cout << "Infinite loop with phi not implemented" << endl;
-                exit(1);
+                pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+                pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+                pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+                pn()->createArc(pnIterOver,pnLoopBack);
             }
         }
         else
