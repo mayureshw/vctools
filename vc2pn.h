@@ -723,7 +723,7 @@ class LoopTerminatorCPElement : public SoloCPElement
     }
     vcCPElement *getUniqSucc( vcCPElement* n )
     {
-        auto succs = n->Get_Successors();
+        auto& succs = n->Get_Successors();
         if ( succs.size() != 1 )
         {
             cout << "getUniqSucc expects unique succ, got " << succs.size() << " " << n->Kind() << ":" << n->Get_Id() << endl;
@@ -785,7 +785,7 @@ class LoopTerminatorCPElement : public SoloCPElement
         }
         // this successor of interest, prints the same label as of lbstart, if printed
         auto lbstartSucc = lbstartSuccs[0] == lbdelay ? lbstartSuccs[1] : lbstartSuccs[0];
-        for( auto entrynode : lbstartSucc->Get_Successors() ) modifyEntryNodePN( entrynode, lbstartSucc );
+        for( auto& entrynode : lbstartSucc->Get_Successors() ) modifyEntryNodePN( entrynode, lbstartSucc );
 
     }
     vcBranch* getLoopCondBranch()
