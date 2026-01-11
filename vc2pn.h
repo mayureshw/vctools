@@ -709,7 +709,7 @@ public:
 
 class LoopTerminatorCPElement : public SoloCPElement
 {
-    int _phicnt;
+    vcCPPipelinedLoopBody * _loopbody;
     int _depth;
     vcCPElement *getUniqPred( vcCPElement* n )
     {
@@ -802,7 +802,7 @@ class LoopTerminatorCPElement : public SoloCPElement
 protected:
     vcLoopTerminator* elem() { return (vcLoopTerminator*) _elem; }
 public:
-    void setPhiCount(int phicnt) { _phicnt = phicnt; }
+    void setLoopBody(vcCPPipelinedLoopBody *loopbody) { _loopbody = loopbody; }
     void setdepth(int depth)
     {
         _depth = depth;
@@ -821,7 +821,7 @@ public:
         // NOTE: When looping condition's input is constant we don't expect it to be 0
         return inpwires[0]->Is_Constant();
     }
-    bool isPhilessLoop() { return _phicnt == 0; }
+    bool isPhilessLoop() { return _loopbody->Get_Number_Of_Phi_Sequencers() == 0; }
     void buildPN()
     {
 
@@ -1181,7 +1181,7 @@ public:
             loopTermCPE->setdepth(slb->Get_Pipeline_Depth());
             _cpelist.push_back(loopTermCPE);
             auto plb = slb->Get_Loop_Body();
-            loopTermCPE->setPhiCount( plb->Get_Number_Of_Phi_Sequencers() );
+            loopTermCPE->setLoopBody( plb );
             for(auto psq : plb->Get_Phi_Sequencers()) _cpelist.push_back(getCPE(psq));
             for(auto tmerge : plb->Get_Transition_Merges()) _cpelist.push_back(getCPE(tmerge));
         }
