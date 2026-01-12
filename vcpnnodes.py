@@ -119,6 +119,10 @@ class PNArc(Arc):
         super().__init__(srcnode,tgtnode,props)
 
 class PNNode(Node):
+    def isTrivial(self): return self.fanout('petri') == 1 and self.fanin('petri') == 1
+    def trivialDotProps(self): return [
+        ('label',''), ('shape','point'), ('style','invis'),
+        ('width','0'), ('height','0'), ('margin','0') ]
     def pnmarking(self): return self.marking if self.isPlace() else None
     def pncapacity(self): return self.capacity if self.isPlace() else None
     def nodeClass(self): return self.classname
@@ -145,7 +149,9 @@ class PNNode(Node):
         super().__init__(nodeid,vcir,props)
 
 class Transition(PNNode):
-    def dotprops(self): return [ ( 'shape','rectangle' ), ( 'label', self.idstr() + ':' + self.label ) ]
+    def dotprops(self): return self.trivialDotProps() if self.isTrivial() else [
+        ( 'shape','rectangle' ), ( 'label', self.idstr() + ':' + self.label )
+        ]
     def isTransition(self): return True
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
@@ -153,7 +159,7 @@ class Transition(PNNode):
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(PNNode):
-    def dotprops(self): return [
+    def dotprops(self): return self.trivialDotProps() if self.isTrivial() else [
         ('color', 'green' if self.isMutex() else \
         'blue' if self.isBranch() else \
         'lightblue' if self.isPassiveBranch() else 'black' ),
