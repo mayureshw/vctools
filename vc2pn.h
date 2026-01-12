@@ -100,6 +100,7 @@ public:
     void buildPNPhi()
     {
         auto phplace = pn()->createPlace("DPE:" + _label + "_phplace");
+        pn()->annotatePNNode(phplace,SimuOnly_);
         auto rootindex = elem()->Get_Root_Index();
         for(int i=0; i<_reqs.size(); i++)
         {
