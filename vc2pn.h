@@ -680,9 +680,13 @@ public:
         pn()->createArc(reduceSampleAck, pnSampleAck);
 
         // Extra tt Basis the way we handle Phi (Do we need these?)
-        // pn()->createArc(pnSampleReq, pnSampleAck);
-        // pn()->createArc(pnUpdateReq, pnUpdAck);
-        // pn()->createArc(pnSampleAck, pnUpdAck);
+        PNNode *p;
+        p = pn()->createArc(pnSampleReq, pnSampleAck);
+        pn()->annotatePNNode(p,SimuOnly_);
+        p = pn()->createArc(pnUpdateReq, pnUpdAck);
+        pn()->annotatePNNode(p,SimuOnly_);
+        p = pn()->createArc(pnSampleAck, pnUpdAck);
+        pn()->annotatePNNode(p,SimuOnly_);
 
         for(int i=0; i<elem()->_triggers.size(); i++)
         {
@@ -719,6 +723,15 @@ class LoopTerminatorCPElement : public SoloCPElement
             exit(1);
         }
         return *preds.begin();
+    }
+    PNNode* getUniqPred( PNNode *n )
+    {
+        if ( n->_iarcs.size() != 1 )
+        {
+            cout << "getUniqPred expects unique pred, got " << n->_iarcs.size() << " " << n->idstr() << endl;
+            exit(1);
+        }
+        return n->_iarcs[0]->source();
     }
     vcCPElement *getUniqSucc( vcCPElement* n )
     {
@@ -839,8 +852,9 @@ class LoopTerminatorCPElement : public SoloCPElement
             auto loopback_trigger = triggers[1];
             auto sack = phseq->_phi_sample_ack;
             auto pnLoopbackTrigger = vce2pnnode( loopback_trigger );
+            auto pnLoopbackTriggerPred = getUniqPred( pnLoopbackTrigger );
             auto pnSampleAck = vce2pnnode( sack );
-            pn()->createArc( pnSampleAck, pnLoopbackTrigger );
+            pn()->createArc( pnSampleAck, pnLoopbackTriggerPred );
         }
     }
 protected:
@@ -897,24 +911,22 @@ public:
             }
             else
             {
-                // WIP IMPLEMENTATION (similar in principle to philess loop)
-                // auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
-                // auto pnBackEdge = vce2pnnode(back_edge);
-                // pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
-                // pn()->annotatePNNode(pnLoopCont,SimuOnly_);
-                // pn()->annotatePNNode(pnIterOver,SimuOnly_);
-                // pn()->annotatePNNode(pnLoopBack,SimuOnly_);
-                // pn()->annotatePNNode(pnLoopExit,SimuOnly_);
-                // pn()->annotatePNNode(pnBackEdge,SimuOnly_);
-
-                // transformPhiInfiniteLoopPN();
+                auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
+                auto pnBackEdge = vce2pnnode(back_edge);
+                pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+                pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+                pn()->annotatePNNode(pnIterOver,SimuOnly_);
+                pn()->annotatePNNode(pnLoopBack,SimuOnly_);
+                pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+                pn()->annotatePNNode(pnBackEdge,SimuOnly_);
+                transformPhiInfiniteLoopPN();
 
                 // ALTERNATIVE IMPLEMENTATION
                 // This is a safe default, but less efficient, as it waits on iteration to be over
-                pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
-                pn()->annotatePNNode(pnLoopCont,SimuOnly_);
-                pn()->annotatePNNode(pnLoopExit,SimuOnly_);
-                pn()->createArc(pnIterOver,pnLoopBack);
+                //pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+                //pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+                //pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+                //pn()->createArc(pnIterOver,pnLoopBack);
              }
         }
         else
