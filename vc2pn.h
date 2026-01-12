@@ -641,7 +641,6 @@ class SoloCPElement : public CPElement
 protected:
     PNNode* vce2pnnode(vcCPElement* vce) { return _module->getCPE(vce)->pnNode(); }
 public:
-    PNNode* _pnnode;
     string shape() { return "rectangle"; }
     string color() { return "blue"; }
     SoloCPElement(vcCPElement *elem, ModuleBase *module) : CPElement(elem, module)
@@ -1179,11 +1178,12 @@ public:
         {
             auto loopTermCPE = (LoopTerminatorCPElement*) getCPE(slb->Get_Terminator());
             loopTermCPE->setdepth(slb->Get_Pipeline_Depth());
-            _cpelist.push_back(loopTermCPE);
             auto plb = slb->Get_Loop_Body();
             loopTermCPE->setLoopBody( plb );
             for(auto psq : plb->Get_Phi_Sequencers()) _cpelist.push_back(getCPE(psq));
             for(auto tmerge : plb->Get_Transition_Merges()) _cpelist.push_back(getCPE(tmerge));
+            // loopTermCPE needs tmerge PN to be in place, hence push it after it
+            _cpelist.push_back(loopTermCPE);
         }
         setInparamDatum(); // To be done before constructing _dpe as DPEs need input params
         for(auto dpet:_vcm->Get_Data_Path()->Get_DPE_Map())
