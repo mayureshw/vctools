@@ -680,9 +680,9 @@ public:
         pn()->createArc(reduceSampleAck, pnSampleAck);
 
         // Extra tt Basis the way we handle Phi (Do we need these?)
-        pn()->createArc(pnSampleReq, pnSampleAck);
-        pn()->createArc(pnUpdateReq, pnUpdAck);
-        pn()->createArc(pnSampleAck, pnUpdAck);
+        // pn()->createArc(pnSampleReq, pnSampleAck);
+        // pn()->createArc(pnUpdateReq, pnUpdAck);
+        // pn()->createArc(pnSampleAck, pnUpdAck);
 
         for(int i=0; i<elem()->_triggers.size(); i++)
         {
@@ -798,6 +798,51 @@ class LoopTerminatorCPElement : public SoloCPElement
         }
         return (vcBranch*) cevaled_dpl[0].first;
     }
+    void transformPhiInfiniteLoopPN()
+    {
+        // This part of the transformation is similar to Philess, just the traversal is different
+        for( auto tmrg :  _loopbody->Get_Transition_Merges() )
+        {
+            // vce2pnnode doesn't work here, unclear why
+            // Perhaps, We should make more use of CRTP and variants than vtbl, at least templates
+            auto pnTmrg = _module->getCPE(tmrg)->pnNode();
+            auto pnLbstart = getUniqSucc(pnTmrg);
+            for( auto oa : pnLbstart->_oarcs )
+            {
+                auto nextp = oa->target();
+                auto entrynode = getUniqSucc(nextp);
+                for( auto ia : entrynode->_iarcs )
+                {
+                    auto predplace = (PNPlace*) ia->source();
+                    if ( predplace->marking() == 1 )
+                    {
+                        pn()->createArc( pnLbstart, predplace );
+                        predplace->setMarking(0);
+                    }
+                    else pn()->annotatePNNode(predplace,SimuOnly_);
+                }
+            }
+        }
+
+        // This part of the transformation has no counterpart in philess, phi
+        // requires triggers loopback triggers need to be restored based on
+        // sack (which is controlled by ureq via ps_ureqplace by back pressure)
+        for( auto phseq : _loopbody->Get_Phi_Sequencers() )
+        {
+            auto triggers = phseq->_triggers;
+            if ( triggers.size() != 2 )
+            {
+                cout << "transformPhiInfiniteLoopPN expects triggers.size=2. Got "
+                    << triggers.size() << endl;
+                exit(1);
+            }
+            auto loopback_trigger = triggers[1];
+            auto sack = phseq->_phi_sample_ack;
+            auto pnLoopbackTrigger = vce2pnnode( loopback_trigger );
+            auto pnSampleAck = vce2pnnode( sack );
+            pn()->createArc( pnSampleAck, pnLoopbackTrigger );
+        }
+    }
 protected:
     vcLoopTerminator* elem() { return (vcLoopTerminator*) _elem; }
 public:
@@ -852,11 +897,25 @@ public:
             }
             else
             {
+                // WIP IMPLEMENTATION (similar in principle to philess loop)
+                // auto back_edge = getUniqSucc(elem()->Get_Loop_Back());
+                // auto pnBackEdge = vce2pnnode(back_edge);
+                // pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
+                // pn()->annotatePNNode(pnLoopCont,SimuOnly_);
+                // pn()->annotatePNNode(pnIterOver,SimuOnly_);
+                // pn()->annotatePNNode(pnLoopBack,SimuOnly_);
+                // pn()->annotatePNNode(pnLoopExit,SimuOnly_);
+                // pn()->annotatePNNode(pnBackEdge,SimuOnly_);
+
+                // transformPhiInfiniteLoopPN();
+
+                // ALTERNATIVE IMPLEMENTATION
+                // This is a safe default, but less efficient, as it waits on iteration to be over
                 pn()->annotatePNNode(pnLoopTerm,SimuOnly_);
                 pn()->annotatePNNode(pnLoopCont,SimuOnly_);
                 pn()->annotatePNNode(pnLoopExit,SimuOnly_);
                 pn()->createArc(pnIterOver,pnLoopBack);
-            }
+             }
         }
         else
         {
