@@ -821,6 +821,7 @@ class LoopTerminatorCPElement : public SoloCPElement
             // Perhaps, We should make more use of CRTP and variants than vtbl, at least templates
             auto pnTmrg = _module->getCPE(tmrg)->pnNode();
             auto pnLbstart = getUniqSucc(pnTmrg);
+            list<PNPlace*> predPlaces;
             for( auto oa : pnLbstart->_oarcs )
             {
                 auto nextp = oa->target();
@@ -830,12 +831,15 @@ class LoopTerminatorCPElement : public SoloCPElement
                     auto predplace = (PNPlace*) ia->source();
                     if ( predplace->marking() == 1 )
                     {
-                        pn()->createArc( pnLbstart, predplace );
+                        //earmark for arc pnLbstart -> predplace; can't do here as we are walking over pn
+                        predPlaces.push_back(predplace);
                         predplace->setMarking(0);
                     }
                     else pn()->annotatePNNode(predplace,SimuOnly_);
                 }
             }
+            // complete arc creation earmarked above
+            for( auto predplace : predPlaces ) pn()->createArc(pnLbstart,predplace);
         }
 
         // This part of the transformation has no counterpart in philess, phi
