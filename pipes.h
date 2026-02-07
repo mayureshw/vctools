@@ -50,21 +50,17 @@ protected:
     unsigned pushpos() { return _wpos++; }
     virtual unsigned poppos()=0;
     virtual unsigned lastPopPosOnEmpty()=0;
-    PNPlace *_mutexPlace;
-    void buildPNMutexDepCommon(PNTransition *req, PNTransition *ack)
-    {
-        // for i or o, req should seek token from mutexplace
-        pn()->createArc(_mutexPlace, req);
-        // for i or o, ack should release token to mutexplace
-        pn()->createArc(ack, _mutexPlace);
-    }
+    PNPlace *_rdMutexPlace;
+    PNPlace *_wrMutexPlace;
     virtual void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
     {
-        buildPNMutexDepCommon(req,ack);
+        pn()->createArc(_rdMutexPlace, req);
+        pn()->createArc(ack, _rdMutexPlace);
     }
     virtual void buildPNMutexDepOport(PNTransition *req, PNTransition *ack)
     {
-        buildPNMutexDepCommon(req,ack);
+        pn()->createArc(_wrMutexPlace, req);
+        pn()->createArc(ack, _wrMutexPlace);
     }
     template <typename T> void initStore(unsigned depth, unsigned width)
     {
@@ -147,8 +143,15 @@ public:
     }
     Pipe(unsigned depth, string label, VcPetriNet* pn, vcPipe* vcp) : _depth(depth), _wpos(ModCntr(depth)), _label(label), _pn(pn), _vcp(vcp)
     {
-        _mutexPlace = _pn->createPlace("MARKP:"+_label+".Mutex",1);
-        pn->annotatePNNode(_mutexPlace, Mutex_);
+        _rdMutexPlace = _pn->createPlace("MARKP:"+_label+".rdMutex",1);
+        _wrMutexPlace = _pn->createPlace("MARKP:"+_label+".wrMutex",1);
+        pn->annotatePNNode(_rdMutexPlace, Mutex_);
+        pn->annotatePNNode(_wrMutexPlace, Mutex_);
+        if ( _vcp->Get_P2P() )
+        {
+            pn->annotatePNNode(_rdMutexPlace, SimuOnly_);
+            pn->annotatePNNode(_wrMutexPlace, SimuOnly_);
+        }
     }
     ~Pipe()
     {
@@ -196,9 +199,12 @@ protected:
         // reaches 2.
         _freePlace = pn->createPlace("MARKP:"+_label+".Depth",_depth,_depth);
         _filledPlace = pn->createPlace(_label+".Filled",0,_depth);
+        pn->annotatePNNode(_freePlace,SimuOnly_);
+        pn->annotatePNNode(_filledPlace,SimuOnly_);
     }
 };
 
+// TODO: After _mutexPlace was split into rd and wr, NonBlockingPipe has not been tested
 class NonBlockingPipe : public BlockingPipe
 {
     PNPlace *_popPlace;
@@ -207,7 +213,7 @@ protected:
     void buildPNMutexDepIport(PNTransition *req, PNTransition *ack)
     {
         // for i or o, req should seek token from mutexplace
-        pn()->createArc(_mutexPlace, req);
+        pn()->createArc(_rdMutexPlace, req);
         // For NonBlockingPipe return of mutex token happens via common net
         // built in buildPNIport1
     }
@@ -224,8 +230,8 @@ public:
         pn()->createArc(_popPlace, popNonEmpty);
         pn()->createArc(_filledPlace, popNonEmpty);
         pn()->createArc(popNonEmpty, _freePlace);
-        pn()->createArc(popEmpty, _mutexPlace);
-        pn()->createArc(popNonEmpty, _mutexPlace);
+        pn()->createArc(popEmpty, _rdMutexPlace);
+        pn()->createArc(popNonEmpty, _rdMutexPlace);
         pn()->createArc(popEmpty, _freePlace, "", _depth);
         pn()->createArc(_freePlace, popEmpty, "", _depth);
     }
