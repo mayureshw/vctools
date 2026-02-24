@@ -119,7 +119,8 @@ class PNArc(Arc):
         super().__init__(srcnode,tgtnode,props)
 
 class PNNode(Node):
-    def isTrivial(self): return self.fanout('total') == 1 and self.fanin('total') == 1
+    def isTrivial(self): return self.fanout('total') == 1 and self.fanin('total') == 1 \
+        and ( not self.isPlace() or self.marking == 0 )
     def trivialDotProps(self): return [
         ('label',''), ('shape','point'), ('style','invis'),
         ('width','0'), ('height','0'), ('margin','0') ]
