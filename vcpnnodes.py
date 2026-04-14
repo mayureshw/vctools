@@ -120,7 +120,8 @@ class PNArc(Arc):
 
 class PNNode(Node):
     def isTrivial(self): return self.fanout('total') == 1 and self.fanin('total') == 1 \
-        and ( not self.isPlace() or self.marking == 0 )
+        and ( not self.isPlace() or self.marking == 0 ) \
+        and ( not self.isTransition() or not self.isDPReqOrAck() )
     def trivialDotProps(self): return [
         ('label',''), ('shape','point'), ('style','invis'),
         ('width','0'), ('height','0'), ('margin','0') ]
@@ -157,6 +158,9 @@ class Transition(PNNode):
     def nodeType(self): return 'Transition'
     def isFork(self): return self.fanout('petri') > 1
     def isJoin(self): return self.fanin('petri') > 1
+    def isDPReq(self): return self.fanout('petri') == 1 and self.successors('petri')[0].isDP()
+    def isDPAck(self): return self.fanin('petri') == 1 and self.predecessors('petri')[0].isDP()
+    def isDPReqOrAck(self): return self.isDPReq() or self.isDPAck()
     def __init__(self,nodeid,vcir,props): super().__init__(nodeid,vcir,props)
 
 class Place(PNNode):
